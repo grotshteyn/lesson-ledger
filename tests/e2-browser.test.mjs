@@ -29,7 +29,7 @@ export function createClient(){return {
   }
   if(name==='change_student'){
    const old=current(args.p_student_id),c=args.p_changes;
-   state.versions.push({...old,...c,id:'version-'+(++state.seq),effective_from:args.p_effective_from,created_at:new Date(Date.now()+state.seq*1000).toISOString(),rate:c.billing_mode==='per_lesson'?Number(c.price):null,monthly_fee:c.billing_mode==='monthly_flat'?Number(c.price):null});
+   state.versions.push({...old,...c,id:'version-'+(++state.seq),effective_from:args.p_effective_from,created_at:new Date(Date.now()+state.seq*1000).toISOString(),rate:(c.billing_mode||old.billing_mode)==='per_lesson'?Number(c.price??old.rate):null,monthly_fee:(c.billing_mode||old.billing_mode)==='monthly_flat'?Number(c.price??old.monthly_fee):null});
    return {data:'version-'+state.seq,error:null};
   }
   if(name==='set_student_status'){state.events.push({student_id:args.p_student_id,event_type:args.p_event,effective_from:args.p_effective_from,pause_until:args.p_pause_until,created_at:new Date().toISOString()});return {data:'event-'+state.events.length,error:null};}
