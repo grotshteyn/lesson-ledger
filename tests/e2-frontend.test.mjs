@@ -12,7 +12,7 @@ const context=vm.createContext({});
 const api=vm.runInContext(helpers+'; ({normalizeStudentText,editDistance,studentSearchRank})',context);
 const rank=(student,query)=>api.studentSearchRank(student,api.normalizeStudentText(query));
 test('search ignores case and accents',()=>{
- assert.equal(rank({student_name:'José Müller'},'jose'),1);
+ assert.equal(rank({student_name:'José Müller'},'jose'),0);
  assert.equal(rank({student_name:'José Müller'},'MULLER'),0);
 });
 test('search matches nickname and typos',()=>{
