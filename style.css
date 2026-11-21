@@ -8,3 +8,13 @@
 
 /* Password authentication */
 .auth-heading{padding-top:min(8vh,64px)}.auth-mark{width:68px;height:68px;border:1.5px solid #aaa;border-radius:15px;background:#f4f4f3}.auth-heading h1{margin:25px 0 8px}.auth-heading p{margin:0 0 36px}.auth-card h2{font-size:22px}.auth-card .primary,.setup-screen form>.primary{width:100%}.auth-card .link{display:block;margin:10px auto;text-align:center}.auth-card .small{text-align:center}.auth-card .small .link{display:inline;padding:0}.auth-card .error{min-height:1.2em}
+
+/* Consistent back controls and compact Home student pagination */
+#backHome,#backStudents,#backStatus,#backChange,#home,#backStudents{flex:0 0 auto;min-width:44px;min-height:44px;padding:8px 12px;font-size:22px;line-height:1;border:1px solid #c9c9c7;border-radius:11px;background:#fff;color:#242424}
+#settingsBtn{border-radius:11px!important;width:auto!important;height:auto!important;min-height:44px!important;font-size:15px!important;padding:10px 14px!important;white-space:nowrap}
+#homePagination{border-top:1px solid #e5e5e3;margin-top:12px;padding-top:14px;gap:8px}
+#homePagination .secondary{min-height:40px;padding:8px 12px}
+#homeStudents .student-item{min-height:62px;margin:8px 0}
+.detail-grid dd .link{display:inline-block;margin-left:8px;padding:4px 0;font-size:14px}
+.screen-header{gap:10px}.screen-header h1{flex:1;font-size:clamp(24px,5vw,34px);margin:0}.screen-header .secondary{white-space:nowrap}
+@media(max-width:420px){#settingsBtn{font-size:14px!important;padding:9px 11px!important}.screen-header{gap:7px}.screen-header #newStudent{font-size:13px;padding:8px;min-height:44px}}
