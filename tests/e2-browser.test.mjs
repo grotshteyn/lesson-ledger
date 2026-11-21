@@ -63,7 +63,9 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   await page.locator('#saveStatus').click();
   await page.locator('#backStudents').click();
   await page.locator('#studentFilter').selectOption('paused');
-  await page.locator('[data-student]').waitFor();
-  assert.match(await page.locator('#studentResults').innerText(),/Anna Test/);
+  await page.waitForTimeout(500);
+  const list=await page.locator('#studentResults').innerText();
+  const state=await page.evaluate(()=>({events:globalThis.__e2Mock.events,versions:globalThis.__e2Mock.versions}));
+  assert.match(list,/Anna Test/,'Paused student missing: '+JSON.stringify({list,state}));
  }finally{await browser.close()}
 });
