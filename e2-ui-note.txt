@@ -1,0 +1,1 @@
+E2 frontend work is integrated into app.js on this branch. Initial list, add form, and student details are present; search fuzzy matching and dated changes remain to be implemented.

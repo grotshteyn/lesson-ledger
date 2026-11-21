@@ -1,0 +1,26 @@
+name: E2 frontend checks
+on:
+  pull_request:
+  push:
+    branches:
+      - feature/e2-students-foundation
+jobs:
+  javascript:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Run E2 frontend unit tests
+        run: node --test tests/e2-frontend.test.mjs
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Run browser smoke
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/e2-server.log 2>&1 &
+          node --test tests/e2-browser.test.mjs
