@@ -4,7 +4,7 @@ import {chromium} from 'playwright';
 
 const mockModule = `
 const state={students:[],versions:[],events:[],seq:0};
-globalThis.__e2Mock=state;
+globalThis.__e2Mock=state;globalThis.__rpcCalls=[];
 const now=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const current=id=>state.versions.filter(v=>v.student_id===id&&v.effective_from<=now()).sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at))[0];
 const status=id=>{const e=state.events.filter(x=>x.student_id===id&&x.effective_from<=now()).at(-1);return e?e.event_type==='pause'?(e.pause_until&&e.pause_until<=now()?'active':'paused'):e.event_type==='restart'?'active':e.event_type==='end'?'ended':'removed':'active'};
@@ -13,6 +13,7 @@ export function createClient(){return {
  auth:{getUser:async()=>({data:{user:{id:'user-1',email:'test@example.com'}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})},
  from:table,
  rpc:async(name,args)=>{
+  globalThis.__rpcCalls.push({name,args});
   if(name==='ensure_my_ledger')return {data:'ledger-1',error:null};
   if(name==='create_student'){
    const id='student-'+(++state.seq),d=args.p_details;
@@ -65,7 +66,7 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   await page.locator('#studentFilter').selectOption('paused');
   await page.waitForTimeout(500);
   const list=await page.locator('#studentResults').innerText();
-  const state=await page.evaluate(()=>({events:globalThis.__e2Mock.events,versions:globalThis.__e2Mock.versions}));
+  const state=await page.evaluate(()=>({events:globalThis.__e2Mock.events,versions:globalThis.__e2Mock.versions,calls:globalThis.__rpcCalls}));
   assert.match(list,/Anna Test/,'Paused student missing: '+JSON.stringify({list,state}));
  }finally{await browser.close()}
 });
