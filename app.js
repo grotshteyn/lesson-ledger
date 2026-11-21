@@ -30,7 +30,7 @@ function persist(){localStorage.setItem(draftKey(),JSON.stringify(draft));localS
 async function save(){const data={...draft,vat_mode:draft.vat_mode||'unsure',ledger_id:ledger,effective_from:today()};const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);localStorage.removeItem(draftKey());localStorage.removeItem(stepKey());editing=false;await load()}
 function home(){
  const m=missing(settings);
- frame('<div class="row"><h1>Hello, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn" aria-label="Settings">☼</button></div>'+
+ frame('<div class="row"><h1>Hello, '+escapeHTML(settings.teacher_name.split(/\s+/)[0])+'</h1><button class="secondary" id="settingsBtn" aria-label="Settings">☼</button></div>'+
  '<div style="margin:22px 0 10px">'+button('+ Log a lesson','logLesson')+'</div><p class="muted" style="text-align:center">Add your first student to start logging.</p>'+
  (m.length?'<section class="card" style="border:2px solid #242424"><h2>To do</h2><p class="muted">'+m.length+' things missing before your first invoice</p>'+m.map(([k,label])=>'<button class="link todo-item" data-key="'+k+'">'+escapeHTML(label)+' ›</button>').join('')+'</section>':'')+
  '<section class="card"><h2>Students</h2><p class="muted">Open your student list to add or manage students.</p>'+button('Students','addStudent','secondary')+'</section>'+
