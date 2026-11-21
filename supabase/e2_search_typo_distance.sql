@@ -8,7 +8,13 @@ language sql stable security invoker set search_path='' as $$
    public.student_status_at(s.id,p_at) as status,
    extensions.unaccent(lower(coalesce(v.student_name,''))) as full_name,
    extensions.unaccent(lower(coalesce(v.nickname,''))) as short_name
-  from public.students s cross join lateral public.student_details_at(s.id,p_at) v
+  from public.students s cross join lateral (
+    select sv.* from public.student_versions sv where sv.student_id=s.id
+    order by case when sv.effective_from<=p_at then 0 else 1 end,
+      case when sv.effective_from<=p_at then sv.effective_from end desc,
+      case when sv.effective_from>p_at then sv.effective_from end asc,
+      sv.created_at desc,sv.id desc limit 1
+   ) v
   where exists(select 1 from public.ledgers l where l.id=s.ledger_id and l.owner_id=(select auth.uid()))
  ),
  ranked as (
