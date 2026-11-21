@@ -50,7 +50,8 @@ begin
 end $$;
 revoke all on function public.create_student(jsonb) from public,anon;
 grant execute on function public.create_student(jsonb) to authenticated;
--- Prevent partial writes by clients; all student creation goes through RPC.
-revoke insert on public.students,public.student_versions from authenticated;
+-- Invoker RPC requires INSERT grants. Frontend must call RPC for atomic creation.
+-- Direct authenticated inserts remain possible under RLS until a hardened write API is introduced.
+grant insert on public.students,public.student_versions to authenticated;
 create index student_versions_parent_ledger_idx on public.student_versions(student_id,ledger_id);
 create index student_status_parent_ledger_idx on public.student_status_events(student_id,ledger_id);
