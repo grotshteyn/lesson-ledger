@@ -94,10 +94,9 @@ function studentForm(prefill=''){
   if(!(Number(get('lessons_per_week'))>0))errors.push('Stunden pro Woche');
   if(errors.length)return err('Bitte prüfen: '+errors.join(', ')+'.');
   if(get('payer_email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('payer_email')))return err('Bitte eine gültige E-Mail-Adresse eingeben.');
-  const duplicateCheck=await supabase.from('student_versions').select('student_id,student_name,effective_from').eq('ledger_id',ledger).lte('effective_from',today());
+  const duplicateCheck=await supabase.rpc('find_students',{p_query:get('student_name'),p_status:'active',p_at:today()});
   if(duplicateCheck.error)return err(duplicateCheck.error);
-  const latestByStudent=new Map();for(const x of duplicateCheck.data||[]){const prior=latestByStudent.get(x.student_id);if(!prior||x.effective_from>prior.effective_from)latestByStudent.set(x.student_id,x)}
-  const duplicate=Array.from(latestByStudent.values()).some(x=>normalizeStudentText(x.student_name)===normalizeStudentText(get('student_name')));
+  const duplicate=(duplicateCheck.data||[]).some(x=>normalizeStudentText(x.student_name)===normalizeStudentText(get('student_name')));
   if(duplicate&&!confirm('Ein Schüler mit diesem Namen ist bereits vorhanden. Bitte prüfe, ob ein Kurzname hilft. Trotzdem speichern?'))return;
   const details={student_name:get('student_name'),nickname:get('nickname'),subject:get('subject'),minutes:duration,lessons_per_week:Number(get('lessons_per_week')),billing_mode:get('billing_mode'),price:get('price'),payer_name:$('studentPays').checked?get('student_name'):get('payer_name'),payer_email:get('payer_email'),payer_address:{street:get('payer_street'),postcode:get('payer_postcode'),city:get('payer_city'),country:'Deutschland'},location:get('location'),start_date:get('start_date')};
   $('saveStudent').disabled=true;
@@ -143,7 +142,7 @@ function studentChangeForm(id,v){
  field('price','Preis in €',money,'number')+field('payer_name','Zahlende Person',v.payer_name)+field('payer_email','E-Mail',v.payer_email||'','email')+
  field('payer_street','Straße',a.street||'')+field('payer_postcode','PLZ',a.postcode||'')+field('payer_city','Ort',a.city||'')+
  '<label class="field">Unterrichtsort<select id="location"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>'+
- field('effective_from','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
+ field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted small">Bereits erfasste Stunden und ausgestellte Rechnungen werden nicht rückwirkend verändert.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</div>');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
