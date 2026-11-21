@@ -209,23 +209,25 @@ function studentChangeForm(id,v){
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Change '+escapeHTML(v.student_name)+'</h1>'+button('×','backChange','secondary')+'</div>'+
  '<label class="field">What changes?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
  '<div class="change-current"><div><span class="muted">Now</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">New</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
- field('effective_from','From',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
+ '<div id="newModePrice" hidden>'+field('newBillingPrice','New price (€)',money,'number')+'</div>'+field('effective_from','From',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted">Invoiced lessons and issued invoices stay as they are. Monthly fees and pauses start on the 1st of a month.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Save change','saveChange')+'</section></div>','change-screen');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
- const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
+ const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
  $('changeType').onchange=show;show();
  $('backChange').onclick=()=>studentPage(id);
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
   if(!g('effective_from'))return err('Choose an effective date.');
+  if(key==='billing_mode'&&!(Number(g('newBillingPrice'))>0))return err('Enter a price greater than zero.');
   if(key==='price'&&!(Number(g('price'))>0))return err('Enter a price greater than zero.');
   if((key==='minutes'||key==='lessons_per_week')&&!(Number(g(key))>0))return err('Enter a value greater than zero.');
   if(['subject','payer_name'].includes(key)&&!g(key))return err('This field is required.');
   if(key==='payer_email'&&g(key)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g(key)))return err('Invalid email address.');
   const changes={};
   if(key==='price')changes.price=g('price');
+  else if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newBillingPrice');}
   else if(['minutes','lessons_per_week'].includes(key))changes[key]=Number(g(key));
   else if(['payer_street','payer_postcode','payer_city'].includes(key))changes.payer_address={...a,[{payer_street:'street',payer_postcode:'postcode',payer_city:'city'}[key]]:g(key)};
   else changes[key]=g(key);
