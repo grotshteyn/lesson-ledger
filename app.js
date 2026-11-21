@@ -61,7 +61,7 @@ function passwordRecovery(){
   $('backLogin').onclick=login;
  };
 }
-function choosePasswort(){
+function choosePassword(){
  frame('<h1>Passwort festlegen</h1><p class="muted">Dein bestehendes Konto und deine Daten bleiben erhalten.</p>'+
  '<form id="newPasswordForm" class="card">'+
  '<label class="field">Neues Passwort<input id="newPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
@@ -99,7 +99,7 @@ async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabas
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
 function setup(){const [key,title]=steps[step];let body='';if(key==='teacher_address'){const a=addr();body=field('street','Straße und Hausnummer',a.street)+field('postcode','Postleitzahl',a.postcode)+field('city','Ort',a.city)+field('country','Land',a.country||'Deutschland')}
 else if(key==='vat_mode'){body=[['small_business','Kleinunternehmer (§ 19 UStG)','Ich berechne keine Umsatzsteuer.'],['exempt_teaching','Steuerfreier Unterricht (§ 4 Nr. 21 UStG)','Ich habe eine entsprechende Bescheinigung.'],['regular_19','Regulär 19 %','Meine Preise enthalten Umsatzsteuer.'],['unsure','Ich bin mir nicht sicher','Rechnungen bleiben gesperrt, bis du dich entschieden hast.']].map(([v,l,d])=>'<label class="choice"><input type="radio" name="vat_mode" value="'+v+'" '+(draft.vat_mode===v?'checked':'')+'><strong>'+l+'</strong><p class="muted small">'+d+'</p></label>').join('')}
-else if(key==='iban')body=field('iban','IBAN',draft.iban)+field('bank_name','Bankverbindungname (optional)',draft.bank_name);
+else if(key==='iban')body=field('iban','IBAN',draft.iban)+field('bank_name','Bankname (optional)',draft.bank_name);
 else if(key==='cancellation_rule')body='<div class="notice">Kostenlos bis 24 Stunden vor dem Termin. Danach wird die Stunde berechnet.</div>';
 else if(key==='summary')body='<p class="muted small">Mit Zurück kannst du Angaben vor dem Speichern korrigieren.</p>'+Object.entries({Name:draft.teacher_name,Adresse:Object.values(addr()).join(', '),Kontakt:draft.teacher_email,Steuernummer:draft.tax_number||'Fehlt',Umsatzsteuer:draft.vat_mode||'Fehlt',IBAN:draft.iban||'Fehlt',Zahlungsfrist:draft.payment_days+' Tage',Stornoregel:'24 Stunden', 'Erste Rechnungsnummer':new Date().getFullYear()+'-0001'}).map(([k,v])=>'<div class="summary"><strong>'+escapeHTML(k)+'</strong><span>'+escapeHTML(v)+'</span></div>').join('');
 else body=field(key,key==='teacher_name'?'Name':key==='teacher_email'?'Kontakt-E-Mail':key==='tax_number'?'Steuernummer':'Tage',draft[key],key==='teacher_email'?'email':key==='payment_days'?'number':'text');
@@ -112,23 +112,23 @@ async function save(){const data={...draft,vat_mode:draft.vat_mode||'unsure',led
 function home(){
  frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
  '<div style="margin:22px 0 10px">'+button('+ Stunde erfassen','logLesson')+'</div><p class="muted" style="text-align:center">Erfasse zunächst einen Schüler, um Stunden zu dokumentieren.</p>'+
- '<section class="card"><div class="row"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeSchüler" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div><div class="row" id="homePagination" hidden><button class="secondary" id="homePrev">Zurück</button><span id="homePageLabel"></span><button class="secondary" id="homeNext">Weiter</button></div></section>'+
+ '<section class="card"><div class="row"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeStudents" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div><div class="row" id="homePagination" hidden><button class="secondary" id="homePrev">Zurück</button><span id="homePageLabel"></span><button class="secondary" id="homeNext">Weiter</button></div></section>'+
  '<section class="card"><h2>Rechnungen</h2><p class="muted">Noch keine Rechnungen vorhanden.</p></section>');
  $('settingsBtn').onclick=settingsPage;
  $('logLesson').disabled=true;
  $('addStudent').onclick=()=>studentsPage();
  let page=0;const pageSize=5;
  supabase.rpc('find_students',{p_query:'',p_status:'active',p_at:today()}).then(({data,error})=>{
-  if(!$('homeSchüler'))return;
-  if(error){$('homeSchüler').textContent='Schüler konnten nicht geladen werden.';return;}
+  if(!$('homeStudents'))return;
+  if(error){$('homeStudents').textContent='Schüler konnten nicht geladen werden.';return;}
   const students=data||[];
   const render=()=>{
-   if(!$('homeSchüler'))return;
+   if(!$('homeStudents'))return;
    const total=Math.max(1,Math.ceil(students.length/pageSize));
    page=Math.min(page,total-1);
-   $('homeSchüler').innerHTML=students.length?students.slice(page*pageSize,(page+1)*pageSize).map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine aktiven Schüler.</p>'+button('+ Schüler hinzufügen','homeHinzufügenStudent','secondary');
-   document.querySelectorAll('#homeSchüler [data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
-   if($('homeHinzufügenStudent'))$('homeHinzufügenStudent').onclick=()=>studentForm();
+   $('homeStudents').innerHTML=students.length?students.slice(page*pageSize,(page+1)*pageSize).map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine aktiven Schüler.</p>'+button('+ Schüler hinzufügen','homeAddStudent','secondary');
+   document.querySelectorAll('#homeStudents [data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
+   if($('homeAddStudent'))$('homeAddStudent').onclick=()=>studentForm();
    $('homePagination').hidden=students.length<=pageSize;
    $('homePageLabel').textContent=(page+1)+' / '+total;
    $('homePrev').disabled=page===0;$('homeNext').disabled=page===total-1;
@@ -157,17 +157,17 @@ function settingsPage(onlyKeys=null){
  '<section class="card"><h2>Rechnungsangaben</h2>'+rows.map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value)+'</div></div><button class="link" data-setting="'+key+'">'+(value==='Nicht angegeben'?'Hinzufügen':'Bearbeiten')+'</button></div>').join('')+'</section>'+
  '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPassword','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section>','settings-screen');
  $('home').onclick=home;
- $('setPassword').onclick=()=>{recoveryMode=true;choosePasswort();};
+ $('setPassword').onclick=()=>{recoveryMode=true;choosePassword();};
  document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>settingsEditPage(b.dataset.setting==='teacher_address'?['street','postcode','city','country']:b.dataset.setting==='invoice_language'||b.dataset.setting==='cancellation_rule'?null:[b.dataset.setting]));
  $('changeLoginLink').onclick=()=>settingsEditPage(['effective_from']);
  $('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};
  $('signoutAll').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login()};
 }
-function settingsEditPage(onlyKeys=null){const s=settings;const missingOnly=Array.isArray(onlyKeys)&&onlyKeys.length>0;frame('<div class="row"><h1>'+(missingOnly?'Fehlende Angaben':'Einstellungen')+'</h1><button id="home" class="secondary">Zurück</button></div><p class="muted">Änderungen werden als neue Version gespeichert. Bereits ausgestellte Rechnungen bleiben unverändert.</p><div class="card">'+field('teacher_name','Rechnungsname',s.teacher_name)+field('street','Straße',s.teacher_address?.street)+field('postcode','PLZ',s.teacher_address?.postcode)+field('city','Ort',s.teacher_address?.city)+field('country','Land',s.teacher_address?.country||'Deutschland')+field('teacher_email','Kontakt-E-Mail',s.teacher_email)+field('tax_number','Steuernummer',s.tax_number)+ '<label class="field">Umsatzsteuer<select id="vat_mode">'+[['small_business','Kleinunternehmer'],['exempt_teaching','Steuerfreier Unterricht'],['regular_19','Regulär 19 %'],['unsure','Unsicher']].map(([v,t])=>'<option value="'+v+'" '+(s.vat_mode===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+field('iban','IBAN',s.iban)+field('bank_name','Bankverbindungname',s.bank_name)+field('payment_days','Zahlungsfrist (Tage)',s.payment_days,'number')+field('phone','Telefon (optional)',s.phone)+field('effective_from','Gültig ab',today(),'date')+'<p class="muted small">Umsatzsteueränderungen gelten nur für Rechnungen ab diesem Datum. Im Zweifel Steuerberatung fragen.</p>'+'<p id="error" class="error"></p>'+button('Änderungen speichern','save','primary')+'</div><div class="card"><p>Angemeldet als '+escapeHTML(user.email)+'</p>'+field('login_email','Anmelde-E-Mail ändern',user.email,'email')+button('Neue Anmelde-E-Mail bestätigen','changeLogin','secondary')+'<p id="loginStatus" class="muted small"></p>'+button('Abmelden','signout','secondary')+' '+button('Überall abmelden','signoutAll','secondary')+'</div>','settings-screen');if(missingOnly){const keys=new Set([...onlyKeys,'effective_from']);document.querySelectorAll('.card:first-of-type .field').forEach(el=>{const input=el.querySelector('input,select');if(input&&!keys.has(input.id))el.hidden=true});} $('home').onclick=home;$('changeLogin').onclick=async()=>{const email=$('login_email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $('loginStatus').textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});$('loginStatus').textContent=error?error.message:'Bitte bestätige die neue Adresse per E-Mail. Die Kontakt-E-Mail bleibt unverändert.'};$('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};$('signoutAll').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login()};$('save').onclick=async()=>{const a={street:$('street').value.trim(),postcode:$('postcode').value.trim(),city:$('city').value.trim(),country:$('country').value.trim()||'Deutschland'};const v=$('iban').value.trim();if(!$('teacher_name').value.trim()||!a.street||!/^[0-9]{5}$/.test(a.postcode)||!a.city)return err('Bitte Name und vollständige Anschrift eingeben.');if(v&&!ibanValid(v))return err('Die IBAN ist ungültig.');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('teacher_email').value.trim()))return err('Die Kontakt-E-Mail ist ungültig.');const data={ledger_id:ledger,teacher_address:a,effective_from:$('effective_from').value};for(const k of ['teacher_name','teacher_email','tax_number','vat_mode','iban','bank_name','payment_days','phone'])data[k]=$(k).value.trim();data.iban=data.iban.replace(/\s/g,'').toUpperCase();data.payment_days=Number(data.payment_days);if(!Number.isInteger(data.payment_days)||data.payment_days<1||data.payment_days>365)return err('Die Zahlungsfrist muss 1 bis 365 Tage betragen.');data.cancellation_rule='24h';if(!data.effective_from)return err('Bitte ein Gültigkeitsdatum wählen.');if(data.effective_from<today())return err('Bitte heute oder ein zukünftiges Datum wählen.');if(data.vat_mode!==s.vat_mode&&data.effective_from<today())return err('Eine rückwirkende Umsatzsteueränderung ist nicht erlaubt.');const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);alert(data.effective_from>today()?'Änderung gespeichert. Sie wird am gewählten Datum wirksam.':'Änderungen gespeichert.');await load()}}
+function settingsEditPage(onlyKeys=null){const s=settings;const missingOnly=Array.isArray(onlyKeys)&&onlyKeys.length>0;frame('<div class="row"><h1>'+(missingOnly?'Fehlende Angaben':'Einstellungen')+'</h1><button id="home" class="secondary">Zurück</button></div><p class="muted">Änderungen werden als neue Version gespeichert. Bereits ausgestellte Rechnungen bleiben unverändert.</p><div class="card">'+field('teacher_name','Rechnungsname',s.teacher_name)+field('street','Straße',s.teacher_address?.street)+field('postcode','PLZ',s.teacher_address?.postcode)+field('city','Ort',s.teacher_address?.city)+field('country','Land',s.teacher_address?.country||'Deutschland')+field('teacher_email','Kontakt-E-Mail',s.teacher_email)+field('tax_number','Steuernummer',s.tax_number)+ '<label class="field">Umsatzsteuer<select id="vat_mode">'+[['small_business','Kleinunternehmer'],['exempt_teaching','Steuerfreier Unterricht'],['regular_19','Regulär 19 %'],['unsure','Unsicher']].map(([v,t])=>'<option value="'+v+'" '+(s.vat_mode===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+field('iban','IBAN',s.iban)+field('bank_name','Bankname',s.bank_name)+field('payment_days','Zahlungsfrist (Tage)',s.payment_days,'number')+field('phone','Telefon (optional)',s.phone)+field('effective_from','Gültig ab',today(),'date')+'<p class="muted small">Umsatzsteueränderungen gelten nur für Rechnungen ab diesem Datum. Im Zweifel Steuerberatung fragen.</p>'+'<p id="error" class="error"></p>'+button('Änderungen speichern','save','primary')+'</div><div class="card"><p>Angemeldet als '+escapeHTML(user.email)+'</p>'+field('login_email','Anmelde-E-Mail ändern',user.email,'email')+button('Neue Anmelde-E-Mail bestätigen','changeLogin','secondary')+'<p id="loginStatus" class="muted small"></p>'+button('Abmelden','signout','secondary')+' '+button('Überall abmelden','signoutAll','secondary')+'</div>','settings-screen');if(missingOnly){const keys=new Set([...onlyKeys,'effective_from']);document.querySelectorAll('.card:first-of-type .field').forEach(el=>{const input=el.querySelector('input,select');if(input&&!keys.has(input.id))el.hidden=true});} $('home').onclick=home;$('changeLogin').onclick=async()=>{const email=$('login_email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $('loginStatus').textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});$('loginStatus').textContent=error?error.message:'Bitte bestätige die neue Adresse per E-Mail. Die Kontakt-E-Mail bleibt unverändert.'};$('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};$('signoutAll').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login()};$('save').onclick=async()=>{const a={street:$('street').value.trim(),postcode:$('postcode').value.trim(),city:$('city').value.trim(),country:$('country').value.trim()||'Deutschland'};const v=$('iban').value.trim();if(!$('teacher_name').value.trim()||!a.street||!/^[0-9]{5}$/.test(a.postcode)||!a.city)return err('Bitte Name und vollständige Anschrift eingeben.');if(v&&!ibanValid(v))return err('Die IBAN ist ungültig.');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('teacher_email').value.trim()))return err('Die Kontakt-E-Mail ist ungültig.');const data={ledger_id:ledger,teacher_address:a,effective_from:$('effective_from').value};for(const k of ['teacher_name','teacher_email','tax_number','vat_mode','iban','bank_name','payment_days','phone'])data[k]=$(k).value.trim();data.iban=data.iban.replace(/\s/g,'').toUpperCase();data.payment_days=Number(data.payment_days);if(!Number.isInteger(data.payment_days)||data.payment_days<1||data.payment_days>365)return err('Die Zahlungsfrist muss 1 bis 365 Tage betragen.');data.cancellation_rule='24h';if(!data.effective_from)return err('Bitte ein Gültigkeitsdatum wählen.');if(data.effective_from<today())return err('Bitte heute oder ein zukünftiges Datum wählen.');if(data.vat_mode!==s.vat_mode&&data.effective_from<today())return err('Eine rückwirkende Umsatzsteueränderung ist nicht erlaubt.');const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);alert(data.effective_from>today()?'Änderung gespeichert. Sie wird am gewählten Datum wirksam.':'Änderungen gespeichert.');await load()}}
 
 const normalizeStudentText=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').trim();
 function editDistance(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diagonal=prev[0];prev[0]=i;for(let j=1;j<=b.length;j++){const above=prev[j];prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=above;}}return prev[b.length]}
-function studentSucheRank(student,term){
+function studentSearchRank(student,term){
  if(!term)return 0;
  const fields=[student.student_name,student.nickname].filter(Boolean).map(normalizeStudentText);
  const tokens=fields.flatMap(x=>x.split(/\s+/)).concat(fields);
@@ -177,9 +177,9 @@ function studentSucheRank(student,term){
  const tolerance=term.length>=5?2:term.length>=3?1:0;
  return tokens.some(x=>Math.abs(x.length-term.length)<=tolerance&&editDistance(x,term)<=tolerance)?3:Infinity;
 }
-async function studentsPage(initialSuche=''){
+async function studentsPage(initialSearch=''){
  frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Schüler</h1>'+button('+ Hinzufügen','newStudent','secondary')+'</div>'+
- '<label class="field">Suche<input id="studentSuche" placeholder="Name oder Kurzname" value="'+escapeHTML(typeof initialSuche==='string'?initialSuche:'')+'"></label>'+
+ '<label class="field">Suche<input id="studentSearch" placeholder="Name oder Kurzname" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
  '<div class="student-filter-bar" role="group" aria-label="Schülerstatus">'+
  '<button class="filter-pill" data-filter="active" aria-pressed="true">Aktiv</button>'+
  '<button class="filter-pill" data-filter="paused" aria-pressed="false">Pausiert</button>'+
@@ -189,7 +189,7 @@ async function studentsPage(initialSuche=''){
  $('newStudent').onclick=()=>studentForm();
  let serial=0,selected='active';
  async function render(){
-  const current=++serial,search=$('studentSuche').value.trim();
+  const current=++serial,search=$('studentSearch').value.trim();
   const responses=await Promise.all(['active','paused','ended'].map(status=>supabase.rpc('find_students',{p_query:search,p_status:status,p_at:today()})));
   if(current!==serial)return;
   const error=responses.find(x=>x.error)?.error;
@@ -197,17 +197,17 @@ async function studentsPage(initialSuche=''){
   const statuses=['active','paused','ended'];
   document.querySelectorAll('[data-filter]').forEach((b,i)=>{b.textContent=({active:'Aktiv',paused:'Pausiert',ended:'Beendet'})[statuses[i]]+' ('+(responses[i].data||[]).length+')';b.setAttribute('aria-pressed',String(b.dataset.filter===selected));});
   const matches=responses[statuses.indexOf(selected)].data||[];
-  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Hinzufügen student','addGültig abSuche','secondary');
+  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
-  if($('addGültig abSuche'))$('addGültig abSuche').onclick=()=>studentForm($('studentSuche').value.trim());
+  if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
- $('studentSuche').oninput=render;
+ $('studentSearch').oninput=render;
  document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{selected=b.dataset.filter;render()});
  render();
 }
 
 function studentForm(prefill=''){
- frame('<div class="row"><h1>Hinzufügen a student</h1>'+button('×','backStudents','secondary')+'</div><div class="card">'+
+ frame('<div class="row"><h1>Schüler hinzufügen</h1>'+button('×','backStudents','secondary')+'</div><div class="card">'+
  field('student_name',"Name des Schülers *",prefill)+field('nickname','Kurzname (optional)')+field('subject','Fach *')+
  '<label class="field">Unterrichtsdauer *</label><div class="segment" id="minutesSegment">'+[30,45,60,90,'Andere'].map(n=>'<button type="button" data-minutes="'+n+'" aria-pressed="'+(n===45)+'">'+n+'</button>').join('')+'</div><input type="hidden" id="minutes" value="45">'+field('customMinutes','Andere Dauer in Minuten','','number')+
  field('lessons_per_week','Stunden pro Woche',1,'number')+
@@ -215,11 +215,11 @@ function studentForm(prefill=''){
  field('price','Preis pro Stunde (€) *','','number')+
  '<fieldset><legend>Wer bezahlt?</legend><label class="choice"><input type="checkbox" id="studentPays"> Schüler bezahlt selbst</label>'+
  field('payer_name','Name der zahlenden Person *')+
- field('payer_email','E-Mail (needed before sending invoices)','', 'email')+
+ field('payer_email','E-Mail (vor Rechnungsversand erforderlich)','', 'email')+
  field('payer_street','Straße und Hausnummer (vor erster Rechnung erforderlich)')+field('payer_postcode','PLZ (optional)')+field('payer_city','Ort (optional)')+'</fieldset>'+
  '<label class="field">Unterrichtsort</label><div class="segment" id="locationSegment"><button type="button" data-location="my_place" aria-pressed="false">Bei mir</button><button type="button" data-location="student_home" aria-pressed="false">Beim Schüler</button><button type="button" data-location="online" aria-pressed="false">Online</button></div><input type="hidden" id="location" value="">'+
  field('start_date','Startdatum *',today(),'date')+
- '<div class="notice">Stornoregel: free if cancelled 24 h before, otherwise billed.</div>'+
+ '<div class="notice">Stornoregel: Bis 24 Stunden vorher kostenlos, danach kostenpflichtig.</div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Schüler speichern','saveStudent')+'</div>','student-form-screen');
  $('backStudents').onclick=()=>studentsPage();
  $('customMinutes').closest('label').hidden=true;
@@ -266,12 +266,12 @@ async function studentPage(id){
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
- const niceDate=d=>{if(!d)return '';const [y,m,day]=d.slice(0,10).split('-');return new Date(Number(y),Number(m)-1,Number(day)).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});};
+ const niceDate=d=>{if(!d)return '';const [y,m,day]=d.slice(0,10).split('-');return new Date(Number(y),Number(m)-1,Number(day)).toLocaleDateString('de-DE',{day:'numeric',month:'short',year:'numeric'});};
  const statusLabel={active:'Aktiv',paused:'Pausiert',ended:'Beendet',removed:'Entfernt'}[status.data]||'Noch nicht begonnen';
  const startDate=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);
  const locationLabel={my_place:'Bei mir',student_home:'Beim Schüler',online:'Online'}[v.location]||'Nicht angegeben';
  const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde';
- frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück to students">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
+ frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück zu Schülern">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
  '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
  '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
  '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
@@ -362,4 +362,4 @@ function studentStatusForm(id,v,current){
  };
 }
 
-supabase.auth.onAuthStateÄndern((event)=>{if(event==='PASSWORD_RECOVERY'){recoveryMode=true;setTimeout(choosePasswort,0);}else if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
+supabase.auth.onAuthStateÄndern((event)=>{if(event==='PASSWORD_RECOVERY'){recoveryMode=true;setTimeout(choosePassword,0);}else if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
