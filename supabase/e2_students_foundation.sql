@@ -33,7 +33,7 @@ create table public.student_versions (
    (billing_mode='per_lesson' and rate>0 and monthly_fee is null)
    or (billing_mode='monthly_flat' and monthly_fee>0 and rate is null)),
  constraint student_versions_email_chk check (
-   payer_email is null or payer_email='' or payer_email ~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$')
+   payer_email is null or payer_email='' or payer_email ~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$')
 );
 create index student_versions_asof_idx
  on public.student_versions(student_id,effective_from desc,created_at desc,id desc);
