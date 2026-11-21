@@ -33,9 +33,7 @@ create table public.student_versions (
    (billing_mode='per_lesson' and rate>0 and monthly_fee is null)
    or (billing_mode='monthly_flat' and monthly_fee>0 and rate is null)),
  constraint student_versions_email_chk check (
-   payer_email is null or payer_email='' or payer_email ~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$'),
- constraint student_versions_monthly_boundary_chk check (
-   billing_mode<>'monthly_flat' or extract(day from effective_from)=1)
+   payer_email is null or payer_email='' or payer_email ~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$')
 );
 create index student_versions_asof_idx
  on public.student_versions(student_id,effective_from desc,created_at desc,id desc);
@@ -94,17 +92,20 @@ set search_path = '' as $$
   where e.student_id=p_student_id and e.effective_from<=p_at
   order by e.effective_from desc,e.created_at desc,e.id desc limit 1
  )
- select coalesce((select case
+ select case when not exists (select 1 from public.students s where s.id=p_student_id) then null
+ else coalesce((select case
    when event_type='pause' and pause_until is not null and p_at>=pause_until then 'active'
    when event_type='pause' then 'paused'
    when event_type='restart' then 'active'
    when event_type='end' then 'ended'
    when event_type='remove' then 'removed'
- end from latest),'active')
-$$;
+ end from latest),'active') end
+$;
 revoke all on function public.student_details_at(uuid,date),public.student_status_at(uuid,date) from public,anon;
 grant execute on function public.student_details_at(uuid,date),public.student_status_at(uuid,date) to authenticated;
 
+-- Initial monthly-flat students may start on any date; only subsequent monthly
+-- changes and flat-fee pauses must be first-of-month, validated by write RPC.
 -- Note: creation must use one transactional RPC before ST-1 ships.
 -- Status-event conflict validation and monthly pause boundaries must be
 -- enforced by the write RPC, not by trusting the browser.
