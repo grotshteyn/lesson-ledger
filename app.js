@@ -5,14 +5,14 @@ const nextMonthFirst=()=>{const d=new Date();return `${d.getFullYear()+(d.getMon
 const steps=[['teacher_name','Welcher Name soll auf deinen Rechnungen stehen?'],['teacher_address','Wie lautet deine Postanschrift?'],['teacher_email','Unter welcher E-Mail-Adresse können dich Zahlende erreichen?'],['tax_number','Wie lautet deine Steuernummer?'],['vat_mode','Wie berechnest du Umsatzsteuer?'],['iban','Wohin sollen Zahlende überweisen?'],['payment_days','Wie viele Tage haben Zahlende zum Bezahlen?'],['cancellation_rule','Deine Stornoregel'],['summary','Alles richtig?']];
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
-const button=(label,id,kind='primary')=>'<button id="'+id+'" class="'+kind+'">'+label+'</button>';
-const frame=html=>{root.innerHTML='<main class="shell"><header class="top"><span class="brand">Lesson Ledger</span><span class="muted small">Für Lehrkräfte</span></header>'+html+'</main>'};
+const button=(label,id,kind='primary')=>'<button type="button" id="'+id+'" class="'+kind+'">'+label+'</button>';
+const frame=(html,screen='')=>{document.body.className=screen;root.innerHTML='<main class="shell">'+html+'</main>'};
 const err=e=>{const n=$('error');if(n)n.textContent=e?.message||String(e)};
 const addr=()=>draft.teacher_address||{street:'',postcode:'',city:'',country:'Deutschland'};
 const ibanValid=s=>{let v=(s||'').replace(/\s/g,'').toUpperCase();if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;v=v.slice(4)+v.slice(0,4);let r=0;for(const c of v){const str=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const digit of str)r=(r*10+Number(digit))%97}return r===1};
 const missing=s=>[['tax_number','Steuernummer'],['vat_mode','Umsatzsteuer'],['iban','IBAN']].filter(([k])=>!s?.[k]||s[k]==='unsure');
 const draftKey=()=>`ll-draft:${user?.id||'guest'}`;const stepKey=()=>`ll-step:${user?.id||'guest'}`;const lastUseKey=()=>`ll-last-use:${user?.id||'guest'}`;const DAY=86400000;let otpSentAt=0;const defaultDraft=()=>({teacher_name:'',teacher_address:{street:'',postcode:'',city:'',country:'Deutschland'},teacher_email:user?.email||'',tax_number:'',vat_mode:'',iban:'',bank_name:'',payment_days:14,cancellation_rule:'24h',phone:''});
-function login(){frame('<p class="eyebrow">Willkommen</p><h1>Dein Unterricht. Deine Übersicht.</h1><p class="muted">Einfaches Rechnungsprofil für selbstständige Lehrkräfte.</p><div class="card">'+'<label class="field">E-Mail-Adresse<input id="email" type="email" autocomplete="email" placeholder="du@beispiel.de"></label>'+button('Mit E-Mail fortfahren','emailBtn')+'<p id="error" class="error" role="alert"></p></div>');$('emailBtn').onclick=async()=>{const email=$('email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return err('Bitte gib eine gültige E-Mail-Adresse ein.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();verify(email)}}
+function login(){frame('<div style="padding-top:8vh"><div style="width:70px;height:70px;border:1.5px solid #aaa;border-radius:15px;background:#f4f4f3"></div><h1 style="margin-top:24px">Lesson Ledger</h1><p class="muted">Lessons, notes and invoices for private teachers.</p></div><div class="card">'+'<label class="field">E-Mail-Adresse<input id="email" type="email" autocomplete="email" placeholder="du@beispiel.de"></label>'+button('Mit E-Mail fortfahren','emailBtn')+'<p id="error" class="error" role="alert"></p></div>','setup-screen');$('emailBtn').onclick=async()=>{const email=$('email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return err('Bitte gib eine gültige E-Mail-Adresse ein.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();verify(email)}}
 function verify(email){frame('<p class="eyebrow">Anmeldung</p><h1>Prüfe dein Postfach</h1><p>Wir haben eine Anmeldung an <strong>'+escapeHTML(email)+'</strong> geschickt.</p><p class="muted">Öffne den Link oder gib den sechsstelligen Code ein.</p><div class="card"><label class="field">Bestätigungscode<input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>'+button('Code bestätigen','check')+'<p id="error" class="error" role="alert"></p><button class="link" id="resend">Code erneut senden</button><button class="link" id="wrong">Falsche Adresse?</button></div>');$('wrong').onclick=login;$('resend').onclick=async()=>{if(Date.now()-otpSentAt<60000)return err('Bitte warte 60 Sekunden, bevor du einen neuen Code anforderst.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();$('error').textContent='Ein neuer Code wurde angefordert.'};$('check').onclick=async()=>{const {error}=await supabase.auth.verifyOtp({email,token:$('otp').value.trim(),type:'email'});if(error)err(error);else await load()}}
 async function load(){const {data:{user:u}}=await supabase.auth.getUser();user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
@@ -22,7 +22,7 @@ else if(key==='iban')body=field('iban','IBAN',draft.iban)+field('bank_name','Ban
 else if(key==='cancellation_rule')body='<div class="notice">Kostenlos bis 24 Stunden vor dem Termin. Danach wird die Stunde berechnet.</div>';
 else if(key==='summary')body='<p class="muted small">Mit Zurück kannst du Angaben vor dem Speichern korrigieren.</p>'+Object.entries({Name:draft.teacher_name,Adresse:Object.values(addr()).join(', '),Kontakt:draft.teacher_email,Steuernummer:draft.tax_number||'Fehlt',Umsatzsteuer:draft.vat_mode||'Fehlt',IBAN:draft.iban||'Fehlt',Zahlungsfrist:draft.payment_days+' Tage',Stornoregel:'24 Stunden', 'Erste Rechnungsnummer':new Date().getFullYear()+'-0001'}).map(([k,v])=>'<div class="summary"><strong>'+escapeHTML(k)+'</strong><span>'+escapeHTML(v)+'</span></div>').join('');
 else body=field(key,key==='teacher_name'?'Name':key==='teacher_email'?'Kontakt-E-Mail':key==='tax_number'?'Steuernummer':'Tage',draft[key],key==='teacher_email'?'email':key==='payment_days'?'number':'text');
-frame('<p class="eyebrow">Einrichtung · Schritt '+(step+1)+' von 9</p><div class="progress"><div style="width:'+((step+1)/9*100)+'%"></div></div><h1>'+title+'</h1><div class="card">'+body+'<p id="error" class="error" role="alert"></p><div class="actions">'+button('Zurück','back','secondary')+button(key==='summary'?'Bestätigen':'Weiter','next')+'</div>'+(key==='tax_number'||key==='vat_mode'||key==='iban'?'<button id="skip" class="link">Später ergänzen</button>':'')+'</div>');$('back').onclick=()=>{if(step>0){step--;persist();setup()}};$('skip')?.addEventListener('click',()=>{if(key==='iban'){draft.iban='';draft.bank_name=''}else draft[key]='';step++;persist();setup()});$('next').onclick=async()=>{if(key==='summary')return save();if(key==='teacher_address'){const a={street:$('street').value.trim(),postcode:$('postcode').value.trim(),city:$('city').value.trim(),country:$('country').value.trim()||'Deutschland'};if(!a.street||!/^[0-9]{5}$/.test(a.postcode)||!a.city)return err('Bitte Straße, fünfstellige Postleitzahl und Ort eingeben.');draft.teacher_address=a}
+frame('<p class="eyebrow">Einrichtung · Schritt '+(step+1)+' von 9</p><div class="progress"><div style="width:'+((step+1)/9*100)+'%"></div></div><h1>'+title+'</h1><div class="card">'+body+'<p id="error" class="error" role="alert"></p><div class="actions">'+button('Zurück','back','secondary')+button(key==='summary'?'Bestätigen':'Weiter','next')+'</div>'+(key==='tax_number'||key==='vat_mode'||key==='iban'?'<button id="skip" class="link">Später ergänzen</button>':'')+'</div>','setup-screen');$('back').onclick=()=>{if(step>0){step--;persist();setup()}};$('skip')?.addEventListener('click',()=>{if(key==='iban'){draft.iban='';draft.bank_name=''}else draft[key]='';step++;persist();setup()});$('next').onclick=async()=>{if(key==='summary')return save();if(key==='teacher_address'){const a={street:$('street').value.trim(),postcode:$('postcode').value.trim(),city:$('city').value.trim(),country:$('country').value.trim()||'Deutschland'};if(!a.street||!/^[0-9]{5}$/.test(a.postcode)||!a.city)return err('Bitte Straße, fünfstellige Postleitzahl und Ort eingeben.');draft.teacher_address=a}
 else if(key==='vat_mode'){const v=document.querySelector('input[name=vat_mode]:checked');if(!v)return err('Bitte wähle eine Option.');draft.vat_mode=v.value}
 else if(key==='iban'){const v=$('iban').value.trim();if(v&&!ibanValid(v))return err('Die IBAN ist ungültig. Bitte prüfe sie.');draft.iban=v.replace(/\s/g,'').toUpperCase();draft.bank_name=$('bank_name').value.trim()}
 else if(key!=='cancellation_rule'){const v=$(key).value.trim();if((key==='teacher_name'||key==='teacher_email')&&!v)return err('Dieses Feld darf nicht leer sein.');if(key==='teacher_email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return err('Bitte gültige E-Mail-Adresse eingeben.');if(key==='payment_days'&&(!Number.isInteger(Number(v))||Number(v)<1||Number(v)>365))return err('Bitte 1 bis 365 Tage eingeben.');draft[key]=key==='payment_days'?Number(v):v}step++;persist();setup()}}
@@ -44,43 +44,55 @@ function studentSearchRank(student,term){
  return tokens.some(x=>Math.abs(x.length-term.length)<=tolerance&&editDistance(x,term)<=tolerance)?3:Infinity;
 }
 async function studentsPage(initialSearch=''){
- frame('<div class="row"><h1>Schüler</h1>'+button('Zurück','backStudents','secondary')+'</div>'+button('Schüler hinzufügen','newStudent')+'<div class="card">'+field('studentSearch','Name oder Kurzname',initialSearch)+'<label class="field">Status<select id="studentFilter"><option value="active">Aktiv</option><option value="paused">Pausiert</option><option value="ended">Beendet</option></select></label><div id="studentResults"></div><p id="error" class="error"></p></div>');
- $('backStudents').onclick=home;$('newStudent').onclick=()=>studentForm();
- let serial=0;
+ frame('<div class="row screen-header"><h1>Students</h1>'+button('+ Add student','newStudent','secondary')+'</div>'+
+ '<label class="field">Search<input id="studentSearch" placeholder="Name or short name" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
+ '<div class="student-filter-bar" role="group" aria-label="Student status">'+
+ '<button class="filter-pill" data-filter="active" aria-pressed="true">Active</button>'+
+ '<button class="filter-pill" data-filter="paused" aria-pressed="false">Paused</button>'+
+ '<button class="filter-pill" data-filter="ended" aria-pressed="false">Ended</button></div>'+
+ '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>');
+ $('newStudent').onclick=()=>studentForm();
+ let serial=0,selected='active';
  async function render(){
-  const current=++serial;
-  const search=$('studentSearch').value.trim(),status=$('studentFilter').value;
-  const {data,error}=await supabase.rpc('find_students',{p_query:search,p_status:status,p_at:today()});
+  const current=++serial,search=$('studentSearch').value.trim();
+  const responses=await Promise.all(['active','paused','ended'].map(status=>supabase.rpc('find_students',{p_query:search,p_status:status,p_at:today()})));
   if(current!==serial)return;
+  const error=responses.find(x=>x.error)?.error;
   if(error){$('studentResults').innerHTML='';return err(error);}
-  const matches=data||[];
-  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.payer_name)+' · '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Kein Schüler gefunden.</p>'+button('Schüler hinzufügen','addFromSearch','secondary');
+  const statuses=['active','paused','ended'];
+  document.querySelectorAll('[data-filter]').forEach((b,i)=>{b.textContent=({active:'Active',paused:'Paused',ended:'Ended'})[statuses[i]]+' ('+(responses[i].data||[]).length+')';b.setAttribute('aria-pressed',String(b.dataset.filter===selected));});
+  const matches=responses[statuses.indexOf(selected)].data||[];
+  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' min</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / month':x.rate+' € / lesson')+'</span></button>').join(''):'<p class="muted">No student found.</p>'+button('+ Add student','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
   if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
- $('studentSearch').oninput=render;$('studentFilter').onchange=render;render();
+ $('studentSearch').oninput=render;
+ document.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{selected=b.dataset.filter;render()});
+ render();
 }
 
 function studentForm(prefill=''){
- frame('<div class="row"><h1>Schüler hinzufügen</h1>'+button('Zurück','backStudents','secondary')+'</div><div class="card">'+
- field('student_name','Name *',prefill)+field('nickname','Kurzname (optional)')+field('subject','Fach *')+
- '<label class="field">Unterrichtsdauer (Minuten) <select id="minutes"><option>30</option><option selected>45</option><option>60</option><option>90</option><option value="custom">Andere Dauer</option></select></label>'+field('customMinutes','Eigene Dauer in Minuten','','number')+''+
- field('lessons_per_week','Stunden pro Woche',1,'number')+
- '<label class="field">Abrechnung<select id="billing_mode"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>'+
- field('price','Preis in € *','','number')+
- '<label class="choice"><input type="checkbox" id="studentPays"> Schüler zahlt selbst</label>'+
- field('payer_name','Name der zahlenden Person *')+
+ frame('<div class="row"><h1>Add a student</h1>'+button('×','backStudents','secondary')+'</div><div class="card">'+
+ field('student_name',"Student’s name *",prefill)+field('nickname','Short name (optional)')+field('subject','Subject *')+
+ '<label class="field">Lesson length *</label><div class="segment" id="minutesSegment">'+[30,45,60,90,'Other'].map(n=>'<button type="button" data-minutes="'+n+'" aria-pressed="'+(n===45)+'">'+n+'</button>').join('')+'</div><input type="hidden" id="minutes" value="45">'+field('customMinutes','Other length in minutes','','number')+
+ field('lessons_per_week','Lessons per week',1,'number')+
+ '<label class="field">Billing *</label><div class="segment" id="billingSegment"><button type="button" data-billing="per_lesson" aria-pressed="true">Per lesson</button><button type="button" data-billing="monthly_flat" aria-pressed="false">Monthly flat fee</button></div><input type="hidden" id="billing_mode" value="per_lesson">'+
+ field('price','Price per lesson (€) *','','number')+
+ '<fieldset><legend>Who pays?</legend><label class="choice"><input type="checkbox" id="studentPays"> Student pays</label>'+
+ field('payer_name','Payer name *')+
  field('payer_email','E-Mail der zahlenden Person (optional)','', 'email')+
- field('payer_street','Straße (optional)')+field('payer_postcode','PLZ (optional)')+field('payer_city','Ort (optional)')+
- '<label class="field">Unterrichtsort<select id="location"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>'+
+ field('payer_street','Straße (optional)')+field('payer_postcode','PLZ (optional)')+field('payer_city','Town (optional)')+'</fieldset>'+
+ '<label class="field">Where?</label><div class="segment" id="locationSegment"><button type="button" data-location="my_place" aria-pressed="false">My place</button><button type="button" data-location="student_home" aria-pressed="false">Their home</button><button type="button" data-location="online" aria-pressed="false">Online</button></div><input type="hidden" id="location" value="">'+
  field('start_date','Beginn *',today(),'date')+
  '<div class="notice">Stornierung bis 24 Stunden vorher kostenlos, danach kostenpflichtig. Auch bei Nichterscheinen.</div>'+
- '<p id="error" class="error" role="alert"></p>'+button('Schüler speichern','saveStudent')+'</div>');
+ '<p id="error" class="error" role="alert"></p>'+button('Save student','saveStudent')+'</div>','student-form-screen');
  $('backStudents').onclick=()=>studentsPage();
  $('customMinutes').closest('label').hidden=true;
- $('minutes').onchange=()=>{$('customMinutes').closest('label').hidden=$('minutes').value!=='custom'};
+ document.querySelectorAll('[data-minutes]').forEach(b=>b.onclick=()=>{$('minutes').value=b.dataset.minutes==='Other'?'custom':b.dataset.minutes;document.querySelectorAll('[data-minutes]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('customMinutes').closest('label').hidden=$('minutes').value!=='custom'});
+ document.querySelectorAll('[data-billing]').forEach(b=>b.onclick=()=>{$('billing_mode').value=b.dataset.billing;document.querySelectorAll('[data-billing]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('price').closest('label').firstChild.textContent=b.dataset.billing==='monthly_flat'?'Monthly fee (€) *':'Price per lesson (€) *'});
+ document.querySelectorAll('[data-location]').forEach(b=>b.onclick=()=>{$('location').value=b.dataset.location;document.querySelectorAll('[data-location]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)))});
  $('studentPays').onchange=()=>{$('payer_name').value=$('studentPays').checked?$('student_name').value:''};
- $('billing_mode').onchange=()=>{$('price').closest('label').firstChild.textContent=$('billing_mode').value==='monthly_flat'?'Monatsbeitrag in € *':'Preis in € *'};
+
  $('saveStudent').onclick=async()=>{
   const get=id=>$(id).value.trim();
   const errors=[];
