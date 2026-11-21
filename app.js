@@ -110,16 +110,33 @@ else if(key!=='cancellation_rule'){const v=$(key).value.trim();if((key==='teache
 function persist(){localStorage.setItem(draftKey(),JSON.stringify(draft));localStorage.setItem(stepKey(),String(step))}
 async function save(){const data={...draft,vat_mode:draft.vat_mode||'unsure',ledger_id:ledger,effective_from:today()};const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);localStorage.removeItem(draftKey());localStorage.removeItem(stepKey());editing=false;await load()}
 function home(){
- const m=missing(settings);
- frame('<div class="row"><h1>Hello, '+escapeHTML(settings.teacher_name.split(/\s+/)[0])+'</h1><button class="secondary" id="settingsBtn" aria-label="Settings">☼</button></div>'+
- '<div style="margin:22px 0 10px">'+button('+ Log a lesson','logLesson')+'</div><p class="muted" style="text-align:center">Add your first student to start logging.</p>'+
- (m.length?'<section class="card" style="border:2px solid #242424"><h2>To do</h2><p class="muted">'+m.length+' things missing before your first invoice</p>'+m.map(([k,label])=>'<button class="link todo-item" data-key="'+k+'">'+escapeHTML(label)+' ›</button>').join('')+'</section>':'')+
- '<section class="card"><h2>Students</h2><p class="muted">Open your student list to add or manage students.</p>'+button('Students','addStudent','secondary')+'</section>'+
- '<section class="card"><h2>Invoices</h2><p class="muted">No invoices yet.</p></section>');
+ frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
+ '<div style="margin:22px 0 10px">'+button('+ Stunde erfassen','logLesson')+'</div><p class="muted" style="text-align:center">Erfasse zunächst einen Schüler, um Stunden zu dokumentieren.</p>'+
+ '<section class="card"><div class="row"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeStudents" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div><div class="row" id="homePagination" hidden><button class="secondary" id="homePrev">Zurück</button><span id="homePageLabel"></span><button class="secondary" id="homeNext">Weiter</button></div></section>'+
+ '<section class="card"><h2>Rechnungen</h2><p class="muted">Noch keine Rechnungen vorhanden.</p></section>');
  $('settingsBtn').onclick=settingsPage;
  $('logLesson').disabled=true;
- document.querySelectorAll('.todo-item').forEach(b=>b.onclick=()=>settingsPage([b.dataset.key]));
  $('addStudent').onclick=()=>studentsPage();
+ let page=0;const pageSize=5;
+ supabase.rpc('find_students',{p_query:'',p_status:'active',p_at:today()}).then(({data,error})=>{
+  if(!$('homeStudents'))return;
+  if(error){$('homeStudents').textContent='Schüler konnten nicht geladen werden.';return;}
+  const students=data||[];
+  const render=()=>{
+   if(!$('homeStudents'))return;
+   const total=Math.max(1,Math.ceil(students.length/pageSize));
+   page=Math.min(page,total-1);
+   $('homeStudents').innerHTML=students.length?students.slice(page*pageSize,(page+1)*pageSize).map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine aktiven Schüler.</p>'+button('+ Schüler hinzufügen','homeAddStudent','secondary');
+   document.querySelectorAll('#homeStudents [data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
+   if($('homeAddStudent'))$('homeAddStudent').onclick=()=>studentForm();
+   $('homePagination').hidden=students.length<=pageSize;
+   $('homePageLabel').textContent=(page+1)+' / '+total;
+   $('homePrev').disabled=page===0;$('homeNext').disabled=page===total-1;
+  };
+  $('homePrev').onclick=()=>{page--;render()};
+  $('homeNext').onclick=()=>{page++;render()};
+  render();
+ });
 }
 
 function settingsPage(onlyKeys=null){
@@ -161,13 +178,14 @@ function studentSearchRank(student,term){
  return tokens.some(x=>Math.abs(x.length-term.length)<=tolerance&&editDistance(x,term)<=tolerance)?3:Infinity;
 }
 async function studentsPage(initialSearch=''){
- frame('<div class="row screen-header"><h1>Students</h1>'+button('+ Add student','newStudent','secondary')+'</div>'+
+ frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Schüler</h1>'+button('+ Hinzufügen','newStudent','secondary')+'</div>'+
  '<label class="field">Search<input id="studentSearch" placeholder="Name or short name" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
  '<div class="student-filter-bar" role="group" aria-label="Student status">'+
  '<button class="filter-pill" data-filter="active" aria-pressed="true">Active</button>'+
  '<button class="filter-pill" data-filter="paused" aria-pressed="false">Paused</button>'+
  '<button class="filter-pill" data-filter="ended" aria-pressed="false">Ended</button></div>'+
  '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>');
+ $('backHome').onclick=home;
  $('newStudent').onclick=()=>studentForm();
  let serial=0,selected='active';
  async function render(){
@@ -254,23 +272,24 @@ async function studentPage(id){
  const locationLabel={my_place:'My place',student_home:'Their home',online:'Online'}[v.location]||'Not set';
  const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € per month':x.rate+' € per lesson';
  frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Back to students">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' since '+niceDate(startDate)+'</p></div></div></div>'+
- '<section class="card"><h2>Status</h2><dl class="detail-grid"><dt>Subject</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' min, '+escapeHTML(v.lessons_per_week)+'× per week</dd>'+
- '<dt>Price</dt><dd>'+escapeHTML(moneyLabel(v))+'</dd><dt>Payer</dt><dd>'+escapeHTML(v.payer_name)+'</dd>'+
- '<dt>Where</dt><dd>'+escapeHTML(locationLabel)+'</dd><dt>Cancellation</dt><dd>Free if cancelled 24 h before, otherwise billed</dd></dl>'+
+ '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
+ '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
+ '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
  (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>From '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>From '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
- '<div class="actions">'+button('Change','changeStudent')+button('Pause or end','statusStudent','secondary')+'</div>'+
+ '<div class="actions">'+button('Status ändern','statusStudent','secondary')+'</div>'+
  '<section class="card"><h2>History</h2>'+
  (history.data||[]).map((x,i)=>'<div class="history-entry">'+(i===(history.data||[]).length-1?'Student added':'Details effective from '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x)))+'<div class="muted">entered '+niceDate(x.created_at)+'</div></div>').join('')+
  (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' from '+niceDate(x.effective_from)+'<div class="muted">entered '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
  '<div style="margin-top:24px">'+button('Remove mistakenly added student','removeStudent','secondary')+'</div>');
 
  $('backStudents').onclick=()=>studentsPage();
- $('changeStudent').onclick=()=>studentChangeForm(id,v);
+ document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
  if(status.data==='removed')$('removeStudent').hidden=true;
 }
-function studentChangeForm(id,v){
+const editStudentButton=key=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="Bearbeiten">Bearbeiten</button>';
+function studentChangeForm(id,v,initialKey='price'){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
  const a=v.payer_address||{};
  const changeFields=[
@@ -289,12 +308,13 @@ function studentChangeForm(id,v){
  ];
  const editControl=([k,label,val,type])=>k==='billing_mode'?'<label class="field" data-edit="'+k+'">New<select id="'+k+'"><option value="per_lesson">Per lesson</option><option value="monthly_flat">Monthly flat fee</option></select></label>':k==='location'?'<label class="field" data-edit="'+k+'">New<select id="'+k+'"><option value="">Not set</option><option value="my_place">My place</option><option value="student_home">Their home</option><option value="online">Online</option></select></label>':'<div data-edit="'+k+'">'+field(k,'New',val,type||'text')+'</div>';
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Change '+escapeHTML(v.student_name)+'</h1>'+button('×','backChange','secondary')+'</div>'+
- '<label class="field">What changes?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
+ '<label class="field" hidden>Was ändern?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
  '<div class="change-current"><div><span class="muted">Now</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">New</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
  '<div id="newModePrice" hidden>'+field('newBillingPrice','New price (€)',money,'number')+'</div>'+field('effective_from','From',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted">Invoiced lessons and issued invoices stay as they are. Monthly fees and pauses start on the 1st of a month.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Save change','saveChange')+'</section></div>','change-screen');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
+ $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
  const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
  $('changeType').onchange=show;show();
