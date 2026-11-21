@@ -26,7 +26,7 @@ language sql stable security invoker set search_path='' as $$
       where (extensions.similarity(w,t.needle)>=0.25 or
         (length(w)<=255 and length(t.needle)<=255 and
          abs(length(w)-length(t.needle))<=2 and
-         extensions.levenshtein_less_equal(w,t.needle,2)<=case when length(t.needle)>=5 then 2 else 1 end)))
+         extensions.levenshtein_less_equal(w,t.needle,2)<=case when length(t.needle)>=4 then 2 else 1 end)))
    ) then 3 else 99 end as match_rank
   from candidates c cross join terms t
  )
