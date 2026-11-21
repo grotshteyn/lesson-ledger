@@ -53,13 +53,13 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   await page.locator('#price').fill('35');
   await page.locator('#payer_name').fill('Parent Test');
   await page.locator('#saveStudent').click();
-  await page.locator('#changeStudent').waitFor();
+  await page.locator('[data-direct-edit="price"]').waitFor();
   assert.match(await page.locator('main').innerText(),/Anna Test/);
-  await page.locator('#changeStudent').click();
+  await page.locator('[data-direct-edit="price"]').click();
   await page.locator('#price').fill('38');
   await page.locator('#saveChange').click();
   await page.locator('#statusStudent').waitFor();
-  assert.match(await page.locator('main').innerText(),/38 € per lesson/);
+  assert.match(await page.locator('main').innerText(),/38 € pro Stunde/);
   await page.locator('#statusStudent').click();
   await page.locator('#saveStatus').click();
   await page.locator('#backStudents').click();
@@ -85,8 +85,23 @@ test('E2 mobile viewport: create student without horizontal overflow',async()=>{
   await page.locator('#price').fill('45');
   await page.locator('#studentPays').check();
   await page.locator('#saveStudent').click();
-  await page.locator('#changeStudent').waitFor();
+  await page.locator('[data-direct-edit="price"]').waitFor();
   const size=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
   assert.ok(size.width<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
+ }finally{await browser.close()}
+});
+
+test('German Home layout, student navigation and direct editing are present',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage();
+ await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:mockModule}));
+ try{
+  await page.goto('http://127.0.0.1:8765/',{waitUntil:'networkidle'});
+  await page.locator('#settingsBtn').waitFor();
+  assert.equal(await page.locator('#settingsBtn').innerText(),'Einstellungen');
+  assert.equal(await page.getByText('To do').count(),0);
+  await page.locator('#addStudent').click();
+  await page.locator('#backHome').click();
+  await page.locator('#settingsBtn').waitFor();
  }finally{await browser.close()}
 });
