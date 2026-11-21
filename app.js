@@ -76,7 +76,7 @@ function studentForm(prefill=''){
  field('start_date','Beginn *',today(),'date')+
  '<div class="notice">Stornierung bis 24 Stunden vorher kostenlos, danach kostenpflichtig. Auch bei Nichterscheinen.</div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Schüler speichern','saveStudent')+'</div>');
- $('backStudents').onclick=studentsPage;
+ $('backStudents').onclick=()=>studentsPage();
  $('customMinutes').closest('label').hidden=true;
  $('minutes').onchange=()=>{$('customMinutes').closest('label').hidden=$('minutes').value!=='custom'};
  $('studentPays').onchange=()=>{$('payer_name').value=$('studentPays').checked?$('student_name').value:''};
@@ -115,7 +115,7 @@ async function studentPage(id){
   supabase.from('student_status_events').select('*').eq('student_id',id).order('effective_from',{ascending:false})
  ]);
  const error=detail.error||status.error||history.error||events.error;
- if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=studentsPage;return;}
+ if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
@@ -127,7 +127,7 @@ async function studentPage(id){
  (pending.length||pendingEvents.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+pendingEvents.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.event_type)+'</p>').join('')+'</div>':'')+
  '<div class="card"><h2>Änderungsverlauf</h2>'+history.data.map(x=>'<div class="summary"><strong>Ab '+escapeHTML(x.effective_from)+'</strong><span>'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde')+' · erfasst '+escapeHTML(x.created_at.slice(0,10))+'</span></div>').join('')+
  (events.data||[]).map(x=>'<div class="summary"><strong>'+escapeHTML(x.event_type)+' ab '+escapeHTML(x.effective_from)+'</strong><span>Erfasst '+escapeHTML(x.created_at.slice(0,10))+(x.pause_until?' · bis '+escapeHTML(x.pause_until):'')+'</span></div>').join('')+'</div>');
- $('backStudents').onclick=studentsPage;
+ $('backStudents').onclick=()=>studentsPage();
  $('changeStudent').onclick=()=>studentChangeForm(id,v);
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
