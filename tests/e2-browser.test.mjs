@@ -70,3 +70,23 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   assert.match(list,/Anna Test/,'Paused student missing: '+JSON.stringify({list,state}));
  }finally{await browser.close()}
 });
+
+test('E2 mobile viewport: create student without horizontal overflow',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ page.on('dialog',d=>d.accept());
+ await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:mockModule}));
+ try{
+  await page.goto('http://127.0.0.1:8765/',{waitUntil:'networkidle'});
+  await page.locator('#addStudent').click();
+  await page.locator('#newStudent').click();
+  await page.locator('#student_name').fill('Mobile Student');
+  await page.locator('#subject').fill('Music');
+  await page.locator('#price').fill('45');
+  await page.locator('#studentPays').check();
+  await page.locator('#saveStudent').click();
+  await page.locator('#changeStudent').waitFor();
+  const size=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
+  assert.ok(size.width<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
+ }finally{await browser.close()}
+});
