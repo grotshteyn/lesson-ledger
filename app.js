@@ -92,11 +92,11 @@ function studentForm(prefill=''){
  field('price','Price per lesson (€) *','','number')+
  '<fieldset><legend>Who pays?</legend><label class="choice"><input type="checkbox" id="studentPays"> Student pays</label>'+
  field('payer_name','Payer name *')+
- field('payer_email','E-Mail der zahlenden Person (optional)','', 'email')+
- field('payer_street','Straße (optional)')+field('payer_postcode','PLZ (optional)')+field('payer_city','Town (optional)')+'</fieldset>'+
+ field('payer_email','Email (needed before sending invoices)','', 'email')+
+ field('payer_street','Street and number (needed before first invoice)')+field('payer_postcode','Postcode (optional)')+field('payer_city','Town (optional)')+'</fieldset>'+
  '<label class="field">Where?</label><div class="segment" id="locationSegment"><button type="button" data-location="my_place" aria-pressed="false">My place</button><button type="button" data-location="student_home" aria-pressed="false">Their home</button><button type="button" data-location="online" aria-pressed="false">Online</button></div><input type="hidden" id="location" value="">'+
- field('start_date','Beginn *',today(),'date')+
- '<div class="notice">Stornierung bis 24 Stunden vorher kostenlos, danach kostenpflichtig. Auch bei Nichterscheinen.</div>'+
+ field('start_date','Start date *',today(),'date')+
+ '<div class="notice">Cancellation rule: free if cancelled 24 h before, otherwise billed.</div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Save student','saveStudent')+'</div>','student-form-screen');
  $('backStudents').onclick=()=>studentsPage();
  $('customMinutes').closest('label').hidden=true;
