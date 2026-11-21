@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature/e2-students-foundation
+      - feature/wireframe-visual-alignment
 jobs:
   javascript:
     runs-on: ubuntu-24.04
