@@ -121,14 +121,16 @@ async function studentPage(id){
  frame('<div class="row"><h1>'+escapeHTML(v.student_name)+'</h1>'+button('Zurück','backStudents','secondary')+'</div>'+
  '<div class="card"><h2>Schülerdaten</h2><p>'+escapeHTML(v.subject)+' · '+escapeHTML(v.minutes)+' Minuten · '+escapeHTML(v.lessons_per_week)+' / Woche</p>'+
  '<p>'+escapeHTML(v.billing_mode==='monthly_flat'?v.monthly_fee+' € pro Monat':v.rate+' € pro Stunde')+'</p>'+
- '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Status: '+escapeHTML(detail.data?.[0]?status.data:'Noch nicht begonnen')+'</p>'+
- '<div class="actions">'+button('Daten ändern','changeStudent','secondary')+button('Status ändern','statusStudent','secondary')+'</div></div>'+
+ '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Kontakt: '+escapeHTML(v.payer_email||'E-Mail fehlt')+'</p><p>Anschrift: '+escapeHTML([v.payer_address?.street,v.payer_address?.postcode,v.payer_address?.city].filter(Boolean).join(', ')||'Anschrift fehlt')+'</p><p>Unterrichtsort: '+escapeHTML(v.location||'Nicht angegeben')+'</p><p>Status: '+escapeHTML(detail.data?.[0]?status.data:'Noch nicht begonnen')+'</p>'+
+ '<div class="actions">'+button('Daten ändern','changeStudent','secondary')+button('Status ändern','statusStudent','secondary')+button('Irrtümlich angelegt entfernen','removeStudent','secondary')+'</div></div>'+
  (pending.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+'</div>':'')+
  '<div class="card"><h2>Änderungsverlauf</h2>'+history.data.map(x=>'<div class="summary"><strong>Ab '+escapeHTML(x.effective_from)+'</strong><span>'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde')+' · erfasst '+escapeHTML(x.created_at.slice(0,10))+'</span></div>').join('')+
  (events.data||[]).map(x=>'<div class="summary"><strong>'+escapeHTML(x.event_type)+' ab '+escapeHTML(x.effective_from)+'</strong><span>Erfasst '+escapeHTML(x.created_at.slice(0,10))+(x.pause_until?' · bis '+escapeHTML(x.pause_until):'')+'</span></div>').join('')+'</div>');
  $('backStudents').onclick=studentsPage;
  $('changeStudent').onclick=()=>studentChangeForm(id,v);
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
+ $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
+ if(status.data==='removed')$('removeStudent').hidden=true;
 }
 function studentChangeForm(id,v){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
@@ -160,7 +162,7 @@ function studentStatusForm(id,v,current){
  frame('<div class="row"><h1>Status ändern</h1>'+button('Zurück','backStatus','secondary')+'</div><div class="card">'+
  '<p>'+escapeHTML(v.student_name)+' · aktuell: '+escapeHTML(current)+'</p>'+
  '<label class="field">Aktion<select id="statusEvent"><option value="pause">Pausieren</option><option value="restart">Wieder starten</option><option value="end">Beenden</option></select></label>'+
- field('statusDate','Gültig ab',today(),'date')+field('pauseUntil','Pause bis (optional)','','date')+
+ field('statusDate','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?new Date(new Date(today()+'T12:00:00').getFullYear(),new Date(today()+'T12:00:00').getMonth()+1,1).toLocaleDateString('en-CA'):today(),'date')+field('pauseUntil','Pause bis (optional)','','date')+
  '<p class="muted small">Bei Monatspauschalen gelten Statusänderungen ab dem Monatsersten.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Status speichern','saveStatus')+'</div>');
  $('backStatus').onclick=()=>studentPage(id);
