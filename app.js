@@ -68,7 +68,7 @@ async function studentsPage(initialSearch=''){
 function studentForm(prefill=''){
  frame('<div class="row"><h1>Schüler hinzufügen</h1>'+button('Zurück','backStudents','secondary')+'</div><div class="card">'+
  field('student_name','Name *',prefill)+field('nickname','Kurzname (optional)')+field('subject','Fach *')+
- '<label class="field">Unterrichtsdauer (Minuten) <select id="minutes"><option>30</option><option selected>45</option><option>60</option><option>90</option></select></label>'+
+ '<label class="field">Unterrichtsdauer (Minuten) <select id="minutes"><option>30</option><option selected>45</option><option>60</option><option>90</option><option value="custom">Andere Dauer</option></select></label>'+field('customMinutes','Eigene Dauer in Minuten','','number')+''+
  field('lessons_per_week','Stunden pro Woche',1,'number')+
  '<label class="field">Abrechnung<select id="billing_mode"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>'+
  field('price','Preis in € *','','number')+
@@ -81,6 +81,8 @@ function studentForm(prefill=''){
  '<div class="notice">Stornierung bis 24 Stunden vorher kostenlos, danach kostenpflichtig. Auch bei Nichterscheinen.</div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Schüler speichern','saveStudent')+'</div>');
  $('backStudents').onclick=studentsPage;
+ $('customMinutes').closest('label').hidden=true;
+ $('minutes').onchange=()=>{$('customMinutes').closest('label').hidden=$('minutes').value!=='custom'};
  $('studentPays').onchange=()=>{$('payer_name').value=$('studentPays').checked?$('student_name').value:''};
  $('billing_mode').onchange=()=>{$('price').closest('label').firstChild.textContent=$('billing_mode').value==='monthly_flat'?'Monatsbeitrag in € *':'Preis in € *'};
  $('saveStudent').onclick=async()=>{
@@ -91,15 +93,17 @@ function studentForm(prefill=''){
   if(!get('payer_name')&&!$('studentPays').checked)errors.push('Zahlende Person');
   if(!get('start_date'))errors.push('Beginn');
   if(!(Number(get('price'))>0))errors.push('Preis über 0 €');
-  if(!(Number(get('minutes'))>0))errors.push('Unterrichtsdauer');
+  const duration=get('minutes')==='custom'?Number(get('customMinutes')):Number(get('minutes'));
+  if(!Number.isInteger(duration)||duration<=0)errors.push('Unterrichtsdauer');
   if(!(Number(get('lessons_per_week'))>0))errors.push('Stunden pro Woche');
   if(errors.length)return err('Bitte prüfen: '+errors.join(', ')+'.');
   if(get('payer_email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(get('payer_email')))return err('Bitte eine gültige E-Mail-Adresse eingeben.');
   const duplicateCheck=await supabase.from('student_versions').select('student_id,student_name,effective_from').eq('ledger_id',ledger).lte('effective_from',today());
   if(duplicateCheck.error)return err(duplicateCheck.error);
-  const duplicate=(duplicateCheck.data||[]).some(x=>normalizeStudentText(x.student_name)===normalizeStudentText(get('student_name')));
+  const latestByStudent=new Map();for(const x of duplicateCheck.data||[]){const prior=latestByStudent.get(x.student_id);if(!prior||x.effective_from>prior.effective_from)latestByStudent.set(x.student_id,x)}
+  const duplicate=Array.from(latestByStudent.values()).some(x=>normalizeStudentText(x.student_name)===normalizeStudentText(get('student_name')));
   if(duplicate&&!confirm('Ein Schüler mit diesem Namen ist bereits vorhanden. Bitte prüfe, ob ein Kurzname hilft. Trotzdem speichern?'))return;
-  const details={student_name:get('student_name'),nickname:get('nickname'),subject:get('subject'),minutes:Number(get('minutes')),lessons_per_week:Number(get('lessons_per_week')),billing_mode:get('billing_mode'),price:get('price'),payer_name:$('studentPays').checked?get('student_name'):get('payer_name'),payer_email:get('payer_email'),payer_address:{street:get('payer_street'),postcode:get('payer_postcode'),city:get('payer_city'),country:'Deutschland'},location:get('location'),start_date:get('start_date')};
+  const details={student_name:get('student_name'),nickname:get('nickname'),subject:get('subject'),minutes:duration,lessons_per_week:Number(get('lessons_per_week')),billing_mode:get('billing_mode'),price:get('price'),payer_name:$('studentPays').checked?get('student_name'):get('payer_name'),payer_email:get('payer_email'),payer_address:{street:get('payer_street'),postcode:get('payer_postcode'),city:get('payer_city'),country:'Deutschland'},location:get('location'),start_date:get('start_date')};
   $('saveStudent').disabled=true;
   const {data,error}=await supabase.rpc('create_student',{p_details:details});
   if(error){$('saveStudent').disabled=false;return err(error);}
