@@ -20,3 +20,9 @@
 @media(max-width:420px){#settingsBtn{font-size:14px!important;padding:9px 11px!important}.screen-header{gap:7px}.screen-header #newStudent{font-size:13px;padding:8px;min-height:44px}}
 
 .student-extra-edits{border-top:1px solid #e5e5e3;margin-top:16px;padding-top:12px;display:flex;gap:8px 14px;flex-wrap:wrap}.student-extra-edits>p{width:100%;margin:0}.student-extra-edits>span{display:inline-flex;align-items:center;gap:6px;border:1px solid #dededc;border-radius:9px;padding:3px 9px;font-size:14px}.student-extra-edits .link{font-size:13px;padding:4px 0}
+
+/* Home students card: override full-width overview button inside flex header. */
+.card>.row:has(>#addStudent){display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.card>.row:has(>#addStudent)>h2{flex:1 1 auto;min-width:max-content;margin:0;overflow-wrap:normal;word-break:normal}
+.card>.row>#addStudent{width:auto;flex:0 0 auto;min-width:0;min-height:44px;padding:10px 14px;white-space:nowrap;font-size:15px}
+@media(max-width:360px){.card>.row:has(>#addStudent)>h2{font-size:21px}.card>.row>#addStudent{font-size:14px;padding:9px 11px}}
