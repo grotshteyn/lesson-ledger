@@ -131,7 +131,7 @@ function studentChangeForm(id,v){
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim();
   if(!g('subject')||!g('payer_name')||!g('effective_from')||Number(g('minutes'))<=0||Number(g('lessons_per_week'))<=0||Number(g('price'))<=0)return err('Bitte alle Pflichtfelder und einen Preis über 0 eingeben.');
-  if(g('payer_email')&&!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(g('payer_email')))return err('Ungültige E-Mail-Adresse.');
+  if(g('payer_email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g('payer_email')))return err('Ungültige E-Mail-Adresse.');
   const changes={subject:g('subject'),nickname:g('nickname'),minutes:Number(g('minutes')),lessons_per_week:Number(g('lessons_per_week')),billing_mode:g('billing_mode'),price:g('price'),payer_name:g('payer_name'),payer_email:g('payer_email'),payer_address:{street:g('payer_street'),postcode:g('payer_postcode'),city:g('payer_city'),country:'Deutschland'},location:g('location')};
   $('saveChange').disabled=true;
   const {error}=await supabase.rpc('change_student',{p_student_id:id,p_effective_from:g('effective_from'),p_changes:changes});
