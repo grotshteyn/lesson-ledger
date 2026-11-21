@@ -55,7 +55,7 @@ function passwordRecovery(){
  $('backLogin').onclick=login;
  $('recoveryForm').onsubmit=async e=>{
   e.preventDefault();const email=$('recoveryE-Mail').value.trim();$('sendRecovery').disabled=true;
-  const {error}=await supabase.auth.resetPasswortForE-Mail(email,{redirectTo:location.origin+location.pathname});
+  const {error}=await supabase.auth.resetPasswordForE-Mail(email,{redirectTo:location.origin+location.pathname});
   if(error){$('sendRecovery').disabled=false;return err(error);}
   frame('<h1>Prüfe dein Postfach</h1><p>Öffne den Link in der E-Mail, um ein Passwort festzulegen. Falls das Versandlimit erreicht ist, warte vor einem neuen Versuch.</p>'+button('Zurück zur Anmeldung','backLogin','secondary'),'setup-screen');
   $('backLogin').onclick=login;
@@ -63,30 +63,30 @@ function passwordRecovery(){
 }
 function choosePasswort(){
  frame('<h1>Passwort festlegen</h1><p class="muted">Dein bestehendes Konto und deine Daten bleiben erhalten.</p>'+
- '<form id="newPasswortForm" class="card">'+
- '<label class="field">Neues Passwort<input id="newPasswort" type="password" autocomplete="new-password" Min.length="12" required></label>'+
- '<label class="field">Passwort bestätigen<input id="confirmPasswort" type="password" autocomplete="new-password" Min.length="12" required></label>'+
- '<p id="error" class="error" role="alert"></p><button type="submit" id="savePasswort" class="primary">Passwort speichern</button></form>','setup-screen');
- $('newPasswortForm').onsubmit=async e=>{
-  e.preventDefault();const password=$('newPasswort').value;
+ '<form id="newPasswordForm" class="card">'+
+ '<label class="field">Neues Passwort<input id="newPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
+ '<label class="field">Passwort bestätigen<input id="confirmPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
+ '<p id="error" class="error" role="alert"></p><button type="submit" id="savePassword" class="primary">Passwort speichern</button></form>','setup-screen');
+ $('newPasswordForm').onsubmit=async e=>{
+  e.preventDefault();const password=$('newPassword').value;
   if(password.length<12)return err('Bitte Min.destens 12 Zeichen verwenden.');
-  if(password!==$('confirmPasswort').value)return err('Passworts do not match.');
-  $('savePasswort').disabled=true;
+  if(password!==$('confirmPassword').value)return err('Passworts do not match.');
+  $('savePassword').disabled=true;
   const {error}=await supabase.auth.updateUser({password});
-  if(error){$('savePasswort').disabled=false;return err(error);}
+  if(error){$('savePassword').disabled=false;return err(error);}
   recoveryMode=false;await load();
  };
 }
 function register(){
  frame('<h1>Konto erstellen</h1><p class="muted">Already used Lesson Ledger? Go back and choose Passwort festlegen oder zurücksetzen to keep your existing data.</p>'+
  '<form id="registerForm" class="card"><label class="field">E-Mail<input id="registerE-Mail" type="email" autocomplete="email" required></label>'+
- '<label class="field">Passwort (mindestens 12 Zeichen)<input id="registerPasswort" type="password" autocomplete="new-password" Min.length="12" required></label>'+
+ '<label class="field">Passwort (mindestens 12 Zeichen)<input id="registerPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
  '<p id="error" class="error" role="alert"></p><button class="primary" id="registerBtn" type="submit">Konto erstellen</button>'+
  button('Zurück zur Anmeldung','backLogin','secondary')+'</form>','setup-screen');
  $('backLogin').onclick=login;
  $('registerForm').onsubmit=async e=>{
   e.preventDefault();$('registerBtn').disabled=true;
-  const {data,error}=await supabase.auth.signUp({email:$('registerE-Mail').value.trim(),password:$('registerPasswort').value,options:{emailRedirectTo:location.origin+location.pathname}});
+  const {data,error}=await supabase.auth.signUp({email:$('registerE-Mail').value.trim(),password:$('registerPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){$('registerBtn').disabled=false;return err(error);}
   if(data.session)return load();
   frame('<h1>Prüfe dein Postfach</h1><p>Bestätige bei einem neuen Konto deine E-Mail-Adresse. Bestehende Nutzer sollten stattdessen ihr Passwort zurücksetzen.</p>'+button('Zurück zur Anmeldung','backLogin','secondary'),'setup-screen');
@@ -155,9 +155,9 @@ function settingsPage(onlyKeys=null){
  ];
  frame('<div class="row"><button id="home" class="secondary" aria-label="Zurück">←</button><h1 style="flex:1">Einstellungen</h1></div>'+
  '<section class="card"><h2>Rechnungsangaben</h2>'+rows.map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value)+'</div></div><button class="link" data-setting="'+key+'">'+(value==='Nicht angegeben'?'Hinzufügen':'Bearbeiten')+'</button></div>').join('')+'</section>'+
- '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPasswort','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section>','settings-screen');
+ '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPassword','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section>','settings-screen');
  $('home').onclick=home;
- $('setPasswort').onclick=()=>{recoveryMode=true;choosePasswort();};
+ $('setPassword').onclick=()=>{recoveryMode=true;choosePasswort();};
  document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>settingsEditPage(b.dataset.setting==='teacher_address'?['street','postcode','city','country']:b.dataset.setting==='invoice_language'||b.dataset.setting==='cancellation_rule'?null:[b.dataset.setting]));
  $('changeLoginLink').onclick=()=>settingsEditPage(['effective_from']);
  $('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};
@@ -207,7 +207,7 @@ async function studentsPage(initialSuche=''){
 }
 
 function studentForm(prefill=''){
- frame('<div class="row"><h1>Hinzufügen a student</h1>'+button('×','backSchüler','secondary')+'</div><div class="card">'+
+ frame('<div class="row"><h1>Hinzufügen a student</h1>'+button('×','backStudents','secondary')+'</div><div class="card">'+
  field('student_name',"Name des Schülers *",prefill)+field('nickname','Kurzname (optional)')+field('subject','Fach *')+
  '<label class="field">Unterrichtsdauer *</label><div class="segment" id="minutesSegment">'+[30,45,60,90,'Andere'].map(n=>'<button type="button" data-minutes="'+n+'" aria-pressed="'+(n===45)+'">'+n+'</button>').join('')+'</div><input type="hidden" id="minutes" value="45">'+field('customMinutes','Andere Dauer in Minuten','','number')+
  field('lessons_per_week','Stunden pro Woche',1,'number')+
@@ -221,7 +221,7 @@ function studentForm(prefill=''){
  field('start_date','Startdatum *',today(),'date')+
  '<div class="notice">Stornoregel: free if cancelled 24 h before, otherwise billed.</div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Schüler speichern','saveStudent')+'</div>','student-form-screen');
- $('backSchüler').onclick=()=>studentsPage();
+ $('backStudents').onclick=()=>studentsPage();
  $('customMinutes').closest('label').hidden=true;
  document.querySelectorAll('[data-minutes]').forEach(b=>b.onclick=()=>{$('minutes').value=b.dataset.minutes==='Andere'?'custom':b.dataset.minutes;document.querySelectorAll('[data-minutes]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('customMinutes').closest('label').hidden=$('minutes').value!=='custom'});
  document.querySelectorAll('[data-billing]').forEach(b=>b.onclick=()=>{$('billing_mode').value=b.dataset.billing;document.querySelectorAll('[data-billing]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('price').closest('label').firstChild.textContent=b.dataset.billing==='monthly_flat'?'Monatspauschale (€) *':'Preis pro Stunde (€) *'});
@@ -262,7 +262,7 @@ async function studentPage(id){
   supabase.from('student_status_events').select('*').eq('student_id',id).order('effective_from',{ascending:false})
  ]);
  const error=detail.error||status.error||history.error||events.error;
- if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backSchüler'));$('backSchüler').onclick=()=>studentsPage();return;}
+ if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
@@ -271,7 +271,7 @@ async function studentPage(id){
  const startDate=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);
  const locationLabel={my_place:'Bei mir',student_home:'Beim Schüler',online:'Online'}[v.location]||'Nicht angegeben';
  const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde';
- frame('<div class="student-page-heading"><div class="row"><button id="backSchüler" class="secondary" aria-label="Zurück to students">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
+ frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück to students">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
  '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
  '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
  '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
@@ -282,14 +282,14 @@ async function studentPage(id){
  (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' from '+niceDate(x.effective_from)+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
  '<div style="margin-top:24px">'+button('Versehentlich hinzugefügten Schüler entfernen','removeStudent','secondary')+'</div>');
 
- $('backSchüler').onclick=()=>studentsPage();
- document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentÄndernForm(id,v,b.dataset.directBearbeiten));
+ $('backStudents').onclick=()=>studentsPage();
+ document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directBearbeiten));
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
  if(status.data==='removed')$('removeStudent').hidden=true;
 }
 const editStudentButton=key=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="Bearbeiten">Bearbeiten</button>';
-function studentÄndernForm(id,v,initialKey='price'){
+function studentChangeForm(id,v,initialKey='price'){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
  const a=v.payer_address||{};
  const changeFields=[
