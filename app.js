@@ -12,7 +12,88 @@ const addr=()=>draft.teacher_address||{street:'',postcode:'',city:'',country:'De
 const ibanValid=s=>{let v=(s||'').replace(/\s/g,'').toUpperCase();if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;v=v.slice(4)+v.slice(0,4);let r=0;for(const c of v){const str=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const digit of str)r=(r*10+Number(digit))%97}return r===1};
 const missing=s=>[['tax_number','Steuernummer'],['vat_mode','Umsatzsteuer'],['iban','IBAN']].filter(([k])=>!s?.[k]||s[k]==='unsure');
 const draftKey=()=>`ll-draft:${user?.id||'guest'}`;const stepKey=()=>`ll-step:${user?.id||'guest'}`;const lastUseKey=()=>`ll-last-use:${user?.id||'guest'}`;const DAY=86400000;let otpSentAt=0;const defaultDraft=()=>({teacher_name:'',teacher_address:{street:'',postcode:'',city:'',country:'Deutschland'},teacher_email:user?.email||'',tax_number:'',vat_mode:'',iban:'',bank_name:'',payment_days:14,cancellation_rule:'24h',phone:''});
-function login(){frame('<div style="padding-top:8vh"><div style="width:70px;height:70px;border:1.5px solid #aaa;border-radius:15px;background:#f4f4f3"></div><h1 style="margin-top:24px">Lesson Ledger</h1><p class="muted">Lessons, notes and invoices for private teachers.</p></div><div class="card">'+'<label class="field">E-Mail-Adresse<input id="email" type="email" autocomplete="email" placeholder="du@beispiel.de"></label>'+button('Mit E-Mail fortfahren','emailBtn')+'<p id="error" class="error" role="alert"></p></div>','setup-screen');$('emailBtn').onclick=async()=>{const email=$('email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return err('Bitte gib eine gültige E-Mail-Adresse ein.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();verify(email)}}
+function login(){
+ frame('<div class="auth-heading"><div class="auth-mark" aria-hidden="true"></div><h1>Lesson Ledger</h1><p class="muted">Lessons, notes and invoices for private teachers.</p></div>'+
+ '<form id="loginForm" class="card auth-card"><h2>Sign in</h2>'+
+ '<label class="field">Email<input id="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>'+
+ '<label class="field">Password<input id="password" type="password" autocomplete="current-password" required></label>'+
+ '<button class="primary" type="submit" id="passwordBtn">Sign in</button>'+
+ '<p id="error" class="error" role="alert"></p>'+
+ '<button type="button" class="link" id="forgotPassword">Set or reset password</button>'+
+ '<button type="button" class="link" id="emailFallback">Use an email code instead</button>'+
+ '<p class="muted small">New here? <button type="button" class="link" id="createAccount">Create an account</button></p></form>','setup-screen');
+ $('loginForm').onsubmit=async e=>{
+  e.preventDefault();const email=$('email').value.trim(),password=$('password').value;
+  $('passwordBtn').disabled=true;
+  const {error}=await supabase.auth.signInWithPassword({email,password});
+  if(error){$('passwordBtn').disabled=false;return err(error);}
+  await load();
+ };
+ $('forgotPassword').onclick=()=>passwordRecovery();
+ $('emailFallback').onclick=()=>emailCodeLogin();
+ $('createAccount').onclick=()=>register();
+}
+function emailCodeLogin(){
+ frame('<h1>Sign in with email</h1><p class="muted">An email code or link will be sent. Email sending limits may apply.</p><div class="card">'+
+ '<label class="field">Email<input id="email" type="email" autocomplete="email"></label>'+
+ button('Send sign-in email','emailBtn')+'<p id="error" class="error" role="alert"></p>'+button('Back to password login','backLogin','secondary')+'</div>','setup-screen');
+ $('backLogin').onclick=login;
+ $('emailBtn').onclick=async()=>{
+  const email=$('email').value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return err('Enter a valid email address.');
+  $('emailBtn').disabled=true;
+  const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0],shouldCreateUser:false}});
+  if(error){$('emailBtn').disabled=false;return err(error);}
+  otpSentAt=Date.now();verify(email);
+ };
+}
+function passwordRecovery(){
+ frame('<h1>Set or reset your password</h1><p class="muted">Use the same email as your existing Lesson Ledger account to keep your students and settings. We will send one recovery link.</p>'+
+ '<form id="recoveryForm" class="card"><label class="field">Account email<input id="recoveryEmail" type="email" autocomplete="email" required></label>'+
+ '<button type="submit" class="primary" id="sendRecovery">Send recovery link</button><p id="error" class="error" role="alert"></p>'+
+ button('Back to sign in','backLogin','secondary')+'</form>','setup-screen');
+ $('backLogin').onclick=login;
+ $('recoveryForm').onsubmit=async e=>{
+  e.preventDefault();const email=$('recoveryEmail').value.trim();$('sendRecovery').disabled=true;
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  if(error){$('sendRecovery').disabled=false;return err(error);}
+  frame('<h1>Check your email</h1><p>When the recovery email arrives, open its link to choose a password. If email delivery is rate-limited, wait before trying again.</p>'+button('Back to sign in','backLogin','secondary'),'setup-screen');
+  $('backLogin').onclick=login;
+ };
+}
+function choosePassword(){
+ frame('<h1>Choose your password</h1><p class="muted">Your existing Lesson Ledger account and data will stay the same.</p>'+
+ '<form id="newPasswordForm" class="card">'+
+ '<label class="field">New password<input id="newPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
+ '<label class="field">Confirm password<input id="confirmPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
+ '<p id="error" class="error" role="alert"></p><button type="submit" id="savePassword" class="primary">Save password</button></form>','setup-screen');
+ $('newPasswordForm').onsubmit=async e=>{
+  e.preventDefault();const password=$('newPassword').value;
+  if(password.length<12)return err('Use at least 12 characters.');
+  if(password!==$('confirmPassword').value)return err('Passwords do not match.');
+  $('savePassword').disabled=true;
+  const {error}=await supabase.auth.updateUser({password});
+  if(error){$('savePassword').disabled=false;return err(error);}
+  await load();
+ };
+}
+function register(){
+ frame('<h1>Create an account</h1><p class="muted">Already used Lesson Ledger? Go back and choose Set or reset password to keep your existing data.</p>'+
+ '<form id="registerForm" class="card"><label class="field">Email<input id="registerEmail" type="email" autocomplete="email" required></label>'+
+ '<label class="field">Password (12 characters minimum)<input id="registerPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
+ '<p id="error" class="error" role="alert"></p><button class="primary" id="registerBtn" type="submit">Create account</button>'+
+ button('Back to sign in','backLogin','secondary')+'</form>','setup-screen');
+ $('backLogin').onclick=login;
+ $('registerForm').onsubmit=async e=>{
+  e.preventDefault();$('registerBtn').disabled=true;
+  const {data,error}=await supabase.auth.signUp({email:$('registerEmail').value.trim(),password:$('registerPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error){$('registerBtn').disabled=false;return err(error);}
+  if(data.session)return load();
+  frame('<h1>Check your email</h1><p>If this is a new account, confirm your email to finish signing up. Existing users should reset their password instead.</p>'+button('Back to sign in','backLogin','secondary'),'setup-screen');
+  $('backLogin').onclick=login;
+ };
+}
+
 function verify(email){frame('<p class="eyebrow">Anmeldung</p><h1>Prüfe dein Postfach</h1><p>Wir haben eine Anmeldung an <strong>'+escapeHTML(email)+'</strong> geschickt.</p><p class="muted">Öffne den Link oder gib den sechsstelligen Code ein.</p><div class="card"><label class="field">Bestätigungscode<input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>'+button('Code bestätigen','check')+'<p id="error" class="error" role="alert"></p><button class="link" id="resend">Code erneut senden</button><button class="link" id="wrong">Falsche Adresse?</button></div>');$('wrong').onclick=login;$('resend').onclick=async()=>{if(Date.now()-otpSentAt<60000)return err('Bitte warte 60 Sekunden, bevor du einen neuen Code anforderst.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();$('error').textContent='Ein neuer Code wurde angefordert.'};$('check').onclick=async()=>{const {error}=await supabase.auth.verifyOtp({email,token:$('otp').value.trim(),type:'email'});if(error)err(error);else await load()}}
 async function load(){const {data:{user:u}}=await supabase.auth.getUser();user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
@@ -260,4 +341,4 @@ function studentStatusForm(id,v,current){
  };
 }
 
-supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
+supabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(choosePassword,0);else if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
