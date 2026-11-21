@@ -23,3 +23,15 @@ test('search matches nickname and typos',()=>{
 test('exact matches rank ahead of fuzzy matches',()=>{
  assert.ok(rank({student_name:'Anna'},'Anna')<rank({student_name:'Anja'},'Anna'));
 });
+
+test('password sign-in and recovery keep the existing Supabase account',()=>{
+ assert.match(source,/auth\.signInWithPassword\(\{email,password\}\)/);
+ assert.match(source,/auth\.resetPasswordForEmail\(email,/);
+ assert.match(source,/auth\.updateUser\(\{password\}\)/);
+ assert.match(source,/event==='PASSWORD_RECOVERY'/);
+ assert.match(source,/shouldCreateUser:false/);
+});
+test('new user registration is separate from existing-account password recovery',()=>{
+ assert.match(source,/auth\.signUp\(\{email:/);
+ assert.match(source,/Already used Lesson Ledger\?/);
+});
