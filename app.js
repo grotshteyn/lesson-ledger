@@ -279,11 +279,11 @@ async function studentPage(id){
  '<div class="actions">'+button('Status ändern','statusStudent','secondary')+'</div>'+
  '<section class="card"><h2>Verlauf</h2>'+
  (history.data||[]).map((x,i)=>'<div class="history-entry">'+(i===(history.data||[]).length-1?'Schüler hinzugefügt':'Angaben gültig ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x)))+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+
- (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' from '+niceDate(x.effective_from)+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
+ (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' ab '+niceDate(x.effective_from)+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
  '<div style="margin-top:24px">'+button('Versehentlich hinzugefügten Schüler entfernen','removeStudent','secondary')+'</div>');
 
  $('backStudents').onclick=()=>studentsPage();
- document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directBearbeiten));
+ document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
  if(status.data==='removed')$('removeStudent').hidden=true;
@@ -293,7 +293,7 @@ function studentChangeForm(id,v,initialKey='price'){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
  const a=v.payer_address||{};
  const changeFields=[
-  ['price','Price pro Stunde',money,'number'],
+  ['price','Preis pro Stunde',money,'number'],
   ['subject','Fach',v.subject],
   ['nickname','Kurzname',v.nickname||''],
   ['minutes','Unterrichtsdauer (Minuten)',v.minutes,'number'],
@@ -307,35 +307,35 @@ function studentChangeForm(id,v,initialKey='price'){
   ['location','Unterrichtsort',v.location||'']
  ];
  const editControl=([k,label,val,type])=>k==='billing_mode'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>':k==='location'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>':'<div data-edit="'+k+'">'+field(k,'Neu',val,type||'text')+'</div>';
- frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Ändern '+escapeHTML(v.student_name)+'</h1>'+button('×','backÄndern','secondary')+'</div>'+
+ frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Ändern '+escapeHTML(v.student_name)+'</h1>'+button('×','backChange','secondary')+'</div>'+
  '<label class="field" hidden>Was ändern?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
  '<div class="change-current"><div><span class="muted">Bisher</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">Neu</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
- '<div id="newModePrice" hidden>'+field('newAbrechnungPrice','Neuer Preis (€)',money,'number')+'</div>'+field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
+ '<div id="newModePrice" hidden>'+field('newBillingPrice','Neuer Preis (€)',money,'number')+'</div>'+field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted">Bereits abgerechnete Stunden und ausgestellte Rechnungen bleiben unverändert. Monatspauschalen und Pausen beginnen am Monatsersten.</p>'+
- '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveÄndern')+'</section></div>','change-screen');
+ '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</section></div>','change-screen');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
  $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
  const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
  $('changeType').onchange=show;show();
- $('backÄndern').onclick=()=>studentPage(id);
- $('saveÄndern').onclick=async()=>{
+ $('backChange').onclick=()=>studentPage(id);
+ $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
   if(!g('effective_from'))return err('Bitte ein Gültigkeitsdatum wählen.');
-  if(key==='billing_mode'&&!(Number(g('newAbrechnungPrice'))>0))return err('Bitte einen Preis über 0 eingeben.');
+  if(key==='billing_mode'&&!(Number(g('newBillingPrice'))>0))return err('Bitte einen Preis über 0 eingeben.');
   if(key==='price'&&!(Number(g('price'))>0))return err('Bitte einen Preis über 0 eingeben.');
   if((key==='minutes'||key==='lessons_per_week')&&!(Number(g(key))>0))return err('Bitte einen Wert über 0 eingeben.');
   if(['subject','payer_name'].includes(key)&&!g(key))return err('Dieses Feld ist erforderlich.');
   if(key==='payer_email'&&g(key)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g(key)))return err('Ungültige E-Mail-Adresse.');
   const changes={};
   if(key==='price')changes.price=g('price');
-  else if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newAbrechnungPrice');}
+  else if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newBillingPrice');}
   else if(['minutes','lessons_per_week'].includes(key))changes[key]=Number(g(key));
   else if(['payer_street','payer_postcode','payer_city'].includes(key))changes.payer_address={...a,[{payer_street:'street',payer_postcode:'postcode',payer_city:'city'}[key]]:g(key)};
   else changes[key]=g(key);
-  $('saveÄndern').disabled=true;
+  $('saveChange').disabled=true;
   const {error}=await supabase.rpc('change_student',{p_student_id:id,p_effective_from:g('effective_from'),p_changes:changes});
-  if(error){$('saveÄndern').disabled=false;return err(error);}
+  if(error){$('saveChange').disabled=false;return err(error);}
   studentPage(id);
  };
 }
