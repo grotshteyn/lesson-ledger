@@ -11,7 +11,7 @@ const err=e=>{const n=$('error');if(n)n.textContent=e?.message||String(e)};
 const addr=()=>draft.teacher_address||{street:'',postcode:'',city:'',country:'Deutschland'};
 const ibanValid=s=>{let v=(s||'').replace(/\s/g,'').toUpperCase();if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;v=v.slice(4)+v.slice(0,4);let r=0;for(const c of v){const str=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const digit of str)r=(r*10+Number(digit))%97}return r===1};
 const missing=s=>[['tax_number','Steuernummer'],['vat_mode','Umsatzsteuer'],['iban','IBAN']].filter(([k])=>!s?.[k]||s[k]==='unsure');
-const draftKey=()=>`ll-draft:${user?.id||'guest'}`;const stepKey=()=>`ll-step:${user?.id||'guest'}`;const lastUseKey=()=>`ll-last-use:${user?.id||'guest'}`;const DAY=86400000;let otpSentAt=0;const defaultDraft=()=>({teacher_name:'',teacher_address:{street:'',postcode:'',city:'',country:'Deutschland'},teacher_email:user?.email||'',tax_number:'',vat_mode:'',iban:'',bank_name:'',payment_days:14,cancellation_rule:'24h',phone:''});
+const draftKey=()=>`ll-draft:${user?.id||'guest'}`;const stepKey=()=>`ll-step:${user?.id||'guest'}`;const lastUseKey=()=>`ll-last-use:${user?.id||'guest'}`;const DAY=86400000;let otpSentAt=0,recoveryMode=false;const defaultDraft=()=>({teacher_name:'',teacher_address:{street:'',postcode:'',city:'',country:'Deutschland'},teacher_email:user?.email||'',tax_number:'',vat_mode:'',iban:'',bank_name:'',payment_days:14,cancellation_rule:'24h',phone:''});
 function login(){
  frame('<div class="auth-heading"><div class="auth-mark" aria-hidden="true"></div><h1>Lesson Ledger</h1><p class="muted">Lessons, notes and invoices for private teachers.</p></div>'+
  '<form id="loginForm" class="card auth-card"><h2>Sign in</h2>'+
@@ -74,7 +74,7 @@ function choosePassword(){
   $('savePassword').disabled=true;
   const {error}=await supabase.auth.updateUser({password});
   if(error){$('savePassword').disabled=false;return err(error);}
-  await load();
+  recoveryMode=false;await load();
  };
 }
 function register(){
@@ -95,7 +95,7 @@ function register(){
 }
 
 function verify(email){frame('<p class="eyebrow">Anmeldung</p><h1>Prüfe dein Postfach</h1><p>Wir haben eine Anmeldung an <strong>'+escapeHTML(email)+'</strong> geschickt.</p><p class="muted">Öffne den Link oder gib den sechsstelligen Code ein.</p><div class="card"><label class="field">Bestätigungscode<input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>'+button('Code bestätigen','check')+'<p id="error" class="error" role="alert"></p><button class="link" id="resend">Code erneut senden</button><button class="link" id="wrong">Falsche Adresse?</button></div>');$('wrong').onclick=login;$('resend').onclick=async()=>{if(Date.now()-otpSentAt<60000)return err('Bitte warte 60 Sekunden, bevor du einen neuen Code anforderst.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0]}});if(error)return err(error);otpSentAt=Date.now();$('error').textContent='Ein neuer Code wurde angefordert.'};$('check').onclick=async()=>{const {error}=await supabase.auth.verifyOtp({email,token:$('otp').value.trim(),type:'email'});if(error)err(error);else await load()}}
-async function load(){const {data:{user:u}}=await supabase.auth.getUser();user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
+async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabase.auth.getUser();if(recoveryMode)return;user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
 function setup(){const [key,title]=steps[step];let body='';if(key==='teacher_address'){const a=addr();body=field('street','Straße und Hausnummer',a.street)+field('postcode','Postleitzahl',a.postcode)+field('city','Ort',a.city)+field('country','Land',a.country||'Deutschland')}
 else if(key==='vat_mode'){body=[['small_business','Kleinunternehmer (§ 19 UStG)','Ich berechne keine Umsatzsteuer.'],['exempt_teaching','Steuerfreier Unterricht (§ 4 Nr. 21 UStG)','Ich habe eine entsprechende Bescheinigung.'],['regular_19','Regulär 19 %','Meine Preise enthalten Umsatzsteuer.'],['unsure','Ich bin mir nicht sicher','Rechnungen bleiben gesperrt, bis du dich entschieden hast.']].map(([v,l,d])=>'<label class="choice"><input type="radio" name="vat_mode" value="'+v+'" '+(draft.vat_mode===v?'checked':'')+'><strong>'+l+'</strong><p class="muted small">'+d+'</p></label>').join('')}
@@ -138,8 +138,9 @@ function settingsPage(onlyKeys=null){
  ];
  frame('<div class="row"><button id="home" class="secondary" aria-label="Back">←</button><h1 style="flex:1">Settings</h1></div>'+
  '<section class="card"><h2>Invoice details</h2>'+rows.map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value)+'</div></div><button class="link" data-setting="'+key+'">'+(value==='Not set'?'Add':'Edit')+'</button></div>').join('')+'</section>'+
- '<section class="card"><h2>Sign-in</h2><div class="settings-row"><div><div class="muted">Sign-in email</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Change</button></div>'+button('Sign out','signout','secondary')+'<div style="text-align:center">'+button('Sign out everywhere','signoutAll','secondary')+'</div></section>','settings-screen');
+ '<section class="card"><h2>Sign-in</h2><div class="settings-row"><div><div class="muted">Sign-in email</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Change</button></div>'+button('Set or change password','setPassword','secondary')+button('Sign out','signout','secondary')+'<div style="text-align:center">'+button('Sign out everywhere','signoutAll','secondary')+'</div></section>','settings-screen');
  $('home').onclick=home;
+ $('setPassword').onclick=()=>{recoveryMode=true;choosePassword();};
  document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>settingsEditPage(b.dataset.setting==='teacher_address'?['street','postcode','city','country']:b.dataset.setting==='invoice_language'||b.dataset.setting==='cancellation_rule'?null:[b.dataset.setting]));
  $('changeLoginLink').onclick=()=>settingsEditPage(['effective_from']);
  $('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};
@@ -341,4 +342,4 @@ function studentStatusForm(id,v,current){
  };
 }
 
-supabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY')setTimeout(choosePassword,0);else if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
+supabase.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recoveryMode=true;setTimeout(choosePassword,0);}else if(event==='SIGNED_IN'&&!user)setTimeout(load,0)});load();
