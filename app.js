@@ -45,20 +45,15 @@ function studentSearchRank(student,term){
 async function studentsPage(initialSearch=''){
  frame('<div class="row"><h1>Schüler</h1>'+button('Zurück','backStudents','secondary')+'</div>'+button('Schüler hinzufügen','newStudent')+'<div class="card">'+field('studentSearch','Name oder Kurzname',initialSearch)+'<label class="field">Status<select id="studentFilter"><option value="active">Aktiv</option><option value="paused">Pausiert</option><option value="ended">Beendet</option></select></label><div id="studentResults"></div><p id="error" class="error"></p></div>');
  $('backStudents').onclick=home;$('newStudent').onclick=()=>studentForm();
- const q=await supabase.from('students').select('id,student_versions(*)').eq('ledger_id',ledger);
- if(q.error)return err(q.error);
- const items=await Promise.all((q.data||[]).map(async st=>{
-  const versions=(st.student_versions||[]).filter(v=>v.effective_from<=today()).sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at)||b.id.localeCompare(a.id));
-  const v=versions[0];if(!v)return null;
-  const r=await supabase.rpc('student_status_at',{p_student_id:st.id,p_at:today()});
-  return r.error?null:{...v,id:st.id,status:r.data};
- }));
- const records=items.filter(Boolean);
- function render(){
-  const query=normalizeStudentText($('studentSearch').value);
-  const status=$('studentFilter').value;
-  const matches=records.filter(x=>x.status===status).map(x=>({...x,rank:studentSearchRank(x,query)})).filter(x=>Number.isFinite(x.rank)).sort((a,b)=>a.rank-b.rank||a.student_name.localeCompare(b.student_name,'de'));
-  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.id)+'"><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.payer_name)+' · '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Kein Schüler gefunden.</p>'+button('Schüler hinzufügen','addFromSearch','secondary');
+ let serial=0;
+ async function render(){
+  const current=++serial;
+  const search=$('studentSearch').value.trim(),status=$('studentFilter').value;
+  const {data,error}=await supabase.rpc('find_students',{p_query:search,p_status:status,p_at:today()});
+  if(current!==serial)return;
+  if(error){$('studentResults').innerHTML='';return err(error);}
+  const matches=data||[];
+  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.payer_name)+' · '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Kein Schüler gefunden.</p>'+button('Schüler hinzufügen','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
   if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
