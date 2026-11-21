@@ -102,7 +102,7 @@ function studentForm(prefill=''){
   $('saveStudent').disabled=true;
   const {data,error}=await supabase.rpc('create_student',{p_details:details});
   if(error){$('saveStudent').disabled=false;return err(error);}
-  alert('Gespeichert: '+details.student_name+', '+details.subject+', '+details.minutes+' Min., '+details.price+' €');
+  alert('Gespeichert: '+details.student_name+', '+details.subject+', '+details.minutes+' Min., '+details.price+' € '+(details.billing_mode==='monthly_flat'?'pro Monat':'pro Stunde'));
   studentPage(data);
  };
 }
@@ -118,12 +118,13 @@ async function studentPage(id){
  if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=studentsPage;return;}
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
+ const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
  frame('<div class="row"><h1>'+escapeHTML(v.student_name)+'</h1>'+button('Zurück','backStudents','secondary')+'</div>'+
  '<div class="card"><h2>Schülerdaten</h2><p>'+escapeHTML(v.subject)+' · '+escapeHTML(v.minutes)+' Minuten · '+escapeHTML(v.lessons_per_week)+' / Woche</p>'+
  '<p>'+escapeHTML(v.billing_mode==='monthly_flat'?v.monthly_fee+' € pro Monat':v.rate+' € pro Stunde')+'</p>'+
  '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Kontakt: '+escapeHTML(v.payer_email||'E-Mail fehlt')+'</p><p>Anschrift: '+escapeHTML([v.payer_address?.street,v.payer_address?.postcode,v.payer_address?.city].filter(Boolean).join(', ')||'Anschrift fehlt')+'</p><p>Unterrichtsort: '+escapeHTML(v.location||'Nicht angegeben')+'</p><p>Status: '+escapeHTML(detail.data?.[0]?status.data:'Noch nicht begonnen')+'</p>'+
  '<div class="actions">'+button('Daten ändern','changeStudent','secondary')+button('Status ändern','statusStudent','secondary')+button('Irrtümlich angelegt entfernen','removeStudent','secondary')+'</div></div>'+
- (pending.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+'</div>':'')+
+ (pending.length||pendingEvents.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+pendingEvents.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.event_type)+'</p>').join('')+'</div>':'')+
  '<div class="card"><h2>Änderungsverlauf</h2>'+history.data.map(x=>'<div class="summary"><strong>Ab '+escapeHTML(x.effective_from)+'</strong><span>'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde')+' · erfasst '+escapeHTML(x.created_at.slice(0,10))+'</span></div>').join('')+
  (events.data||[]).map(x=>'<div class="summary"><strong>'+escapeHTML(x.event_type)+' ab '+escapeHTML(x.effective_from)+'</strong><span>Erfasst '+escapeHTML(x.created_at.slice(0,10))+(x.pause_until?' · bis '+escapeHTML(x.pause_until):'')+'</span></div>').join('')+'</div>');
  $('backStudents').onclick=studentsPage;
