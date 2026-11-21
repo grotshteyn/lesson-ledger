@@ -100,7 +100,7 @@ set search_path = '' as $$
    when event_type='end' then 'ended'
    when event_type='remove' then 'removed'
  end from latest),'active') end
-$;
+$$;
 revoke all on function public.student_details_at(uuid,date),public.student_status_at(uuid,date) from public,anon;
 grant execute on function public.student_details_at(uuid,date),public.student_status_at(uuid,date) to authenticated;
 
