@@ -1,6 +1,7 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const nextMonthFirst=()=>{const d=new Date();return `${d.getFullYear()+(d.getMonth()===11?1:0)}-${String((d.getMonth()+1)%12+1).padStart(2,'0')}-01`};
 const steps=[['teacher_name','Welcher Name soll auf deinen Rechnungen stehen?'],['teacher_address','Wie lautet deine Postanschrift?'],['teacher_email','Unter welcher E-Mail-Adresse können dich Zahlende erreichen?'],['tax_number','Wie lautet deine Steuernummer?'],['vat_mode','Wie berechnest du Umsatzsteuer?'],['iban','Wohin sollen Zahlende überweisen?'],['payment_days','Wie viele Tage haben Zahlende zum Bezahlen?'],['cancellation_rule','Deine Stornoregel'],['summary','Alles richtig?']];
 const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const $=id=>document.getElementById(id);
@@ -142,7 +143,7 @@ function studentChangeForm(id,v){
  field('price','Preis in €',money,'number')+field('payer_name','Zahlende Person',v.payer_name)+field('payer_email','E-Mail',v.payer_email||'','email')+
  field('payer_street','Straße',a.street||'')+field('payer_postcode','PLZ',a.postcode||'')+field('payer_city','Ort',a.city||'')+
  '<label class="field">Unterrichtsort<select id="location"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>'+
- field('effective_from','Gültig ab',today(),'date')+
+ field('effective_from','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted small">Bereits erfasste Stunden und ausgestellte Rechnungen werden nicht rückwirkend verändert.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</div>');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
@@ -162,7 +163,7 @@ function studentStatusForm(id,v,current){
  frame('<div class="row"><h1>Status ändern</h1>'+button('Zurück','backStatus','secondary')+'</div><div class="card">'+
  '<p>'+escapeHTML(v.student_name)+' · aktuell: '+escapeHTML(current)+'</p>'+
  '<label class="field">Aktion<select id="statusEvent"><option value="pause">Pausieren</option><option value="restart">Wieder starten</option><option value="end">Beenden</option></select></label>'+
- field('statusDate','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?new Date(new Date(today()+'T12:00:00').getFullYear(),new Date(today()+'T12:00:00').getMonth()+1,1).toLocaleDateString('en-CA'):today(),'date')+field('pauseUntil','Pause bis (optional)','','date')+
+ field('statusDate','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+field('pauseUntil','Pause bis (optional)','','date')+
  '<p class="muted small">Bei Monatspauschalen gelten Statusänderungen ab dem Monatsersten.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Status speichern','saveStatus')+'</div>');
  $('backStatus').onclick=()=>studentPage(id);
