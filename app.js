@@ -131,14 +131,22 @@ async function studentPage(id){
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
- frame('<div class="row"><h1>'+escapeHTML(v.student_name)+'</h1>'+button('Zurück','backStudents','secondary')+'</div>'+
- '<div class="card"><h2>Schülerdaten</h2><p>'+escapeHTML(v.subject)+' · '+escapeHTML(v.minutes)+' Minuten · '+escapeHTML(v.lessons_per_week)+' / Woche</p>'+
- '<p>'+escapeHTML(v.billing_mode==='monthly_flat'?v.monthly_fee+' € pro Monat':v.rate+' € pro Stunde')+'</p>'+
- '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Kontakt: '+escapeHTML(v.payer_email||'E-Mail fehlt')+'</p><p>Anschrift: '+escapeHTML([v.payer_address?.street,v.payer_address?.postcode,v.payer_address?.city].filter(Boolean).join(', ')||'Anschrift fehlt')+'</p><p>Unterrichtsort: '+escapeHTML(v.location||'Nicht angegeben')+'</p><p>Status: '+escapeHTML(detail.data?.[0]?status.data:'Noch nicht begonnen')+'</p>'+
- '<div class="actions">'+button('Daten ändern','changeStudent','secondary')+button('Status ändern','statusStudent','secondary')+button('Irrtümlich angelegt entfernen','removeStudent','secondary')+'</div></div>'+
- (pending.length||pendingEvents.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+pendingEvents.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.event_type)+'</p>').join('')+'</div>':'')+
- '<div class="card"><h2>Änderungsverlauf</h2>'+history.data.map(x=>'<div class="summary"><strong>Ab '+escapeHTML(x.effective_from)+'</strong><span>'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde')+' · erfasst '+escapeHTML(x.created_at.slice(0,10))+'</span></div>').join('')+
- (events.data||[]).map(x=>'<div class="summary"><strong>'+escapeHTML(x.event_type)+' ab '+escapeHTML(x.effective_from)+'</strong><span>Erfasst '+escapeHTML(x.created_at.slice(0,10))+(x.pause_until?' · bis '+escapeHTML(x.pause_until):'')+'</span></div>').join('')+'</div>');
+ const niceDate=d=>{if(!d)return '';const [y,m,day]=d.slice(0,10).split('-');return new Date(Number(y),Number(m)-1,Number(day)).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});};
+ const statusLabel={active:'Active',paused:'Paused',ended:'Ended',removed:'Removed'}[status.data]||'Not yet started';
+ const startDate=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);
+ const locationLabel={my_place:'My place',student_home:'Their home',online:'Online'}[v.location]||'Not set';
+ const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € per month':x.rate+' € per lesson';
+ frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Back to students">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' since '+niceDate(startDate)+'</p></div></div></div>'+
+ '<section class="card"><h2>Status</h2><dl class="detail-grid"><dt>Subject</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' min, '+escapeHTML(v.lessons_per_week)+'× per week</dd>'+
+ '<dt>Price</dt><dd>'+escapeHTML(moneyLabel(v))+'</dd><dt>Payer</dt><dd>'+escapeHTML(v.payer_name)+'</dd>'+
+ '<dt>Where</dt><dd>'+escapeHTML(locationLabel)+'</dd><dt>Cancellation</dt><dd>Free if cancelled 24 h before, otherwise billed</dd></dl>'+
+ (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>From '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>From '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
+ '<div class="actions">'+button('Change','changeStudent')+button('Pause or end','statusStudent','secondary')+'</div>'+
+ '<section class="card"><h2>History</h2>'+
+ (history.data||[]).map((x,i)=>'<div class="history-entry">'+(i===(history.data||[]).length-1?'Student added':'Details effective from '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x)))+'<div class="muted">entered '+niceDate(x.created_at)+'</div></div>').join('')+
+ (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' from '+niceDate(x.effective_from)+'<div class="muted">entered '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
+ '<div style="margin-top:24px">'+button('Remove mistakenly added student','removeStudent','secondary')+'</div>');
+
  $('backStudents').onclick=()=>studentsPage();
  $('changeStudent').onclick=()=>studentChangeForm(id,v);
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
