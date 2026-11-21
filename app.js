@@ -121,12 +121,12 @@ async function studentPage(id){
  ]);
  const error=detail.error||status.error||history.error||events.error;
  if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=studentsPage;return;}
- const v=detail.data?.[0];if(!v)return studentsPage();
+ const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  frame('<div class="row"><h1>'+escapeHTML(v.student_name)+'</h1>'+button('Zurück','backStudents','secondary')+'</div>'+
  '<div class="card"><h2>Schülerdaten</h2><p>'+escapeHTML(v.subject)+' · '+escapeHTML(v.minutes)+' Minuten · '+escapeHTML(v.lessons_per_week)+' / Woche</p>'+
  '<p>'+escapeHTML(v.billing_mode==='monthly_flat'?v.monthly_fee+' € pro Monat':v.rate+' € pro Stunde')+'</p>'+
- '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Status: '+escapeHTML(status.data)+'</p>'+
+ '<p>Zahlende Person: '+escapeHTML(v.payer_name)+'</p><p>Status: '+escapeHTML(detail.data?.[0]?status.data:'Noch nicht begonnen')+'</p>'+
  '<div class="actions">'+button('Daten ändern','changeStudent','secondary')+button('Status ändern','statusStudent','secondary')+'</div></div>'+
  (pending.length?'<div class="card"><h2>Geplante Änderungen</h2>'+pending.map(x=>'<p>Ab '+escapeHTML(x.effective_from)+': '+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</p>').join('')+'</div>':'')+
  '<div class="card"><h2>Änderungsverlauf</h2>'+history.data.map(x=>'<div class="summary"><strong>Ab '+escapeHTML(x.effective_from)+'</strong><span>'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde')+' · erfasst '+escapeHTML(x.created_at.slice(0,10))+'</span></div>').join('')+
