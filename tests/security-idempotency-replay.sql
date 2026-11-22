@@ -90,5 +90,14 @@ begin
   if sqlerrm='LEGACY_RATE_REPLAY_ACCEPTED' or sqlerrm not like '%Idempotency key reused with different lesson%'
   then raise exception 'Legacy rate mismatch not rejected: %',sqlerrm; end if;
  end;
+ -- Changing student defaults must not turn an omitted-argument replay into a false success.
+ perform public.change_student(s,current_date-10,jsonb_build_object('minutes',75,'price',65));
+ begin
+  perform public.log_lesson_v2(s,current_date-3,'held',null,null,false,k2,false,'web');
+  raise exception 'DEFAULT_CHANGE_REPLAY_ACCEPTED';
+ exception when others then
+  if sqlerrm='DEFAULT_CHANGE_REPLAY_ACCEPTED' or sqlerrm not like '%Idempotency key reused with different lesson%'
+  then raise exception 'Changed defaults not rejected: %',sqlerrm; end if;
+ end;
 end $$;
 rollback;
