@@ -394,7 +394,12 @@ async function loadLessonHistory(id){
  const from=new Date();from.setDate(1);from.setMonth(from.getMonth()-1);
  const cutoff=[from.getFullYear(),String(from.getMonth()+1).padStart(2,'0'),'01'].join('-');
  const lessons=(a.data||[]).filter(x=>!voided.has(x.id)&&x.lesson_date>=cutoff);
- target.innerHTML=(lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+'</span></span><span>'+lessonMoney(x)+' €</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+ target.innerHTML=(lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+'</span></span><span>'+lessonMoney(x)+' €</span></button>').join(''):'<p class="muted">Keine Stunden im aktuellen oder vorherigen Monat.</p>')+
+ '<button class="link" id="toggleLessonHistory">Verlauf einschließlich entfernter Stunden anzeigen</button><div id="voidedLessonHistory" hidden></div>';
+ $('toggleLessonHistory').onclick=()=>{
+  const el=$('voidedLessonHistory');el.hidden=!el.hidden;
+  if(!el.hidden)el.innerHTML=(a.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+(voided.has(x.id)?' · Entfernt':'')+'</div>').join('')||'Kein Verlauf';
+ };
  target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,id));
 }
 async function lessonDetails(lessonId,studentId){
