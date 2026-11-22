@@ -197,8 +197,9 @@ async function studentsPage(initialSearch=''){
   const statuses=['active','paused','ended'];
   document.querySelectorAll('[data-filter]').forEach((b,i)=>{b.textContent=({active:'Aktiv',paused:'Pausiert',ended:'Beendet'})[statuses[i]]+' ('+(responses[i].data||[]).length+')';b.setAttribute('aria-pressed',String(b.dataset.filter===selected));});
   const matches=responses[statuses.indexOf(selected)].data||[];
-  $('studentResults').innerHTML=matches.length?matches.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
+  $('studentResults').innerHTML=matches.length?matches.map(x=>'<div class="lesson-student-row"><button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>'+(selected==='active'?'<button class="primary lesson-log-btn" data-log="'+escapeHTML(x.student_id)+'">Log</button>':'')+'</div>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
+  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logLessonSheet(b.dataset.log));
   if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
  $('studentSearch').oninput=render;
@@ -276,7 +277,8 @@ async function studentPage(id){
  '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
  '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
  (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
- '<div class="actions">'+button('Status ändern','statusStudent','secondary')+'</div>'+
+ '<div class="actions">'+button('Log','studentLog')+button('Status ändern','statusStudent','secondary')+'</div>'+
+ '<section class="card"><h2>Stunden</h2><div id="lessonHistory">Wird geladen …</div></section>'+
  '<section class="card"><h2>Verlauf</h2>'+
  (history.data||[]).map((x,i)=>'<div class="history-entry">'+(i===(history.data||[]).length-1?'Schüler hinzugefügt':'Angaben gültig ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x)))+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+
  (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' ab '+niceDate(x.effective_from)+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
@@ -285,6 +287,8 @@ async function studentPage(id){
  $('backStudents').onclick=()=>studentsPage();
  document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
+ $('studentLog').onclick=()=>logLessonSheet(id);
+ loadLessonHistory(id);
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
  if(status.data==='removed')$('removeStudent').hidden=true;
 }
@@ -359,6 +363,58 @@ function studentStatusForm(id,v,current){
   const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:action,p_effective_from:date,p_pause_until:action==='pause'?until:null});
   if(error){$('saveStatus').disabled=false;return err(error);}
   studentPage(id);
+ };
+}
+
+
+const lessonMoney=x=>x.billing_mode==='monthly_flat'?0:(x.charge_override==='not_charged'?0:x.charge_override==='charged'?Number(x.rate):x.status==='cancelled_free'?0:Number(x.rate));
+async function loadLessonHistory(id){
+ const target=$('lessonHistory');if(!target)return;
+ const [a,b]=await Promise.all([supabase.from('lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(100),supabase.from('lesson_voids').select('lesson_id').limit(500)]);
+ if(a.error||b.error){target.textContent=(a.error||b.error).message;return;}
+ const voided=new Set((b.data||[]).map(x=>x.lesson_id));
+ const lessons=(a.data||[]).filter(x=>!voided.has(x.id));
+ target.innerHTML=lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+'</span></span><span>'+lessonMoney(x)+' €</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+ target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,id));
+}
+async function lessonDetails(lessonId,studentId){
+ const {data:x,error}=await supabase.from('lessons').select('*').eq('id',lessonId).single();
+ if(error)return alert(error.message);
+ frame('<div class="row"><h1>Stunde '+escapeHTML(x.lesson_date)+'</h1>'+button('Zurück','backLesson','secondary')+'</div><section class="card"><p>Status: '+escapeHTML(x.no_show?'Nicht erschienen':x.status)+'</p><p>Dauer: '+x.minutes+' Minuten</p><p>Preis: '+x.rate+' €</p><p>Berechnet: '+lessonMoney(x)+' €</p><p>Erfasst: '+escapeHTML(x.created_at)+'</p></section><div class="actions">'+button('Bearbeiten','editLesson')+button('Entfernen','removeLesson','secondary')+'</div><p id="error" class="error"></p>');
+ $('backLesson').onclick=()=>studentPage(studentId);
+ const remove=async(reason)=>{if(x.invoice_id)return err({message:'Bereits abgerechnet. Bitte Rechnung korrigieren.'});if(!confirm('Stunde stornieren? Der Verlauf bleibt erhalten.'))return;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:lessonId,p_reason:reason,p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
+ $('removeLesson').onclick=()=>remove('remove');
+ $('editLesson').onclick=async()=>{if(x.invoice_id)return err({message:'Bereits abgerechnet.'});if(!confirm('Alte Stunde stornieren und korrigierte Stunde neu erfassen?'))return;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:lessonId,p_reason:'edit',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);logLessonSheet(studentId,x);};
+}
+async function logLessonSheet(studentId,original=null){
+ const {data,error}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:original?.lesson_date||today()});
+ if(error||!data?.length)return alert(error?.message||'Keine Schülerdaten');
+ const v=data[0],flat=v.billing_mode==='monthly_flat';
+ frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true"><div class="row"><h1>Log: '+escapeHTML(v.student_name)+'</h1>'+button('×','closeLog','secondary')+'</div>'+
+ '<label class="field">Art<select id="lessonStatus"><option value="held">Gehalten</option><option value="cancelled">Abgesagt</option><option value="no_show">Nicht erschienen</option></select></label>'+
+ field('lessonDate','Datum',original?.lesson_date||today(),'date')+field('lessonMinutes','Dauer (Minuten)',original?.minutes||v.minutes,'number')+
+ (flat?'':'<div id="lessonPriceField">'+field('lessonRate','Preis (€)',original?.rate||v.rate,'number')+'</div>')+
+ '<div id="lessonCancellation" hidden><label class="field">Wer hat abgesagt?<select id="cancelBy"><option value="student">Schüler</option><option value="teacher">Ich</option></select></label><label class="field" id="cancelTimingField">Mindestens 24 Stunden vorher?<select id="cancelInTime"><option value="false">Nein</option><option value="true">Ja</option></select></label></div>'+
+ (flat?'':'<label class="choice" id="lessonOverrideRow"><input type="checkbox" id="lessonFree"> Diesmal nicht berechnen</label>')+
+ '<p id="error" class="error"></p>'+button('Speichern','saveLesson')+'</section></div>','change-screen');
+ $('closeLog').onclick=()=>studentPage(studentId);
+ if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonFree'))$('lessonFree').checked=original.charge_override==='not_charged';}
+ const refresh=()=>{$('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';$('cancelTimingField').hidden=$('cancelBy').value!=='student';};
+ $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;refresh();
+ let key=crypto.randomUUID();
+ $('saveLesson').onclick=async()=>{
+  $('saveLesson').disabled=true;
+  const status=$('lessonStatus').value;
+  const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonFree').checked?'not_charged':null,p_idempotency_key:key};
+  let {data,error}=await supabase.rpc('log_lesson',params);
+  if(!error&&data?.state==='duplicate'){
+   if(confirm('An diesem Datum existiert bereits eine Stunde. Zweite Stunde speichern?')){params.p_confirm_duplicate=true;({data,error}=await supabase.rpc('log_lesson',params));}
+   else{$('saveLesson').disabled=false;return;}
+  }
+  if(error){$('saveLesson').disabled=false;return err(error);}
+  frame('<div class="card"><h2>Stunde gespeichert</h2><p>'+escapeHTML(params.p_lesson_date)+' · '+params.p_minutes+' Min.</p>'+button('Rückgängig','undoLesson','secondary')+button('Fertig','doneLesson')+'<p id="error" class="error"></p></div>');
+  $('doneLesson').onclick=()=>studentPage(studentId);
+  $('undoLesson').onclick=async()=>{const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
  };
 }
 
