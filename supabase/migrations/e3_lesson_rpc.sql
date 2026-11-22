@@ -123,6 +123,14 @@ begin
  end if;
  if v_old.invoice_id is not null then raise exception 'Lesson was invoiced in the meantime'; end if;
  if exists(select 1 from public.lesson_voids where lesson_id=v_old.id) then raise exception 'Lesson already voided'; end if;
+ if not p_confirm_inactive then
+  if not exists(select 1 from public.student_versions v where v.student_id=v_old.student_id and v.effective_from<=p_lesson_date) then
+   return jsonb_build_object('state','inactive','student_status','not_started');
+  end if;
+  if public.student_status_at(v_old.student_id,p_lesson_date) is distinct from 'active' then
+   return jsonb_build_object('state','inactive','student_status',coalesce(public.student_status_at(v_old.student_id,p_lesson_date),'unknown'));
+  end if;
+ end if;
  if not p_confirm_duplicate then
   select x.id into v_new_id from public.lessons x
   where x.student_id=v_old.student_id and x.lesson_date=p_lesson_date
