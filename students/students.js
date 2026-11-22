@@ -25,7 +25,7 @@ const lessonLength = (value=45) => {
  '<input type="hidden" name="minutes" value="'+escape(value)+'" '+(standard?'':'disabled')+'>';
 };
 const billingChoice = value => segmented('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],value);
-const locationChoice = value => segmented('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],value||'');
+const locationChoice = value => segmented('location','Unterrichtsort',[['my_place','Bei mir'],['online','Online'],['student_home','Beim Schüler']],locationNames[value]?value:'my_place');
 const effectiveChoice = date => {
  const standard=date===todayLocal()||date===nextMonthStart(todayLocal());
  return segmented('effective_choice','Gültig ab',[['today','Heute'],['next','1. des nächsten Monats'],['other','Anderes Datum']],date===todayLocal()?'today':date===nextMonthStart(todayLocal())?'next':'other')+
@@ -138,7 +138,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    const v=(Array.isArray(current)?current[0]:current)||versions.data?.[0];if(!v)throw new Error('Schüler nicht gefunden.');
    const isDetails=tab==='details',payer=v.payer_address||{};
    const editButton=section=>`<button class="e2-edit" data-edit="${section}">Bearbeiten</button>`;
-   render(`<header class="e2-heading">${backButton}<div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs" role="group" aria-label="Schüleransicht"><button data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
+   render(`<header class="e2-heading">${backButton}<div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs e2-single-select" role="group" aria-label="Schüleransicht"><button type="button" data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button type="button" data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
     card('Grundlagen',`<dl>${detail('Name',v.student_name)}${detail('Kurzname',v.nickname)}${detail('Fach',v.subject)}${detail('Beginn',dateLabel(v.start_date))}</dl>`,editButton('basics'))+
     card('Stunden und Preis',`<dl>${detail('Dauer',v.minutes+' Minuten')}${detail('Stunden pro Woche',v.lessons_per_week)}${detail('Preis',studentPrice(v))}${detail('Unterrichtsort',locationNames[v.location])}</dl>`,editButton('pricing'))+
     card('Zahlungspflichtige Person',`<dl>${detail('Name',v.payer_name)}${detail('E-Mail',v.payer_email)}${detail('Straße',payer.street)}${detail('PLZ',payer.postcode)}${detail('Ort',payer.city)}</dl>`,editButton('payer'))+
