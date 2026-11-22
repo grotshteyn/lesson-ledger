@@ -167,7 +167,7 @@ function routeTab(tab,options={}){
   activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
   if(options.studentId)activeModule.open?.(options.studentId,'lessons');
  }else{
-  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId});
+  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId,onBack:()=>options.studentId?routeTab('students',{studentId:options.studentId}):routeTab('lessons')});
   if(options.lessonId)activeModule.openLesson(options.lessonId,options.studentId);
   else if(options.studentId)activeModule.createLesson(options.studentId);
  }
