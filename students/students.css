@@ -139,3 +139,26 @@
 .ll-app .e2-screen .e2-tabs button+button{border-left:1px solid #aaa}
 .ll-app .e2-screen .e2-tabs button[aria-pressed=true]{background:#242424;color:#fff}
 @media(max-width:360px){.ll-app .e2-segment button{font-size:11px}.ll-app .e2-screen .e2-actions button{font-size:13px}}
+
+
+/* Match wireframe: white bordered form sections, individual length/effective pills. */
+.ll-app .e2-screen:has(#e2-form) form .e2-card,
+.ll-app .e2-screen:has(#e2-edit) form .e2-card{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:14px;margin:8px 0 12px}
+.ll-app .e2-screen:has(#e2-form),.ll-app .e2-screen:has(#e2-edit){padding-top:10px}
+.ll-app .e2-screen:has(#e2-form) .e2-heading,.ll-app .e2-screen:has(#e2-edit) .e2-heading{margin:0 0 12px}
+.ll-app .e2-screen:has(#e2-form) .e2-heading h1,.ll-app .e2-screen:has(#e2-edit) .e2-heading h1{font-size:22px}
+.ll-app .e2-screen:has(#e2-form) .e2-field,.ll-app .e2-screen:has(#e2-edit) .e2-field{margin:10px 0;font-size:13px;font-weight:500}
+.ll-app .e2-screen:has(#e2-form) .e2-field input,.ll-app .e2-screen:has(#e2-edit) .e2-field input{min-height:42px;margin-top:5px;padding:9px 11px;font-size:15px}
+.ll-app .e2-choice-field{margin:11px 0 14px}
+.ll-app .e2-choice-label{font-size:13px;font-weight:500;margin-bottom:6px}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment,
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment{border:0;background:transparent;gap:6px;border-radius:0;overflow:visible}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment button,
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button{border:1.5px solid #aaa;border-radius:8px;background:#fff;min-height:44px}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment button[aria-pressed=true],
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button[aria-pressed=true]{background:#242424;color:#fff;border-color:#242424}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment{border:0;background:#e6e6e3;border-radius:9px;padding:3px;gap:3px}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button{border:0;border-radius:7px;background:transparent;font-size:13px}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button[aria-pressed=true]{background:#fff;color:#242424;box-shadow:0 1px 3px #0002}
+.ll-app .e2-screen:has(#e2-form) .e2-card-heading h2,.ll-app .e2-screen:has(#e2-edit) .e2-card-heading h2{font-size:15px;font-weight:700}
+.ll-app .e2-screen:has(#e2-edit) .e2-actions{position:sticky;bottom:0}
