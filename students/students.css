@@ -65,3 +65,18 @@
 .e2-screen:has(#e2-search) .e2-floating{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:9;margin:0;pointer-events:none}
 .e2-screen:has(#e2-search) .e2-floating button{height:56px;min-height:56px;border:0;border-radius:28px;padding:0 24px;background:#222;color:#fff;font-size:15px;font-weight:600;white-space:nowrap;box-shadow:0 3px 12px #0002;pointer-events:auto}
 .e2-screen:has(#e2-search) .e2-student-list>.e2-muted{padding:12px 14px;margin:0;font-size:13px}
+
+/* Students shell only: match the reference's text-only three-tab navigation. */
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-header{min-height:77px;padding:20px 20px 12px;border-bottom-color:#d6d6d2}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-header h1{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:normal}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-settings{width:44px;height:44px;min-width:44px;min-height:44px;border:1.5px solid #9a9a96;border-radius:8px;background:#fff;font-size:22px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-content{padding:0 20px 96px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tabs{display:flex;align-items:stretch;gap:0;padding:0 0 16px;background:#fff;border-top:1px solid #d6d6d2}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab{flex:1;min-height:56px;gap:0;padding:0;border:0;border-top:3px solid transparent;border-radius:0;font-size:13px;font-weight:500;color:#555}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab[aria-current="page"]{border-top-color:#222;color:#222;font-weight:700}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab span:first-child{display:none}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-floating{bottom:92px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-floating button{width:72vw;max-width:280.8px;font-size:17px;font-weight:700;box-shadow:0 4px 14px #0004}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-group{margin-bottom:12px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-price{flex:0 0 auto;overflow-wrap:normal}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-main small{margin-top:2px}
