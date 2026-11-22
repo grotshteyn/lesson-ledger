@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../students/students.js',import.meta.url),'utf8');
-const {normalize,studentPrice,groupStudents,groupLessons,matchingStudents,duplicateNames,STUDENT_STORIES}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {normalize,studentPrice,groupStudents,groupLessons,matchingStudents,duplicateNames,basicsChanges,STUDENT_STORIES}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 
 test('ST-3: name and nickname search normalization handles accents and case',()=>{
  assert.equal(normalize('  JÖRG Müller  '),'jorg muller');
@@ -62,4 +62,17 @@ test('ST-4: pricing uses versioned RPC without repricing existing lessons',()=>{
  assert.match(source,/change_student_with_repricing/);
  assert.match(source,/p_reprice:false/);
  assert.match(source,/p_idempotency_key:crypto\.randomUUID\(\)/);
+});
+
+test('ST-4: Basics payload allowlist excludes student_name and arbitrary fields',()=>{
+ const changes=basicsChanges({student_name:'Unauthorized rename',nickname:'  Niki  ',subject:'  Physik ',payer_name:'Unexpected',price:0});
+ assert.deepEqual(changes,{nickname:'Niki',subject:'Physik'});
+ assert.equal(Object.hasOwn(changes,'student_name'),false);
+ assert.equal(Object.hasOwn(changes,'payer_name'),false);
+ assert.equal(Object.hasOwn(changes,'price'),false);
+});
+test('ST-4: Basics form uses the payload allowlist, keeping name read-only',()=>{
+ assert.match(source,/Object\.assign\(changes,basicsChanges\(/);
+ assert.match(source,/Name: \$\{escape\(v\.student_name\)\} \(nicht bearbeitbar\)/);
+ assert.doesNotMatch(source,/input\('student_name','Name',v\.student_name/);
 });
