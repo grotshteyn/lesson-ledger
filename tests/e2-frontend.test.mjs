@@ -33,5 +33,5 @@ test('password sign-in and recovery keep the existing Supabase account',()=>{
 });
 test('new user registration is separate from existing-account password recovery',()=>{
  assert.match(source,/auth\.signUp\(\{email:/);
- assert.match(source,/Already used Lesson Ledger\?/);
+ assert.match(source,/Du hast bereits ein Konto\?/);
 });
