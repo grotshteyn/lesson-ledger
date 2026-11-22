@@ -43,7 +43,7 @@ await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentTyp
 mkdirSync('browser-evidence/e3-all',{recursive:true});
 async function capture(name,selector){
  await page.locator(selector).first().waitFor({state:'visible',timeout:15000});
- await page.evaluate(()=>document.fonts.ready);
+ await page.evaluate(async()=>{window.scrollTo(0,0);await document.fonts.ready});
  const path='browser-evidence/e3-all/'+name+'.png';
  await page.screenshot({path,animations:'disabled',fullPage:false});
  const metrics=await page.evaluate(()=>{
