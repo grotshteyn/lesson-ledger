@@ -1,0 +1,41 @@
+name: E3 all wireframe screens
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'students/**'
+      - 'lessons/**'
+      - 'frontend/**'
+      - 'style.css'
+      - 'tests/e3-all-visual.mjs'
+      - '.github/workflows/e3-all-visual.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenshot-matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser runtime
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Serve actual checked-out application
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/e3-http.log 2>&1 &
+      - name: Capture E3 wireframe screens with authenticated E2 mock
+        run: node tests/e3-all-visual.mjs
+      - name: Existing E2 browser regression
+        run: node --test tests/e2-browser.test.mjs
+      - name: Upload screenshot matrix and measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e3-all-screens-390x844
+          path: browser-evidence/e3-all/
+          if-no-files-found: warn
