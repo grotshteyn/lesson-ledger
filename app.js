@@ -316,12 +316,32 @@ function studentChangeForm(id,v,initialKey='price'){
  '<div class="change-current"><div><span class="muted">Bisher</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">Neu</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
  '<div id="newModePrice" hidden>'+field('newBillingPrice','Neuer Preis (€)',money,'number')+'</div>'+field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted">Bereits abgerechnete Stunden und ausgestellte Rechnungen bleiben unverändert. Monatspauschalen und Pausen beginnen am Monatsersten.</p>'+
+ '<div id="repriceSection" class="notice" hidden><p id="repriceSummary"></p><label class="choice"><input id="repriceLessons" type="checkbox"> Noch nicht abgerechnete Stunden ab diesem Datum mit dem neuen Preis neu erfassen</label></div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</section></div>','change-screen');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
  $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
  const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
- $('changeType').onchange=show;show();
+ $('changeType').onchange=()=>{show();refreshReprice();};show();
+ let repriceLoad=0;
+ const refreshReprice=async()=>{
+  const token=++repriceLoad,key=$('changeType').value,date=$('effective_from').value;
+  const box=$('repriceSection');box.hidden=true;
+  if(!['price','billing_mode'].includes(key)||!date||date>today())return;
+  const [lessons,voids]=await Promise.all([
+   supabase.from('lessons').select('id,invoice_id').eq('student_id',id).gte('lesson_date',date),
+   supabase.from('lesson_voids').select('lesson_id')
+  ]);
+  if(token!==repriceLoad)return;
+  if(lessons.error||voids.error){$('repriceSummary').textContent='Stunden konnten nicht geprüft werden.';box.hidden=false;$('repriceLessons').disabled=true;return;}
+  const removed=new Set((voids.data||[]).map(x=>x.lesson_id));
+  const eligible=(lessons.data||[]).filter(x=>!removed.has(x.id)&&!x.invoice_id);
+  const invoiced=(lessons.data||[]).filter(x=>!removed.has(x.id)&&x.invoice_id);
+  $('repriceSummary').textContent=eligible.length+' nicht abgerechnete Stunden betroffen. '+(invoiced.length?invoiced.length+' abgerechnete Stunden bleiben unverändert.':'');
+  $('repriceLessons').disabled=!eligible.length;
+  $('repriceLessons').checked=false;box.hidden=!eligible.length&&!invoiced.length;
+ };
+ $('effective_from').addEventListener('change',refreshReprice);refreshReprice();
  $('backChange').onclick=()=>studentPage(id);
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
@@ -337,8 +357,14 @@ function studentChangeForm(id,v,initialKey='price'){
   else if(['minutes','lessons_per_week'].includes(key))changes[key]=Number(g(key));
   else if(['payer_street','payer_postcode','payer_city'].includes(key))changes.payer_address={...a,[{payer_street:'street',payer_postcode:'postcode',payer_city:'city'}[key]]:g(key)};
   else changes[key]=g(key);
+  const priceChange=key==='price'||key==='billing_mode';
+  const reprice=priceChange&&!!$('repriceLessons')?.checked;
+  if(reprice&&!confirm('Alle nicht abgerechneten Stunden ab dem gewählten Datum neu bewerten? Die alten Einträge bleiben im Verlauf.'))return;
   $('saveChange').disabled=true;
-  const {error}=await supabase.rpc('change_student',{p_student_id:id,p_effective_from:g('effective_from'),p_changes:changes});
+  const rpc=priceChange?'change_student_with_repricing':'change_student';
+  const params={p_student_id:id,p_effective_from:g('effective_from'),p_changes:changes};
+  if(priceChange){params.p_reprice=reprice;params.p_idempotency_key=crypto.randomUUID();}
+  const {error}=await supabase.rpc(rpc,params);
   if(error){$('saveChange').disabled=false;return err(error);}
   studentPage(id);
  };
