@@ -181,7 +181,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   }
   function compare(existing,proposed,proceed){
     const rows = (label,x) => '<div class="ll-compare-row"><span><strong>'+label+'</strong> · '+statusLabel(x)+' · '+esc(x.minutes)+' Min.</span><b>'+euro(x.rate)+'</b></div>';
-    const {overlay,close}=sheet('<h3>Stunde bereits vorhanden</h3><p>An diesem Tag ist bereits eine Stunde erfasst.</p><div class="ll-compare"><div><strong>Vorhanden</strong>'+rows(existing)+'</div><div><strong>Neu</strong>'+rows(proposed)+'</div></div>',button('Abbrechen','cancel')+button('Zweite speichern','confirm','ll-primary'));
+    const {overlay,close}=sheet('<h3>Stunde bereits vorhanden</h3><p>An diesem Tag ist bereits eine Stunde erfasst.</p><div class="ll-compare">'+rows('Vorhanden',existing)+rows('Neu',proposed)+'</div>',button('Abbrechen','cancel')+button('Zweite speichern','confirm','ll-primary'));
     overlay.querySelector('[data-action="cancel"]').onclick=close;
     overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();proceed();};
   }
