@@ -494,7 +494,12 @@ async function logLessonSheet(studentId,original=null){
   const preview=$('lessonBillingPreview');if(!preview)return;
   const status=$('lessonStatus').value,override=$('lessonOverride')?.value||'';
   const billable=override==='charged'||(override!=='not_charged'&&(status==='held'||(status==='no_show'&&v.no_show_billable!==false)||(status==='cancelled'&&$('cancelBy').value==='student'&&$('cancelInTime').value==='false')));
-  preview.textContent=flat?'Monatspauschale: keine zusätzliche Berechnung':billable?'Voraussichtlich berechnet: '+(Number($('lessonRate').value)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'}):'Voraussichtlich nicht berechnet';
+  const cancelledFree=status==='cancelled'&&($('cancelBy').value==='teacher'||$('cancelInTime').value==='true');
+  const noShowFree=status==='no_show'&&v.no_show_billable===false;
+  const label=status==='held'?'Gehalten':status==='no_show'?'Nicht erschienen':cancelledFree?'Rechtzeitig / durch Lehrkraft abgesagt':'Spät abgesagt';
+  const amount=(Number($('lessonRate')?.value)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+  preview.textContent='Wird gespeichert als: '+label+' · '+(flat?'Monatspauschale, keine zusätzliche Berechnung':billable?amount+' berechnet'+(override?' (manuell)':''):'Nicht berechnet'+(override?' (manuell)':''));
+  if(noShowFree&&override!=='charged')preview.textContent+=' · No-show-Regel: kostenlos';
  };
  $('lessonStatus').onchange=()=>{refresh();refreshRecent();};$('lessonMinutes').oninput=refreshRecent;if($('lessonRate'))$('lessonRate').oninput=()=>{refresh();refreshRecent();};$('cancelBy').onchange=refresh;$('cancelInTime').onchange=refresh;if($('lessonOverride'))$('lessonOverride').onchange=refresh;if($('lessonRate'))$('lessonRate').oninput=refresh;refresh();
  let key=crypto.randomUUID();
