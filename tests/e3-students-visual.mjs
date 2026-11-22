@@ -24,7 +24,7 @@ people.forEach(([name,subject,minutes,price,status,billing],i)=>{
  if(status!=='active')events.push({student_id:id,event_type:status==='paused'?'pause':'end',effective_from:'2026-01-01',pause_until:status==='paused'?'2099-01-06':null,created_at:'2026-01-01T00:00:00Z'});
 });
 const fixture={students,versions,events,seq:people.length};
-const needle='const state={students:[],versions:[],events:[],seq:0};';
+const needle='const state={students:[],versions:[],events:[],lessons:[],seq:0};';
 assert.ok(match[1].includes(needle),'Mock state initializer changed');
 const mock=match[1].replace(needle,'const state='+JSON.stringify(fixture)+';');
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
