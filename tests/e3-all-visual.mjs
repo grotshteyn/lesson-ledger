@@ -82,7 +82,7 @@ try{
  await page.locator('[data-choice="effective_choice"][data-value="next"]').click();
  assert.match(await page.locator('#e2-edit input[type="hidden"][name="effective_from"]').inputValue(),/^[0-9]{4}-[0-9]{2}-01$/);
  await page.locator('[data-cancel]').click();
- await page.locator('[data-finish]').click();
+ await page.locator('[data-back]').click();
  await page.locator('[data-add]').click();
  await capture('05-new-student','#e2-form');
  assert.equal(await page.locator('#e2-form [data-choice="length_choice"]').count(),5);
