@@ -1,0 +1,78 @@
+# E3 database-backed verification runbook (22 Nov 2026)
+
+Status: **BLOCKED on an authorized disposable Supabase database and its cost approval.** No SQL migrations or write tests were run on production. This branch only changes source and regression fixtures.
+
+## Inspected, read-only
+Connected project: `lesson-ledger` (`zcszskoegwgcjgqsfmfx`), ACTIVE_HEALTHY. It is the production project and **must not be used for test fixtures**.
+
+Queries executed using Supabase SQL read-only:
+```sql
+select conname,pg_get_constraintdef(oid) definition
+from pg_constraint where conrelid='public.lessons'::regclass order by conname;
+
+select p.proname,pg_get_function_identity_arguments(p.oid) args
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname in
+('log_lesson_v2','replace_lesson_v2','change_student_with_repricing',
+ 'student_details_at','log_lesson','replace_lesson') order by p.proname;
+
+select pg_get_functiondef(p.oid) definition
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='change_student_with_repricing';
+```
+
+Results:
+- `log_lesson_v2` and `replace_lesson_v2` **absent** from live project.
+- `lesson_paid_rate` requires `rate > 0` for `per_lesson`; proposed migration relaxes to `>= 0`.
+- `lessons_rate_check` already enforces nonnegative rates; `lessons_minutes_check` enforces 5–240.
+- No 365-day CHECK appears in the live `lessons` constraint list. The proposed v2 function has no 365-day date guard. This is **source/schema inspection**, not a passing future-date runtime test.
+- `change_student_with_repricing(p_student_id uuid,p_effective_from date,p_changes jsonb,p_reprice boolean,p_idempotency_key uuid)` exists. Its `p_reprice=false` path calls `change_student` and does not replace logged lessons. `p_reprice=true` intentionally replaces uninvoiced lessons, so the Students UI must pass false when preserving history.
+- The original proposed replacement v2 function returned replay success for the same key and old lesson even if the new date/status/minutes/rate differed. This branch adds a payload comparison and a regression assertion.
+- The proposed log v2 function checks date, status and explicitly supplied minutes/rate on replay. If minutes/rate are omitted, replay cannot detect changes to defaults that occurred after the original write. **Residual risk**: require explicit client snapshots for strict replay equality or persist an operation fingerprint.
+
+One read-only inspection query using `pg_tables.forcerowsecurity` failed because that column does not exist; use `pg_class.relforcerowsecurity` instead. This was a query error, not a security test failure.
+
+## Environment required
+1. **User approval for hourly Supabase development-branch compute charges**, or a user-provided disposable Supabase project. Never use the production project for test writes.
+2. An isolated database provisioned from the current schema and migrations, with no copied production personal data.
+3. A working PostgreSQL client or Supabase SQL execution facility against **that isolated database**.
+4. Ability to run transactional SQL as a database administrator for auth.users fixture setup, plus authenticated role simulation inside transactions.
+
+Supabase branching may apply recorded migrations only; the production project contains E3 routines not fully represented in recorded migration history. Verify the branch baseline before applying the v2 SQL. Do not assume a branch automatically reproduces every untracked object.
+
+## Reproducible execution on disposable database
+
+From repository root, with `psql` installed and `TEST_DATABASE_URL` pointing only to the disposable database:
+
+```bash
+test -n "$TEST_DATABASE_URL" || { echo "Missing TEST_DATABASE_URL"; exit 1; }
+psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/20261122_e3_compatible_lesson_rpcs.sql
+psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/e3-backend-contract.sql
+psql "$TEST_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/tenant-isolation.sql
+```
+
+Before migration, inspect the exact functions and schema on the isolated DB. The migration changes the `lesson_paid_rate` constraint and creates v2 RPCs; never apply it without confirming the target database. The SQL tests use `BEGIN` and `ROLLBACK`, but their role and auth fixture assumptions still need verification.
+
+After running, collect exit status, stdout/stderr, migration version, schema diff and whether the transaction rolled back. Run RLS tests as two distinct authenticated identities. Explicitly test invoiced-record edits/removal after creating a representative invoice fixture; current SQL fixture does **not** cover this case.
+
+## Regression coverage
+- A future held lesson **400 days** ahead, price 0.
+- Repeated same-key same-payload create returns `replayed=true`.
+- Repeated same-key different date or status raises a precise error.
+- Repeated same-key replacement with changed date raises a precise error.
+- Duplicate returns a confirmation-required state; explicit confirmation saves.
+- Replacement leaves old lesson immutable and records a void/replacement link.
+- Cross-tenant create, read and void are rejected.
+
+**Not run**: migration, SQL tests, full Node suite, browser E2E, invoiced-record fixture, migration rollback, or security advisors against a disposable project. These are acceptance blockers, not passes.
+
+## Client RPC contracts
+- `log_lesson_v2(p_student_id,p_lesson_date,p_status,p_minutes,p_rate,p_confirm_duplicate,p_idempotency_key,p_confirm_inactive,p_channel)`
+- `replace_lesson_v2(p_old_lesson_id,p_lesson_date,p_status,p_minutes,p_rate,p_confirm_duplicate,p_idempotency_key,p_confirm_inactive)`
+- Allowed status: `held` or `cancelled_billable`; price 0 is allowed, negative prices rejected.
+- Both return JSON states `saved`, `duplicate`, `inactive`; invoiced edits must error.
+- `change_student_with_repricing(p_student_id,p_effective_from,p_changes,p_reprice,p_idempotency_key)`: for E3 historical-price preservation, `p_reprice=false`.
+- `student_details_at(p_student_id,p_at)` is set-returning; check actual Supabase client response shape.
+
+## Release gate
+Do not switch production clients to v2 until a controlled migration and disposable-DB regression suite pass, and an authorized production rollout is approved. Do not merge to main on this report alone.
