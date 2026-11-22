@@ -61,3 +61,8 @@ Home students card: override full-width overview button inside flex header. */
 .dashboard-card-heading button{width:auto!important;flex:0 0 auto;white-space:nowrap;min-height:44px;padding:10px 14px}
 .dashboard-card .student-item{width:100%}
 @media(max-width:360px){.dashboard-card-heading h2{font-size:21px}.dashboard-card-heading button{font-size:14px;padding:9px 11px}}
+
+/* Dashboard student card is navigation only; no embedded student list. */
+.student-directory-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;text-align:left;font-weight:650;font-size:18px}
+.lesson-week-group+.lesson-week-group{margin-top:24px;padding-top:12px;border-top:1px solid #dededb}
+.lesson-week-group h2{font-size:18px;margin:0 0 12px}

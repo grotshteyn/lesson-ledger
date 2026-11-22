@@ -111,52 +111,75 @@ function persist(){localStorage.setItem(draftKey(),JSON.stringify(draft));localS
 async function save(){const data={...draft,vat_mode:draft.vat_mode||'unsure',ledger_id:ledger,effective_from:today()};const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);localStorage.removeItem(draftKey());localStorage.removeItem(stepKey());editing=false;await load()}
 function lessonSummary(x){
  const status=x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt';
- return escapeHTML(x.lesson_date)+' · '+escapeHTML(status)+' · '+escapeHTML(String(x.minutes))+' Min.';
+ const date=new Date(x.lesson_date+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+ return escapeHTML(date)+' · '+escapeHTML(status)+' · '+escapeHTML(String(x.minutes))+' Min.';
 }
-async function recentStudents(limit=3){
- const [students,versions]=await Promise.all([
-  supabase.from('students').select('id,created_at').order('created_at',{ascending:false}).limit(limit),
-  supabase.from('student_versions').select('student_id,student_name,subject,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false})
- ]);
- if(students.error||versions.error)throw students.error||versions.error;
- const latest=new Map();
- for(const v of versions.data||[])if(!latest.has(v.student_id))latest.set(v.student_id,v);
- return (students.data||[]).map(x=>({...latest.get(x.id),student_id:x.id})).filter(x=>x.student_name);
+async function lessonStudentNames(){
+ const {data,error}=await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false});
+ if(error)throw error;
+ const names=new Map();
+ for(const v of data||[])if(!names.has(v.student_id))names.set(v.student_id,v.student_name);
+ return names;
+}
+function lessonRow(x,names){
+ return '<button class="student-item" data-lesson="'+escapeHTML(x.id)+'" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(names.get(x.student_id)||'Unbekannter Schüler')+'</strong><span>'+lessonSummary(x)+'</span></span><span aria-hidden="true">›</span></button>';
+}
+function wireLessonRows(target){
+ target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,b.dataset.student));
+}
+function lessonGroups(lessons,reference=today()){
+ const current=new Date(reference+'T12:00:00');
+ const monday=new Date(current);monday.setDate(current.getDate()-(current.getDay()+6)%7);
+ const lastMonday=new Date(monday);lastMonday.setDate(monday.getDate()-7);
+ const monthStart=new Date(current.getFullYear(),current.getMonth(),1);
+ const lastMonthStart=new Date(current.getFullYear(),current.getMonth()-1,1);
+ const day=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+ const groups=[
+  {title:'Diese Woche',items:[]},
+  {title:'Letzte Woche',items:[]},
+  {title:'Seit Anfang des Monats',items:[]},
+  {title:'Letzter Monat',items:[]},
+  {title:'Ältere Stunden',items:[]}
+ ];
+ for(const x of lessons){
+  const d=x.lesson_date;
+  const index=d>=day(monday)?0:d>=day(lastMonday)?1:d>=day(monthStart)?2:d>=day(lastMonthStart)?3:4;
+  groups[index].items.push(x);
+ }
+ return groups.filter(g=>g.items.length);
 }
 function home(){
  frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
  '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Stunden</h2>'+button('Alle anzeigen','homeAllLessons','secondary')+'</div><div id="homeLessons" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>'+
- '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeStudents" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div></section>'+
+ '<section class="card dashboard-card"><button id="addStudent" class="student-directory-button">Alle Schüler anzeigen <span aria-hidden="true">›</span></button></section>'+
  '<section class="card dashboard-card"><h2>Rechnungen</h2><p class="muted">Die Rechnungsfunktion kommt bald.</p></section>');
  $('settingsBtn').onclick=settingsPage;
  $('homeAllLessons').onclick=allLessonsPage;
  $('addStudent').onclick=()=>studentsPage();
- supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(3).then(({data,error})=>{
+ Promise.all([
+  supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(3),
+  lessonStudentNames()
+ ]).then(([lessons,names])=>{
   const target=$('homeLessons');if(!target)return;
-  if(error){target.textContent='Stunden konnten nicht geladen werden.';return;}
-  target.innerHTML=(data||[]).length?data.map(x=>'<button class="student-item" data-home-lesson="'+escapeHTML(x.id)+'" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+lessonSummary(x)+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
-  target.querySelectorAll('[data-home-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.homeLesson,b.dataset.student));
- });
- recentStudents().then(students=>{
-  const target=$('homeStudents');if(!target)return;
-  target.innerHTML=students.length?students.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Schüler vorhanden.</p>';
-  target.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
- }).catch(()=>{if($('homeStudents'))$('homeStudents').textContent='Schüler konnten nicht geladen werden.';});
+  if(lessons.error)throw lessons.error;
+  target.innerHTML=(lessons.data||[]).length?lessons.data.map(x=>lessonRow(x,names)).join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+  wireLessonRows(target);
+ }).catch(()=>{if($('homeLessons'))$('homeLessons').textContent='Stunden konnten nicht geladen werden.';});
 }
 async function allLessonsPage(){
  frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Stunden</h1></div>'+
  '<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>');
  $('backHome').onclick=home;
- const [lessons,versions]=await Promise.all([
-  supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
-  supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false})
- ]);
- const target=$('allLessonsList');if(!target)return;
- if(lessons.error||versions.error){target.textContent='Stunden konnten nicht geladen werden.';return;}
- const names=new Map();
- for(const v of versions.data||[])if(!names.has(v.student_id))names.set(v.student_id,v.student_name);
- target.innerHTML=(lessons.data||[]).length?lessons.data.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(names.get(x.student_id)||'Schüler')+'</strong><span>'+lessonSummary(x)+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
- target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,b.dataset.student));
+ try{
+  const [lessons,names]=await Promise.all([
+   supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
+   lessonStudentNames()
+  ]);
+  const target=$('allLessonsList');if(!target)return;
+  if(lessons.error)throw lessons.error;
+  target.innerHTML=(lessons.data||[]).length?lessonGroups(lessons.data).map(g=>'<section class="lesson-week-group"><h2>'+g.title+'</h2>'+g.items.map(x=>lessonRow(x,names)).join('')+'</section>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+  wireLessonRows(target);
+ }catch(error){if($('allLessonsList'))$('allLessonsList').textContent='Stunden konnten nicht geladen werden.';}
 }
 
 function settingsPage(onlyKeys=null){
