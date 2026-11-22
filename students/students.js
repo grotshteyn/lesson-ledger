@@ -37,7 +37,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  async function list(){
    onSubpageChange(false);
   selected=null;const token=++sequence;
-  render(`<header class="e2-heading"><h1>Schüler</h1></header><label class="e2-search">Schüler suchen<input id="e2-search" type="search" placeholder="Name oder Kurzname" value="${escape(search)}"></label><div id="e2-results" aria-live="polite"><p>Wird geladen …</p></div><p role="alert" class="e2-error"></p><div class="e2-floating"><button class="e2-primary" data-add>+ Schüler hinzufügen</button></div>`);
+  render(`<label class="e2-search">Suche<input id="e2-search" type="search" placeholder="Name oder Kurzname" value="${escape(search)}"></label><div id="e2-results" aria-live="polite"><p>Wird geladen …</p></div><p role="alert" class="e2-error"></p><div class="e2-floating"><button class="e2-primary" data-add>+ Schüler hinzufügen</button></div>`);
   const searchInput=root.querySelector('#e2-search');
   searchInput.addEventListener('input',()=>{search=searchInput.value;refreshList()});
   bind('[data-add]',()=>create());
@@ -49,7 +49,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     const rows=await Promise.all(['active','paused','ended'].map(status=>rpc('find_students',{p_query:search.trim(),p_status:status,p_at:today()}).then(items=>(items||[]).map(s=>({...s,status})))));
     if(!alive||request!==sequence)return;
     const grouped=groupStudents(matchingStudents(rows.flat(),search));
-    result.innerHTML=grouped.map(g=>`<section class="e2-group"><h2>${statusNames[g.status]} <span>(${g.items.length})</span></h2>${g.items.length?g.items.map(s=>`<button class="e2-student-row" data-student="${escape(s.student_id)}"><span class="e2-row-main"><strong>${escape(s.student_name)}</strong><small>${escape([s.nickname,s.subject].filter(Boolean).join(' · '))}</small></span><span class="e2-row-price">${escape(studentPrice(s))}</span></button>`).join(''):'<p class="e2-muted">Keine Schüler</p>'}</section>`).join('');
+    result.innerHTML=grouped.map(g=>`<section class="e2-group"><h2>${statusNames[g.status]} <span>(${g.items.length})</span></h2><div class="e2-student-list">${g.items.length?g.items.map(s=>`<button class="e2-student-row" data-student="${escape(s.student_id)}"><span class="e2-row-main"><strong>${escape(s.student_name)}</strong><small>${escape([s.subject,s.minutes ? `${s.minutes} Min.` : ''].filter(Boolean).join(' · '))}</small></span><span class="e2-row-price">${escape(studentPrice(s))}</span></button>`).join(''):'<p class="e2-muted">Keine Schüler</p>'}</div></section>`).join('');
     result.querySelectorAll('[data-student]').forEach(b=>b.addEventListener('click',()=>detailPage(b.dataset.student)));
    }catch(e){if(alive&&request===sequence){result.textContent='Schüler konnten nicht geladen werden.';showError(e)}}
   }
