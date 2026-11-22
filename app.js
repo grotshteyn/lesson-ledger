@@ -275,7 +275,7 @@ async function studentPage(id){
  frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück zu Schülern">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
  '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
  '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
- '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
+ '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd><dt>Nicht erschienen</dt><dd>'+(v.no_show_billable===false?'Nicht berechnen':'Berechnen')+' '+editStudentButton('no_show_billable')+'</dd></dl>'+
  (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
  '<div class="actions">'+button('Log','studentLog')+button('Status ändern','statusStudent','secondary')+'</div>'+
  '<section class="card"><h2>Stunden</h2><div id="lessonHistory">Wird geladen …</div></section>'+
@@ -308,9 +308,10 @@ function studentChangeForm(id,v,initialKey='price'){
   ['payer_street','Straße der zahlenden Person',a.street||''],
   ['payer_postcode','PLZ der zahlenden Person',a.postcode||''],
   ['payer_city','Ort der zahlenden Person',a.city||''],
-  ['location','Unterrichtsort',v.location||'']
+  ['location','Unterrichtsort',v.location||''],
+  ['no_show_billable','Nicht erschienen berechnen?',v.no_show_billable!==false]
  ];
- const editControl=([k,label,val,type])=>k==='billing_mode'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>':k==='location'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>':'<div data-edit="'+k+'">'+field(k,'Neu',val,type||'text')+'</div>';
+ const editControl=([k,label,val,type])=>k==='no_show_billable'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="true">Berechnen</option><option value="false">Nicht berechnen</option></select></label>':k==='billing_mode'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>':k==='location'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>':'<div data-edit="'+k+'">'+field(k,'Neu',val,type||'text')+'</div>';
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Ändern '+escapeHTML(v.student_name)+'</h1>'+button('×','backChange','secondary')+'</div>'+
  '<label class="field" hidden>Was ändern?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
  '<div class="change-current"><div><span class="muted">Bisher</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">Neu</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
@@ -318,7 +319,7 @@ function studentChangeForm(id,v,initialKey='price'){
  '<p class="muted">Bereits abgerechnete Stunden und ausgestellte Rechnungen bleiben unverändert. Monatspauschalen und Pausen beginnen am Monatsersten.</p>'+
  '<div id="repriceSection" class="notice" hidden><p id="repriceSummary"></p><label class="choice"><input id="repriceLessons" type="checkbox"> Noch nicht abgerechnete Stunden ab diesem Datum mit dem neuen Preis neu erfassen</label></div>'+
  '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</section></div>','change-screen');
- $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
+ $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';$('no_show_billable').value=String(v.no_show_billable!==false);
  $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
  const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
@@ -354,6 +355,7 @@ function studentChangeForm(id,v,initialKey='price'){
   const changes={};
   if(key==='price')changes.price=g('price');
   else if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newBillingPrice');}
+  else if(key==='no_show_billable')changes.no_show_billable=g(key)==='true';
   else if(['minutes','lessons_per_week'].includes(key))changes[key]=Number(g(key));
   else if(['payer_street','payer_postcode','payer_city'].includes(key))changes.payer_address={...a,[{payer_street:'street',payer_postcode:'postcode',payer_city:'city'}[key]]:g(key)};
   else changes[key]=g(key);
