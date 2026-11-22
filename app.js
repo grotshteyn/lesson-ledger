@@ -159,7 +159,7 @@ function renderTab(tab,content='',actionLabel=''){
  bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();}});
 }
 function routeTab(tab,options={}){
- if(tab==='invoices'){renderTab('invoices','<section class="card ll-empty"><h2>Rechnungen</h2><p>Rechnungen sind bald verfügbar. Bereits erfasste Stunden bleiben für die spätere Rechnungsstellung erhalten.</p></section>');return;}
+ if(tab==='invoices'){renderTab('invoices','<section class="ll-invoices-empty" role="status" aria-labelledby="ll-invoices-heading"><div class="ll-invoices-message"><h2 id="ll-invoices-heading">Noch keine Rechnungen</h2><p>Die Rechnungsfunktion ist bald verfügbar. Deine erfassten Stunden bleiben erhalten.</p></div></section>');return;}
  renderTab(tab);
  const mountRoot=$('ll-module-root');
  if(tab==='students'){
