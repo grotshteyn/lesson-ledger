@@ -89,8 +89,8 @@ try{
  await capture('09-edit-lesson','.ll-form-card');
  assert.equal(await page.locator('.ll-status-segment button').count(),2);
  await page.locator('.ll-quick [data-action="calendar"]').click();
+ await page.locator('.ll-sheet [data-day]').filter({hasText:/^10$/}).first().click();
  await capture('09b-edit-lesson-form','#ll-date');
- await page.locator('.ll-sheet [data-action="cancel"]').click();
  await page.locator('[data-action="list"]').first().click();
  await page.locator('[data-action="new"]').click();
  await page.locator('[data-pick]').first().click();
