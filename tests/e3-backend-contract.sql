@@ -38,6 +38,13 @@ begin
  y:=public.log_lesson_v2(a,future_date,'held',60,0,false,key1,false,'web');
  if y->>'replayed'<>'true' or y->>'id'<>x->>'id'
  then raise exception 'Idempotency replay failed: %',y; end if;
+ -- A replay key cannot be silently reused for a different lesson date.
+ begin
+  perform public.log_lesson_v2(a,future_date+2,'held',60,0,false,key1,false,'web');
+  raise exception 'Mismatched idempotency key was accepted';
+ exception when others then
+  if sqlerrm='Mismatched idempotency key was accepted' then raise; end if;
+ end;
  y:=public.log_lesson_v2(a,future_date,'cancelled_billable',60,0,false,key2,false,'web');
  if y->>'state'<>'duplicate' or y->>'existing_id'<>x->>'id'
  then raise exception 'Duplicate confirmation missing: %',y; end if;
