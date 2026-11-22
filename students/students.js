@@ -119,7 +119,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    try{
     const existing=(await Promise.all(['active','paused','ended'].map(p_status=>rpc('find_students',{p_query:name,p_status,p_at:today()})))).flat();
     if(duplicateNames(existing,name)&&!confirm('Ein Schüler mit diesem Namen existiert bereits. Trotzdem hinzufügen?'))return;
-    const id=await rpc('create_student',{p_details:payload});await detailPage(id,'details');
+    await rpc('create_student',{p_details:payload});await list();
    }catch(error){showError(error)}finally{if(submit.isConnected)submit.disabled=false}
   });
  }
