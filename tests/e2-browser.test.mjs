@@ -8,7 +8,7 @@ globalThis.__e2Mock=state;globalThis.__rpcCalls=[];
 const now=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const current=id=>state.versions.filter(v=>v.student_id===id&&v.effective_from<=now()).sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at))[0];
 const status=id=>{const e=state.events.filter(x=>x.student_id===id&&x.effective_from<=now()).at(-1);return e?e.event_type==='pause'?(e.pause_until&&e.pause_until<=now()?'active':'paused'):e.event_type==='restart'?'active':e.event_type==='end'?'ended':'removed':'active'};
-function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},gte(k,v){filters.push(x=>x[k]>=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
+function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},gte(k,v){filters.push(x=>x[k]>=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:name==='active_lessons'||name==='lesson_voids'||name==='lessons'?[]:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
 export function createClient(){return {
  auth:{getUser:async()=>({data:{user:{id:'user-1',email:'test@example.com'}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})},
  from:table,
@@ -17,7 +17,7 @@ export function createClient(){return {
   if(name==='ensure_my_ledger')return {data:'ledger-1',error:null};
   if(name==='create_student'){
    const id='student-'+(++state.seq),d=args.p_details;
-   state.students.push({id,ledger_id:'ledger-1'});
+   state.students.push({id,ledger_id:'ledger-1',created_at:new Date().toISOString()});
    state.versions.push({id:'version-'+state.seq,student_id:id,ledger_id:'ledger-1',effective_from:d.start_date,created_at:new Date().toISOString(),student_name:d.student_name,nickname:d.nickname,subject:d.subject,minutes:d.minutes,lessons_per_week:d.lessons_per_week,billing_mode:d.billing_mode,rate:d.billing_mode==='per_lesson'?Number(d.price):null,monthly_fee:d.billing_mode==='monthly_flat'?Number(d.price):null,payer_name:d.payer_name,payer_email:d.payer_email,payer_address:d.payer_address,location:d.location});
    return {data:id,error:null};
   }
@@ -102,7 +102,13 @@ test('German Home layout, student navigation and direct editing are present',asy
   await page.locator('#settingsBtn').waitFor();
   assert.equal(await page.locator('#settingsBtn').innerText(),'Einstellungen');
   assert.equal(await page.getByText('To do').count(),0);
+  assert.equal(await page.locator('.dashboard-card').count(),3);
+  assert.equal(await page.locator('#logLesson').count(),0);
+  await page.locator('#homeAllLessons').click();
+  await page.locator('#backHome').click();
   await page.locator('#addStudent').click();
+  assert.equal(await page.locator('[data-log]').count(),0);
+  assert.equal(await page.locator('[data-log-sheet]').count(),0);
   await page.locator('#backHome').click();
   await page.locator('#settingsBtn').waitFor();
  }finally{await browser.close()}

@@ -109,34 +109,54 @@ else if(key==='iban'){const v=$('iban').value.trim();if(v&&!ibanValid(v))return 
 else if(key!=='cancellation_rule'){const v=$(key).value.trim();if((key==='teacher_name'||key==='teacher_email')&&!v)return err('Dieses Feld darf nicht leer sein.');if(key==='teacher_email'&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))return err('Bitte gültige E-Mail-Adresse eingeben.');if(key==='payment_days'&&(!Number.isInteger(Number(v))||Number(v)<1||Number(v)>365))return err('Bitte 1 bis 365 Tage eingeben.');draft[key]=key==='payment_days'?Number(v):v}step++;persist();setup()}}
 function persist(){localStorage.setItem(draftKey(),JSON.stringify(draft));localStorage.setItem(stepKey(),String(step))}
 async function save(){const data={...draft,vat_mode:draft.vat_mode||'unsure',ledger_id:ledger,effective_from:today()};const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);localStorage.removeItem(draftKey());localStorage.removeItem(stepKey());editing=false;await load()}
+function lessonSummary(x){
+ const status=x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt';
+ return escapeHTML(x.lesson_date)+' · '+escapeHTML(status)+' · '+escapeHTML(String(x.minutes))+' Min.';
+}
+async function recentStudents(limit=3){
+ const [students,versions]=await Promise.all([
+  supabase.from('students').select('id,created_at').order('created_at',{ascending:false}).limit(limit),
+  supabase.from('student_versions').select('student_id,student_name,subject,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false})
+ ]);
+ if(students.error||versions.error)throw students.error||versions.error;
+ const latest=new Map();
+ for(const v of versions.data||[])if(!latest.has(v.student_id))latest.set(v.student_id,v);
+ return (students.data||[]).map(x=>({...latest.get(x.id),student_id:x.id})).filter(x=>x.student_name);
+}
 function home(){
- frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
- '<div style="margin:22px 0 10px">'+button('+ Stunde erfassen','logLesson')+'</div><p class="muted" style="text-align:center">Erfasse zunächst einen Schüler, um Stunden zu dokumentieren.</p>'+
- '<section class="card"><div class="row"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeStudents" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div><div class="row" id="homePagination" hidden><button class="secondary" id="homePrev">Zurück</button><span id="homePageLabel"></span><button class="secondary" id="homeNext">Weiter</button></div></section>'+
- '<section class="card"><h2>Rechnungen</h2><p class="muted">Noch keine Rechnungen vorhanden.</p></section>');
+ frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
+ '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Stunden</h2>'+button('Alle anzeigen','homeAllLessons','secondary')+'</div><div id="homeLessons" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>'+
+ '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Schüler</h2>'+button('Alle anzeigen','addStudent','secondary')+'</div><div id="homeStudents" aria-live="polite"><p class="muted">Schüler werden geladen …</p></div></section>'+
+ '<section class="card dashboard-card"><h2>Rechnungen</h2><p class="muted">Die Rechnungsfunktion kommt bald.</p></section>');
  $('settingsBtn').onclick=settingsPage;
- $('logLesson').disabled=true;
+ $('homeAllLessons').onclick=allLessonsPage;
  $('addStudent').onclick=()=>studentsPage();
- let page=0;const pageSize=5;
- supabase.rpc('find_students',{p_query:'',p_status:'active',p_at:today()}).then(({data,error})=>{
-  if(!$('homeStudents'))return;
-  if(error){$('homeStudents').textContent='Schüler konnten nicht geladen werden.';return;}
-  const students=data||[];
-  const render=()=>{
-   if(!$('homeStudents'))return;
-   const total=Math.max(1,Math.ceil(students.length/pageSize));
-   page=Math.min(page,total-1);
-   $('homeStudents').innerHTML=students.length?students.slice(page*pageSize,(page+1)*pageSize).map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine aktiven Schüler.</p>'+button('+ Schüler hinzufügen','homeAddStudent','secondary');
-   document.querySelectorAll('#homeStudents [data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
-   if($('homeAddStudent'))$('homeAddStudent').onclick=()=>studentForm();
-   $('homePagination').hidden=students.length<=pageSize;
-   $('homePageLabel').textContent=(page+1)+' / '+total;
-   $('homePrev').disabled=page===0;$('homeNext').disabled=page===total-1;
-  };
-  $('homePrev').onclick=()=>{page--;render()};
-  $('homeNext').onclick=()=>{page++;render()};
-  render();
+ supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(3).then(({data,error})=>{
+  const target=$('homeLessons');if(!target)return;
+  if(error){target.textContent='Stunden konnten nicht geladen werden.';return;}
+  target.innerHTML=(data||[]).length?data.map(x=>'<button class="student-item" data-home-lesson="'+escapeHTML(x.id)+'" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+lessonSummary(x)+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+  target.querySelectorAll('[data-home-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.homeLesson,b.dataset.student));
  });
+ recentStudents().then(students=>{
+  const target=$('homeStudents');if(!target)return;
+  target.innerHTML=students.length?students.map(x=>'<button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject||'')+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Schüler vorhanden.</p>';
+  target.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
+ }).catch(()=>{if($('homeStudents'))$('homeStudents').textContent='Schüler konnten nicht geladen werden.';});
+}
+async function allLessonsPage(){
+ frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Stunden</h1></div>'+
+ '<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>');
+ $('backHome').onclick=home;
+ const [lessons,versions]=await Promise.all([
+  supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
+  supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false})
+ ]);
+ const target=$('allLessonsList');if(!target)return;
+ if(lessons.error||versions.error){target.textContent='Stunden konnten nicht geladen werden.';return;}
+ const names=new Map();
+ for(const v of versions.data||[])if(!names.has(v.student_id))names.set(v.student_id,v.student_name);
+ target.innerHTML=(lessons.data||[]).length?lessons.data.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(names.get(x.student_id)||'Schüler')+'</strong><span>'+lessonSummary(x)+'</span></span><span aria-hidden="true">›</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+ target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,b.dataset.student));
 }
 
 function settingsPage(onlyKeys=null){
@@ -181,13 +201,13 @@ async function studentsPage(initialSearch=''){
  frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Schüler</h1>'+button('+ Hinzufügen','newStudent','secondary')+'</div>'+
  '<label class="field">Suche<input id="studentSearch" placeholder="Name oder Kurzname" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
  '<div class="student-filter-bar" role="group" aria-label="Schülerstatus">'+
- '<button class="filter-pill" data-filter="active" aria-pressed="true">Aktiv</button>'+
+ '<button class="filter-pill" data-filter="all" aria-pressed="true">Alle</button><button class="filter-pill" data-filter="active" aria-pressed="false">Aktiv</button>'+
  '<button class="filter-pill" data-filter="paused" aria-pressed="false">Pausiert</button>'+
  '<button class="filter-pill" data-filter="ended" aria-pressed="false">Beendet</button></div>'+
  '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>');
  $('backHome').onclick=home;
  $('newStudent').onclick=()=>studentForm();
- let serial=0,selected='active';
+ let serial=0,selected='all';
  async function render(){
   const current=++serial,search=$('studentSearch').value.trim();
   const responses=await Promise.all(['active','paused','ended'].map(status=>supabase.rpc('find_students',{p_query:search,p_status:status,p_at:today()})));
@@ -195,12 +215,11 @@ async function studentsPage(initialSearch=''){
   const error=responses.find(x=>x.error)?.error;
   if(error){$('studentResults').innerHTML='';return err(error);}
   const statuses=['active','paused','ended'];
-  document.querySelectorAll('[data-filter]').forEach((b,i)=>{b.textContent=({active:'Aktiv',paused:'Pausiert',ended:'Beendet'})[statuses[i]]+' ('+(responses[i].data||[]).length+')';b.setAttribute('aria-pressed',String(b.dataset.filter===selected));});
-  const matches=responses[statuses.indexOf(selected)].data||[];
-  $('studentResults').innerHTML=matches.length?matches.map(x=>'<div class="lesson-student-row"><button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>'+(selected==='active'?'<button class="primary lesson-log-btn" data-log="'+escapeHTML(x.student_id)+'">Log</button><button class="secondary lesson-sheet-btn" data-log-sheet="'+escapeHTML(x.student_id)+'" aria-label="Logformular öffnen">›</button>':'')+'</div>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
+  const all=responses.flatMap((r,i)=>(r.data||[]).map(x=>({...x,status:statuses[i]})));
+  document.querySelectorAll('[data-filter]').forEach(b=>{const status=b.dataset.filter;b.textContent=({all:'Alle',active:'Aktiv',paused:'Pausiert',ended:'Beendet'})[status]+' ('+(status==='all'?all.length:(responses[statuses.indexOf(status)].data||[]).length)+')';b.setAttribute('aria-pressed',String(status===selected));});
+  const matches=selected==='all'?all:responses[statuses.indexOf(selected)].data||[];
+  $('studentResults').innerHTML=matches.length?matches.map(x=>'<div class="lesson-student-row"><button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button></div>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
-  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>quickLogLesson(b.dataset.log,b));
-  document.querySelectorAll('[data-log-sheet]').forEach(b=>b.onclick=()=>logLessonSheet(b.dataset.logSheet));
   if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
  $('studentSearch').oninput=render;

@@ -53,3 +53,11 @@ Home students card: override full-width overview button inside flex header. */
 .change-current #editFields .billing-editor .field{display:block;margin:0 0 10px;color:#606060;font-size:14px}
 .change-current #editFields .billing-editor .field select,.change-current #editFields .billing-editor .field input{margin-top:6px}
 @media(max-width:380px){.change-current{gap:8px}.change-current #editFields input,.change-current #editFields select{font-size:15px;padding:9px 7px}.change-current #oldValue{padding:12px 9px}}
+
+/* Three-card dashboard: stable mobile headings and equal-size actions. */
+.dashboard-card{margin-top:16px}
+.dashboard-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.dashboard-card-heading h2{flex:1 1 auto;min-width:max-content;margin:0;word-break:normal;overflow-wrap:normal}
+.dashboard-card-heading button{width:auto!important;flex:0 0 auto;white-space:nowrap;min-height:44px;padding:10px 14px}
+.dashboard-card .student-item{width:100%}
+@media(max-width:360px){.dashboard-card-heading h2{font-size:21px}.dashboard-card-heading button{font-size:14px;padding:9px 11px}}
