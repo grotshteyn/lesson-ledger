@@ -405,11 +405,11 @@ async function loadLessonHistory(id){
 async function lessonDetails(lessonId,studentId){
  const {data:x,error}=await supabase.from('lessons').select('*').eq('id',lessonId).single();
  if(error)return alert(error.message);
- frame('<div class="row"><h1>Stunde '+escapeHTML(x.lesson_date)+'</h1>'+button('Zurück','backLesson','secondary')+'</div><section class="card"><p>Status: '+escapeHTML(x.no_show?'Nicht erschienen':x.status)+'</p><p>Dauer: '+x.minutes+' Minuten</p><p>Preis: '+x.rate+' €</p><p>Berechnet: '+lessonMoney(x)+' €</p><p>Erfasst: '+escapeHTML(x.created_at)+'</p></section><div class="actions">'+button('Bearbeiten','editLesson')+button('Entfernen','removeLesson','secondary')+'</div><p id="error" class="error"></p>');
+ frame('<div class="row"><h1>Stunde '+escapeHTML(x.lesson_date)+'</h1>'+button('Zurück','backLesson','secondary')+'</div><section class="card"><p>Status: '+escapeHTML(x.no_show?'Nicht erschienen':x.status)+'</p><p>Dauer: '+x.minutes+' Minuten</p><p>Preis: '+x.rate+' €</p><p>Berechnet: '+lessonMoney(x)+' €</p><p>Erfasst: '+escapeHTML(x.created_at)+'</p></section>'+(x.invoice_id?'<p class="notice">Diese Stunde ist abgerechnet. Bitte die Rechnung korrigieren. Rechnungs-ID: '+escapeHTML(x.invoice_id)+'</p>':'<div class="actions">'+button('Bearbeiten','editLesson')+button('Entfernen','removeLesson','secondary')+'</div>')+'<p id="error" class="error"></p>');
  $('backLesson').onclick=()=>studentPage(studentId);
  const remove=async(reason)=>{if(x.invoice_id)return err({message:'Bereits abgerechnet. Bitte Rechnung korrigieren.'});if(!confirm('Stunde stornieren? Der Verlauf bleibt erhalten.'))return;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:lessonId,p_reason:reason,p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
- $('removeLesson').onclick=()=>remove('remove');
- $('editLesson').onclick=()=>{if(x.invoice_id)return err({message:'Bereits abgerechnet.'});logLessonSheet(studentId,x);};
+ if($('removeLesson'))$('removeLesson').onclick=()=>remove('remove');
+ if($('editLesson'))$('editLesson').onclick=()=>{if(x.invoice_id)return err({message:'Bereits abgerechnet.'});logLessonSheet(studentId,x);};
 }
 async function logLessonSheet(studentId,original=null){
  const {data,error}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:original?.lesson_date||today()});
@@ -445,7 +445,7 @@ async function logLessonSheet(studentId,original=null){
  });
  refreshRecent();
 
- if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonOverride'))$('lessonOverride').value=original.charge_override||'';}
+ if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonOverride'))$('lessonOverride').value=original.charge_override||'';if(original.cancelled_by)$('cancelBy').value=original.cancelled_by;if(original.cancelled_in_time!==null)$('cancelInTime').value=String(original.cancelled_in_time);}
  const refresh=()=>{$('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';$('cancelTimingField').hidden=$('cancelBy').value!=='student';};
  $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;refresh();
  let key=crypto.randomUUID();
