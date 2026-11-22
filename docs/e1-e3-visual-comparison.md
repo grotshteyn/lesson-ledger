@@ -7,9 +7,9 @@
 
 | Approved screen | Wireframe requirement | Current source observation | Verification |
 |---|---|---|---|
-| Lessons tab | Month then week groups, newest first, fixed black action, three equal tabs | Lessons module groups by week and renders floating action; shell has tabs | Pending browser; month hierarchy differs |
-| Students tab | Search, grouped active/paused/ended rows, right-aligned price, black floating action | Students module includes search/status filters and floating action | Pending; filters differ from grouped wireframe |
-| Invoices tab | Centered German coming-soon message, settings gear, three tabs | German placeholder in shell, but inside generic card | Pending; layout differs |
+| Lessons tab | Month then week groups, newest first, fixed black action, three equal tabs | Lessons module renders current-month heading above newest-first week groups and floating action; shell has tabs | SOURCE IMPLEMENTED at c94f5d7; browser parity pending |
+| Students tab | Search, grouped active/paused/ended rows, right-aligned price, black floating action | Students module shows search plus simultaneous active/paused/ended groups and floating action | SOURCE IMPLEMENTED; browser parity pending |
+| Invoices tab | Centered German coming-soon message, settings gear, three tabs | Centered German empty state in shell | SOURCE IMPLEMENTED; browser parity pending |
 | Student create | Three stacked Basics / Lessons and price / Payer cards, sticky Abbrechen/Speichern | Students module implements E2 create | Pending rendered comparison |
 | Student detail | Stunden/Details segmented control, card-level edits, history, Pause/Ende | Students module has detail tabs and editing | Pending |
 | Student lessons | Month groups, invoiced marker, + Stunde erfassen, Fertig | Students module groups by month and invokes lesson callbacks | Pending |
@@ -24,9 +24,9 @@
 Capture at 360px mobile and a wide desktop viewport after logging into a disposable test account, with screenshots for every row above. Include long names, scroll bottom, keyboard-open, safe-area insets, selected calendar date, duplicate confirmation, invoiced lesson, zero-priced lesson, and monthly pricing. Compare against the conversation wireframes and document deviations without redesigning the approved layout.
 
 ## Known deviations from wireframe by source inspection
-- Students list currently exposes filter pills instead of showing the three status groups simultaneously.
-- Lessons list shows week headings without the wireframe's separate month heading.
-- Invoices placeholder uses a generic card rather than a vertically centered empty state.
+- Students PR #27 now shows active, paused and ended groups simultaneously, including during search; source integrated, browser parity pending.
+- Lessons month heading and newest-first week grouping are source implemented since c94f5d7; browser spacing/typography and timezone behavior remain unaccepted. PR #34 proposes a timezone-safe week calculation.
+- Shell PR #32 now uses a centered German invoices empty state; source integrated, browser parity pending.
 - Lesson editing uses a detail view followed by an edit form rather than the single editable view with history shown in the reference.
 - The provided wireframes contain English labels as design references; shipping copy must be German.
 
