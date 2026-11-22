@@ -140,3 +140,6 @@
 .ll-overlay .ll-actions button{white-space:nowrap;font-size:13px;padding:8px 6px}
 @media(max-height:730px){.ll-app .ll-student-scroll{max-height:22dvh}.ll-app .ll-form-section{margin:12px 0}.ll-app .ll-status-segment button{min-height:44px}}
 @media(max-width:360px){.ll-app .ll-segment button{font-size:12px}.ll-app .ll-form-actions button{font-size:13px}}
+
+.ll-app .ll-date-display{display:block;margin:10px 0 0;font-size:14px;font-weight:600;color:#333}
+.ll-app .ll-date-row[hidden]{display:none!important}
