@@ -37,3 +37,23 @@ Import `mountLessons` from `./lessons/lessons.js` and load `./lessons/lessons.cs
 - Duplicate sheet compares the local matching lesson; if the server reports a duplicate absent from the currently loaded list, the existing row is not available for an accurate comparison. Resolve with backend-provided duplicate details or a targeted query.
 - UI mount contract is proposed, not yet accepted by shell #21.
 - A real browser smoke test is required before marking stories accepted.
+
+## Follow-up on integration head c94f5d7 (22 November 2026)
+
+This follow-up starts from the integration branch, not the older diverged `agent/lessons` head. It deliberately preserves the current-month heading and month-filtered weekly groups already committed as c94f5d7.
+
+- LE-7: week calculation now uses UTC calendar arithmetic, preventing locale/timezone shifts at month/year boundaries. Existing current-month filtering and German heading remain unchanged.
+- LE-4 / LE-6: a save attempt retains its UUID across identical retries, including duplicate/inactive confirmation and uncertain network outcomes. Changing student, original lesson, date, status, duration or price rotates the UUID. Server `saved` (including `replayed:true`) is treated as success. No client-side duplicate bypass.
+- LE-1 / LE-3: stale asynchronous `student_details_at` results cannot overwrite defaults after another student/date request.
+- LE-5: client rejects statuses other than `held` or `cancelled_billable`; zero price and future dates remain permitted, subject to server validation.
+- Tests added for idempotency payload identity and year-boundary week grouping. Existing calendar and grouping tests retained.
+
+### Contract coordination
+
+Shell: keep the existing `mountLessons({root,supabase,onSubpageChange,...})` adapter and do not mount simultaneous Lessons instances. Students: `onLessonCreate(studentId)` and `onLessonOpen(lessonId,studentId)` must continue to pass the fixed student. Backend: v2 RPCs require the same UUID for a confirmation/retry of the same operation; `saved.replayed` is a successful response. `student_details_at` may return a scalar or a row array.
+
+### Verification and acceptance gaps
+
+Source review: PASS for preserving c94f5d7, explicit v2 RPC names/arguments, historical edit values, zero-price validation and confirmation flags. Added Node tests but **NOT EXECUTED**: GitHub clone from this environment fails DNS resolution, so no local checked-out runner. **NOT EXECUTED**: authenticated browser, 360px/wide screenshots, keyboard/safe-area, live v2 RPC, RLS, invoiced lock or disposable database tests. The original page-1 wireframe is referenced in `docs/e1-e3-visual-comparison.md` but its visual asset is not present in this repository; pixel parity is unverified. Current production lacks the v2 RPCs. No migrations or deployment performed.
+
+Remaining: verify actual browser layout and page-1 wireframe; confirm 500-row list cap does not conceal duplicates; test server replay and invoiced locks on a disposable Supabase database after approved migration. Do not merge or deploy until those gates pass.
