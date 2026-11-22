@@ -57,7 +57,8 @@ async function capture(name,selector){
 try{
  await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded'});
  await page.locator('[data-ll-tab="students"]').waitFor();
- await capture('01-lessons-overview','.ll-groups');
+ console.log('Initial app body:',(await page.locator('body').innerText()).slice(0,1400));
+ await capture('01-lessons-overview','.ll-lessons');
  await page.locator('[data-ll-tab="students"]').click();
  await page.locator('[data-student]').first().waitFor();
  await capture('02-students-overview','#e2-results');
