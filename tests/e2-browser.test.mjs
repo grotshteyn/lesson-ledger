@@ -104,6 +104,9 @@ test('German Home layout, student navigation and direct editing are present',asy
   assert.equal(await page.getByText('To do').count(),0);
   assert.equal(await page.locator('.dashboard-card').count(),3);
   assert.equal(await page.locator('#logLesson').count(),0);
+  assert.equal(await page.locator('#homeStudents').count(),0);
+  assert.equal(await page.locator('#addStudent').count(),1);
+  assert.equal(await page.locator('#homeLessons').count(),1);
   await page.locator('#homeAllLessons').click();
   await page.locator('#backHome').click();
   await page.locator('#addStudent').click();
