@@ -33,3 +33,14 @@
 .student-details-card .settings-row .link{flex-shrink:0;white-space:nowrap;margin-left:8px}
 .student-details-card .settings-row:last-of-type{border-bottom:0}
 @media(max-width:380px){.student-details-card .settings-row{gap:8px;font-size:15px}.student-details-card .settings-row .link{font-size:14px}}
+
+/* Change sheet: balanced before/after columns without duplicate field labels. */
+.change-current{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.change-current>div{min-width:0}
+.change-current #oldValue{min-height:52px;overflow-wrap:anywhere;word-break:normal}
+.change-current #editFields{min-width:0;margin-top:8px}
+.change-current #editFields [data-edit]{min-width:0}
+.change-current #editFields input,.change-current #editFields select{display:block;width:100%;min-width:0;max-width:100%;min-height:52px;border:1.5px solid #a3a3a0;border-radius:10px;padding:10px;background:#fff;color:#242424;font-size:16px}
+.change-current #editFields .billing-editor .field{display:block;margin:0 0 10px;color:#606060;font-size:14px}
+.change-current #editFields .billing-editor .field select,.change-current #editFields .billing-editor .field input{margin-top:6px}
+@media(max-width:380px){.change-current{gap:8px}.change-current #editFields input,.change-current #editFields select{font-size:15px;padding:9px 7px}.change-current #oldValue{padding:12px 9px}}
