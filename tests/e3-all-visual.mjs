@@ -28,7 +28,7 @@ people.forEach(([name,subject,minutes,price,status,billing],i)=>{
  lessons.push({id:'visual-lesson-'+(i+1),student_id:s.student_id,lesson_date:day(offset),status:i===3?'cancelled_billable':'held',minutes:s.minutes,rate:s.rate??0,billing_mode:s.billing_mode,created_at:'2026-11-22T12:00:00Z',invoice_id:null,replaces_lesson_id:null});
 });
 const fixture={students,versions,events,seq:people.length,lessons};
-let mock=match[1].replace('const state={students:[],versions:[],events:[],seq:0};','const state='+JSON.stringify(fixture)+';');
+let mock=match[1].replace('const state={students:[],versions:[],events:[],lessons:[],seq:0};','const state='+JSON.stringify(fixture)+';');
 assert.notEqual(mock,match[1],'Fixture was injected');
 mock=mock.replace("name==='active_lessons'||name==='lesson_voids'||name==='lessons'?[]:state.students","name==='active_lessons'||name==='lessons'?state.lessons:name==='lesson_voids'?[]:state.students");
 mock=mock.replace('return {select(){return this},eq(k,v)', 'return {single(){this._single=true;return this},select(){return this},eq(k,v)');
