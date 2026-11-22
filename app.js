@@ -1,7 +1,7 @@
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js';
 import {mountLessons} from './lessons/lessons.js';
-import {mountInvoices} from './invoices/invoices.js';
+import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -165,7 +165,7 @@ function routeTab(tab,options={}){
  renderTab(tab);
  const mountRoot=$('ll-module-root');
  if(tab==='invoices'){
-  activeModule=mountInvoices({root:mountRoot,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);}});
+  activeModule=mountInvoices({root:mountRoot,adapter:supabaseInvoiceAdapter(supabase),onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);}});
  }else if(tab==='students'){
   activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
   if(options.studentId)activeModule.open?.(options.studentId,'lessons');
