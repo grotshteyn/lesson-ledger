@@ -12,6 +12,14 @@ begin
  and exists(select 1 from public.student_versions v where v.student_id=s.id and v.effective_from<=current_date)
  limit 1;
  if v_student is null then raise exception 'Need an active student fixture'; end if;
+ perform set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ execute 'set local role authenticated';
+ v_rejected:=false;
+ begin
+  perform public.log_lesson(v_student,current_date,'held',null,null,null,null,null,false,gen_random_uuid(),'web');
+ exception when others then v_rejected:=true; end;
+ if not v_rejected then raise exception 'Cross-tenant lesson log was accepted'; end if;
+ execute 'set local role postgres';
  perform set_config('request.jwt.claim.sub',v_owner::text,true);
  execute 'set local role authenticated';
  begin
