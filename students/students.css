@@ -216,3 +216,5 @@
 /* Student detail has one exit (back arrow); keep room for the lesson action. */
 .ll-app .e2-screen:has(.e2-tabs.e2-single-select){padding-bottom:calc(130px + env(safe-area-inset-bottom,0px))}
 .ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-lesson-actions{margin-bottom:16px}
+
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-settings{width:auto;min-width:74px;padding:0 10px;font-size:14px;font-weight:600}
