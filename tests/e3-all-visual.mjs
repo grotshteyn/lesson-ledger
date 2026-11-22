@@ -76,7 +76,7 @@ try{
  await page.locator('[data-choice="location"][data-value="online"]').click();
  assert.equal(await page.locator('#e2-edit [name="location"]').inputValue(),'online');
  await page.locator('[data-choice="effective_choice"][data-value="next"]').click();
- assert.match(await page.locator('#e2-edit [name="effective_from"]').inputValue(),/^[0-9]{4}-[0-9]{2}-01$/);
+ assert.match(await page.locator('#e2-edit input[type="hidden"][name="effective_from"]').inputValue(),/^[0-9]{4}-[0-9]{2}-01$/);
  await page.locator('[data-cancel]').click();
  await page.locator('[data-finish]').click();
  await page.locator('[data-add]').click();
