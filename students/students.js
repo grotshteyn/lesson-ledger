@@ -18,10 +18,21 @@ const dateLabel = value => value ? new Date(String(value).slice(0,10)+'T12:00:00
 const input = (key,label,value='',type='text',required=false) => `<label class="e2-field">${escape(label)}<input name="${key}" type="${type}" value="${escape(value)}" ${required?'required':''}></label>`;
 const select = (key,label,options,value) => `<label class="e2-field">${escape(label)}<select name="${key}">${options.map(([v,l])=>`<option value="${escape(v)}" ${String(value)===String(v)?'selected':''}>${escape(l)}</option>`).join('')}</select></label>`;
 const segmented = (key,label,options,value) => '<div class="e2-choice-field"><span class="e2-choice-label">'+escape(label)+'</span><div class="e2-segment" role="group" aria-label="'+escape(label)+'">'+options.map(([v,l])=>'<button type="button" data-choice="'+escape(key)+'" data-value="'+escape(v)+'" aria-pressed="'+(String(value)===String(v))+'">'+escape(l)+'</button>').join('')+'</div><input type="hidden" name="'+escape(key)+'" value="'+escape(value)+'"></div>';
-const lessonLength = (value=45) => segmented('length_choice','Dauer der Stunde',[['30','30'],['45','45'],['60','60'],['90','90'],['other','Andere']],String([30,45,60,90].includes(Number(value))?value:'other'))+'<div class="e2-other-length" '+([30,45,60,90].includes(Number(value))?'hidden':'')+'>'+input('minutes','Andere Dauer (Minuten)',value,'number',true)+'</div>'+( [30,45,60,90].includes(Number(value))?'<input type="hidden" name="minutes" value="'+escape(value)+'">':'');
+const lessonLength = (value=45) => {
+ const standard=[30,45,60,90].includes(Number(value));
+ return segmented('length_choice','Dauer der Stunde',[['30','30'],['45','45'],['60','60'],['90','90'],['other','Andere']],standard?String(value):'other')+
+ '<div class="e2-other-length" '+(standard?'hidden':'')+'>'+input('minutes','Andere Dauer (Minuten)',value,'number',true)+'</div>'+
+ '<input type="hidden" name="minutes" value="'+escape(value)+'" '+(standard?'':'disabled')+'>';
+};
 const billingChoice = value => segmented('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],value);
 const locationChoice = value => segmented('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],value||'');
-const effectiveChoice = date => segmented('effective_choice','Gültig ab',[['today','Heute'],['next','1. des nächsten Monats'],['other','Anderes Datum']],date===todayLocal()?'today':date===nextMonthStart(todayLocal())?'next':'other')+'<div class="e2-effective-display">'+escape(dateLabel(date))+'</div><div class="e2-effective-date" '+(date===todayLocal()||date===nextMonthStart(todayLocal())?'hidden':'')+'>'+input('effective_from','Datum',date,'date',true)+'</div>'+(date===todayLocal()||date===nextMonthStart(todayLocal())?'<input type="hidden" name="effective_from" value="'+escape(date)+'">':'');
+const effectiveChoice = date => {
+ const standard=date===todayLocal()||date===nextMonthStart(todayLocal());
+ return segmented('effective_choice','Gültig ab',[['today','Heute'],['next','1. des nächsten Monats'],['other','Anderes Datum']],date===todayLocal()?'today':date===nextMonthStart(todayLocal())?'next':'other')+
+ '<div class="e2-effective-display">'+escape(dateLabel(date))+'</div>'+
+ '<div class="e2-effective-date" '+(standard?'hidden':'')+'>'+input('effective_from','Datum',date,'date',true)+'</div>'+
+ '<input type="hidden" name="effective_from" value="'+escape(date)+'" '+(standard?'':'disabled')+'>';
+};
 const card = (heading,body,edit='') => `<section class="e2-card"><div class="e2-card-heading"><h2>${heading}</h2>${edit}</div>${body}</section>`;
 const detail = (label,value) => `<div class="e2-detail"><dt>${escape(label)}</dt><dd>${escape(value||'Nicht angegeben')}</dd></div>`;
 const fieldValue=(form,key)=>String(new FormData(form).get(key)||'').trim();
