@@ -37,6 +37,7 @@ export const lessonReplacementHistory = (rows, lessonId) => {
   return rows.filter(row=>related.has(row.id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
 };
 export const lessonSaveFingerprint = (payload) => JSON.stringify([payload.studentId,payload.originalId||null,payload.date,payload.status,payload.minutes,payload.rate]);
+const shortDay = date => {const d=new Date(date+'T12:00:00');return ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]+' '+d.getDate()};
 const isoToday = () => {const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const control = (label,id,type='text',value='',extra='') => '<label class="ll-field">'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
 const button = (text,action,kind='') => '<button type="button" class="ll-btn '+kind+'" data-action="'+action+'">'+esc(text)+'</button>';
@@ -70,18 +71,16 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       const monthLessons=lessons.filter(x=>x.lesson_date.slice(0,7)===currentMonth);
       const groups=lessonWeekGroups(monthLessons);
       const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
-      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>Woche ab '+pretty(g.week)+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+' · '+statusLabel(x)+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
+      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>'+(g.week===lessonWeekGroups([{lesson_date:today()}])[0]?.week?'Diese Woche':'Woche ab '+pretty(g.week))+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+shortDay(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+(x.status==='held'?'':' · Spät abgesagt')+'</small></span><b>'+(x.billing_mode==='monthly_flat'?'monatlich':euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0))+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
     }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(germanBackendError(e))+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
   async function openLesson(id,studentId){
     ++revision;view='detail';subpage(true);html('<p role="status">Stunde wird geladen …</p>');
     try{
-      const x=unwrap(await supabase.from('lessons').select('*').eq('id',id).single());if(disposed||view!=='detail')return;
-      current=x;fixedStudent=studentId||x.student_id;
-      const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',x.student_id).order('created_at',{ascending:false}).limit(250)),x.id);
-      html('<header class="ll-heading">'+button('Zurück','list')+'<h2>Stunde bearbeiten</h2></header><section class="ll-card"><h3>'+pretty(x.lesson_date)+'</h3><p>'+esc(names.get(x.student_id)||'Schüler')+'</p><p>'+statusLabel(x)+' · '+esc(x.minutes)+' Min. · '+euro(x.rate)+'</p></section>'+(x.invoice_id?'<p class="ll-card" role="status">Diese Stunde ist bereits abgerechnet und kann nicht verändert werden.</p>':'<div class="ll-actions">'+button('Bearbeiten','edit','ll-primary')+button('Entfernen','remove')+'</div>')+'<section class="ll-card"><h3>Verlauf</h3>'+history.map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')+'</section><p id="ll-error" role="alert"></p>'+button('Fertig','list'));
-      actions();
+      const x=unwrap(await supabase.from('lessons').select('*').eq('id',id).single());
+      if(disposed||view!=='detail')return;
+      await createLesson(studentId||x.student_id,x);
     }catch(e){html('<p role="alert">'+esc(e.message)+'</p>'+button('Zurück','list'));actions();}
   }
   async function createLesson(studentId=null,original=null){
@@ -90,13 +89,14 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     html('<p role="status">Formular wird geladen …</p>');
     try{
       if(!students.length){const r=unwrap(await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}));const seen=new Set();students=r.filter(s=>{if(seen.has(s.student_id))return false;seen.add(s.student_id);return true;});}
+       if(!original&&!fixedStudent){try{const all=(await Promise.all(['active','paused','ended'].map(p_status=>supabase.rpc('find_students',{p_query:'',p_status,p_at:today()})))).flatMap((r,i)=>unwrap(r).map(s=>({...s,status:['active','paused','ended'][i]})));if(all.length)students=all.sort((a,b)=>a.student_name.localeCompare(b.student_name,'de'));}catch(e){/* retain version-list fallback if status discovery unavailable */}}
       renderForm(date,original);
       if(original){
         const historyTarget=el('ll-edit-history');
         try{
           const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',original.student_id).order('created_at',{ascending:false}).limit(250)),original.id);
           if(view==='form'&&current?.id===original.id&&historyTarget?.isConnected){
-            historyTarget.innerHTML=(history||[]).map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')||'<p>Keine Einträge vorhanden.</p>';
+            historyTarget.innerHTML=(history||[]).map(h=>'<div class="ll-history-row"><span>'+statusLabel(h)+' · '+euro(h.rate)+'</span><small>erfasst '+new Date(h.created_at).toLocaleDateString('de-DE',{day:'numeric',month:'short'})+'</small></div>').join('')||'<p>Keine Einträge vorhanden.</p>';
           }
         }catch(e){if(historyTarget?.isConnected)historyTarget.textContent='Verlauf konnte nicht geladen werden.';}
       }
@@ -104,18 +104,50 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     }catch(e){alertError(e);}
   }
   function renderForm(date,original){
-    html('<header class="ll-heading"><h2>'+(original?'Stunde bearbeiten':'Neue Stunde')+'</h2>'+button('Abbrechen','list')+'</header><section class="ll-card">'+(fixedStudent?'<p><strong>'+esc(students.find(s=>s.student_id===fixedStudent)?.student_name||names.get(fixedStudent)||'Schüler')+'</strong></p>':'<label class="ll-field">Schüler suchen<input id="ll-search" type="search" placeholder="Name oder Kurzname" autocomplete="off"></label><div id="ll-students" class="ll-student-scroll" role="listbox" aria-label="Schüler auswählen"></div><p id="ll-selection">Bitte Schüler auswählen</p>')+'<div class="ll-quick">'+button('Heute','today')+button('Gestern','yesterday')+button('Datum wählen','calendar')+'</div>'+control('Datum','ll-date','date',date,'required')+'<label class="ll-field">Status<select id="ll-status"><option value="held">Gehalten</option><option value="cancelled_billable">Spät abgesagt oder nicht erschienen</option></select></label>'+control('Dauer (Minuten)','ll-minutes','number',original?.minutes??60,'min="5" max="240" step="1"')+control('Preis (€)','ll-rate','number',original?.rate??0,'min="0" step="0.01"')+'<p class="ll-muted">0 € bedeutet: nicht berechnen.</p></section>'+(original?'<section class="ll-card"><h3>Verlauf</h3><div id="ll-edit-history" role="status">Verlauf wird geladen …</div></section>':'')+'<p id="ll-error" role="alert"></p><div class="ll-actions">'+button('Abbrechen','list')+button('Speichern','save','ll-primary')+'</div>');
-    if(original)el('ll-status').value=original.status==='cancelled_billable'?'cancelled_billable':'held';
-    if(!fixedStudent){const search=el('ll-search');search.oninput=()=>showStudents(search.value);showStudents('');}
-    el('ll-date').onchange=()=>{if(fixedStudent&&!original)defaults(fixedStudent,el('ll-date').value,true);};
+    const initialStatus=original?.status==='cancelled_billable'?'cancelled_billable':'held';
+    const dateChoice=original?(date===today()?'today':'calendar'):'today';
+    const chosenName=students.find(s=>s.student_id===fixedStudent)?.student_name||names.get(fixedStudent)||'Schüler';
+    const nameBlock=fixedStudent?'<div class="ll-fixed-student"><strong>'+esc(chosenName)+'</strong><small>'+esc(students.find(s=>s.student_id===fixedStudent)?.subject||'')+'</small></div>':'<label class="ll-field ll-student-label"><input aria-label="Schüler suchen" id="ll-search" type="search" placeholder="Name oder Kurzname" autocomplete="off"></label><div id="ll-students" class="ll-student-scroll" role="listbox" aria-label="Schüler auswählen"></div><p id="ll-selection" class="ll-muted">Bitte Schüler auswählen</p>';
+    html('<header class="ll-heading ll-form-heading"><div><h2>'+(original?'Stunde':'Neue Stunde')+'</h2>'+(original?'<p class="ll-muted">'+esc(chosenName)+' · '+(original.invoice_id?'abgerechnet':'noch nicht abgerechnet')+'</p>':'')+'</div></header>'+(original?'':'<section class="ll-card ll-student-card"><h3>Schüler</h3>'+nameBlock+'</section>')+'<section class="ll-card ll-form-card">'+(original?'':'<h3>Stunde</h3>')+
+      '<div class="ll-form-section"><label class="ll-field-title">Datum</label><div class="ll-quick ll-segment" role="group" aria-label="Datum auswählen">'+button('Heute','today')+button('Gestern','yesterday')+button('Datum wählen','calendar')+'</div><span id="ll-date-display" class="ll-date-display"></span><div class="ll-date-row" id="ll-date-row">'+control('Datum','ll-date','date',date,'required')+'</div></div>'+
+      '<div class="ll-form-section"><span class="ll-field-title">Was ist passiert?</span><div class="ll-status-segment ll-segment" role="group" aria-label="Was ist passiert?"><button type="button" data-status="held" aria-pressed="'+(initialStatus==='held')+'">Gehalten</button><button type="button" data-status="cancelled_billable" aria-pressed="'+(initialStatus==='cancelled_billable')+'">Spät abgesagt oder nicht erschienen</button></div><input type="hidden" id="ll-status" value="'+initialStatus+'"></div>'+
+      '<div class="ll-numeric-row">'+control('Dauer (Minuten)','ll-minutes','number',original?.minutes??60,'min="5" max="240" step="1"')+control('Preis (€)','ll-rate','number',original?.rate??0,'min="0" step="0.01"')+'</div><p class="ll-muted">0 € bedeutet: nicht berechnen.</p></section>'+
+      (original?'<section class="ll-history-section"><h3>Verlauf</h3><div id="ll-edit-history" role="status">Verlauf wird geladen …</div></section>':'')+
+      (original&&!original.invoice_id?'<div class="ll-remove-row">'+button('Stunde entfernen','remove')+'</div>':'')+
+      (original?.invoice_id?'<p class="ll-muted" role="status">Diese Stunde ist bereits abgerechnet. Rechnung korrigieren, um Änderungen vorzunehmen.</p>':'')+
+      '<p id="ll-error" role="alert"></p><div class="ll-actions ll-form-actions">'+button('Abbrechen','list')+(original?.invoice_id?button('Fertig','list','ll-primary'):button('Speichern','save','ll-primary'))+'</div>');
+    const dateInput=el('ll-date');
+    const updateDate=(choice,openCalendar=false)=>{
+      root.querySelectorAll('.ll-quick button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.action===choice)));
+      el('ll-date-row').hidden=choice!=='calendar';
+      el('ll-date-display').textContent=new Date(dateInput.value+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+      if(openCalendar)calendar();
+    };
     actions();
+    root.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{
+      el('ll-status').value=b.dataset.status;
+      root.querySelectorAll('[data-status]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    });
+    root.querySelectorAll('.ll-quick button').forEach(b=>b.onclick=()=>{
+      const choice=b.dataset.action;
+      if(choice==='calendar'){updateDate('calendar',true);return;}
+      const d=new Date();if(choice==='yesterday')d.setDate(d.getDate()-1);
+      dateInput.value=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+      dateInput.dispatchEvent(new Event('change'));
+      updateDate(choice);
+    });
+    dateInput.onchange=()=>{updateDate('calendar');if(fixedStudent&&!original)defaults(fixedStudent,dateInput.value,true);};
+    updateDate(dateChoice);
+    if(original?.invoice_id)root.querySelectorAll('.ll-form-card input,.ll-status-segment button,.ll-quick button').forEach(x=>x.disabled=true);
+    const saveButton=root.querySelector('[data-action="save"]');if(saveButton)saveButton.disabled=!fixedStudent;
+    if(!fixedStudent){const search=el('ll-search');search.oninput=()=>showStudents(search.value);showStudents('');}
   }
   function showStudents(query){
     const target=el('ll-students');if(!target)return;
     const q=query.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de');
-    const rows=students.filter(s=>(s.student_name+' '+(s.nickname||'')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').includes(q)).slice(0,50);
+    const rows=students.filter(s=>(q || !s.status || s.status==='active')&&(s.student_name+' '+(s.nickname||'')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').includes(q)).slice(0,50);
     target.innerHTML=rows.map(s=>'<button type="button" role="option" aria-selected="'+(fixedStudent===s.student_id)+'" data-pick="'+esc(s.student_id)+'">'+esc(s.student_name)+'</button>').join('')||'<p>Keine Treffer</p>';
-    target.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{fixedStudent=b.dataset.pick;el('ll-selection').textContent=students.find(s=>s.student_id===fixedStudent)?.student_name||'';showStudents(el('ll-search').value);await defaults(fixedStudent,el('ll-date').value,true);});
+    target.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{fixedStudent=b.dataset.pick;el('ll-selection').textContent=students.find(s=>s.student_id===fixedStudent)?.student_name||'';root.querySelector('[data-action="save"]').disabled=false;showStudents(el('ll-search').value);await defaults(fixedStudent,el('ll-date').value,true);});
   }
   async function defaults(id,date,update){
     if(!date)return;
@@ -148,8 +180,8 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     };render();
   }
   function compare(existing,proposed,proceed){
-    const rows = x => '<p>'+pretty(x.lesson_date)+' · '+esc(x.minutes)+' Min. · '+statusLabel(x)+' · '+euro(x.rate)+'</p>';
-    const {overlay,close}=sheet('<h3>Stunde bereits vorhanden</h3><p>An diesem Tag ist bereits eine Stunde erfasst.</p><div class="ll-compare"><div><strong>Vorhanden</strong>'+rows(existing)+'</div><div><strong>Neu</strong>'+rows(proposed)+'</div></div>',button('Abbrechen','cancel')+button('Zweite speichern','confirm','ll-primary'));
+    const rows = (label,x) => '<div class="ll-compare-row"><span><strong>'+label+'</strong> · '+statusLabel(x)+' · '+esc(x.minutes)+' Min.</span><b>'+euro(x.rate)+'</b></div>';
+    const {overlay,close}=sheet('<h3>Stunde bereits vorhanden</h3><p>An diesem Tag ist bereits eine Stunde erfasst.</p><div class="ll-compare">'+rows('Vorhanden',existing)+rows('Neu',proposed)+'</div>',button('Abbrechen','cancel')+button('Zweite speichern','confirm','ll-primary'));
     overlay.querySelector('[data-action="cancel"]').onclick=close;
     overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();proceed();};
   }

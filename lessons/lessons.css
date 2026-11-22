@@ -44,3 +44,137 @@
 .ll-dot{position:absolute;bottom:3px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:currentColor}
 .ll-lessons button:focus-visible,.ll-overlay button:focus-visible{outline:3px solid #666;outline-offset:2px}
 @media(max-width:360px){.ll-lessons{padding:12px 14px 105px}.ll-heading h2{font-size:23px}.ll-list-row b{font-size:14px}.ll-compare{gap:6px}.ll-compare>div{padding:8px}}
+
+
+/* E3: Lessons overview, lesson form, edit, duplicate and date picker. */
+.ll-app .ll-lessons{max-width:none;padding:16px 0 110px;font-family:Inter,system-ui,sans-serif;color:#222}
+.ll-app .ll-lessons .ll-heading{margin:0 0 14px}
+.ll-app .ll-lessons .ll-heading h2{font-size:22px;font-weight:700;line-height:28px}
+.ll-app .ll-lessons .ll-groups>h3{font-size:17px;color:#222;margin:0 0 14px}
+.ll-app .ll-lessons .ll-groups section{margin:0 0 20px}
+.ll-app .ll-lessons .ll-groups section>h3{font-size:13px;font-weight:600;color:#555;margin:0 0 9px}
+.ll-app .ll-lessons .ll-card{border:1px solid #d6d6d2;border-radius:10px;padding:0;margin:0 0 16px;overflow:hidden}
+.ll-app .ll-lessons .ll-list-row{min-height:56px;margin:0;padding:7px 14px;border-bottom:1px solid #e6e6e2;gap:10px;font-size:14px}
+.ll-app .ll-lessons .ll-list-row strong{font-size:14px;font-weight:500;line-height:20px}
+.ll-app .ll-lessons .ll-list-row small{font-size:12px;line-height:16px;margin-top:2px}
+.ll-app .ll-lessons .ll-list-row b{font-size:15px;font-weight:500}
+.ll-app .ll-lessons .ll-floating{position:fixed;bottom:92px;left:50%;transform:translateX(-50%);z-index:9;margin:0;width:72vw;max-width:280.8px}
+.ll-app .ll-lessons .ll-floating .ll-btn{height:56px;min-height:56px;width:100%;border:0;border-radius:28px;background:#222;color:#fff;font-size:17px;font-weight:700;box-shadow:0 4px 14px #0004}
+.ll-app .ll-lessons:has(#ll-date){padding-top:20px;padding-bottom:120px}
+.ll-app .ll-lessons:has(#ll-date) .ll-heading{margin-bottom:20px}
+.ll-app .ll-lessons:has(#ll-date) .ll-card{border:0;border-radius:0;background:transparent;overflow:visible;margin-bottom:20px}
+.ll-app .ll-lessons:has(#ll-date) .ll-field{font-size:13px;font-weight:600;color:#555;margin:16px 0}
+.ll-app .ll-lessons:has(#ll-date) .ll-field input,.ll-app .ll-lessons:has(#ll-date) .ll-field select{min-height:44px;margin-top:7px;border-radius:8px;border:1.5px solid #9a9a96;background:#fff;font-size:16px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick{margin-top:16px;gap:0;border:1px solid #aaa;border-radius:9px;overflow:hidden}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick button{border:0;border-right:1px solid #aaa;border-radius:0;min-height:44px;font-size:13px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick button:last-child{border-right:0}
+.ll-app .ll-lessons:has(#ll-date) .ll-actions{position:sticky;bottom:0;background:#f4f4f3;padding:12px 0 20px;z-index:5}
+.ll-app .ll-lessons:has(#ll-date) .ll-actions .ll-btn{min-height:48px;border-radius:9px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-scroll{max-height:42dvh;border:1px solid #d6d6d2;border-radius:10px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-scroll button{min-height:56px;padding:10px 14px;border-bottom:1px solid #e6e6e2}
+.ll-app .ll-lessons:has(#ll-date) #ll-search{min-height:44px}
+.ll-overlay .ll-sheet{max-width:390px;border-radius:18px 18px 0 0;padding:22px 20px 24px}
+.ll-overlay .ll-sheet h3{font-size:19px;line-height:26px}
+.ll-overlay .ll-calendar{gap:1px}
+.ll-overlay .ll-calendar button{min-height:44px;border-radius:8px;font-size:15px}
+.ll-overlay .ll-calendar>b{font-size:12px;font-weight:600}
+.ll-overlay .ll-cal-head strong{font-size:16px}
+.ll-overlay .ll-compare{gap:8px}
+.ll-overlay .ll-compare>div{padding:10px;font-size:13px}
+
+/* Reference lesson rows: date / student / price on one line. */
+.ll-app .ll-lessons .ll-list-row>span{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;flex:1;gap:8px}
+.ll-app .ll-lessons .ll-list-row strong,.ll-app .ll-lessons .ll-list-row small{margin:0;font-size:14px;line-height:19px}
+.ll-app .ll-lessons .ll-list-row small{color:#333}
+.ll-app .ll-lessons .ll-list-row b{font-weight:500}
+@media(max-width:360px){.ll-app .ll-lessons .ll-list-row>span{grid-template-columns:64px minmax(0,1fr);gap:6px}.ll-app .ll-lessons .ll-list-row strong,.ll-app .ll-lessons .ll-list-row small{font-size:13px}}
+
+/* One Lessons title in the shared header, as on PDF page 1. */
+.ll-app .ll-lessons:has(.ll-groups)>.ll-heading{display:none}
+.ll-app .ll-lessons .ll-list-row>span{grid-template-columns:76px minmax(0,1fr)}
+.ll-app .ll-lessons .ll-list-row strong{white-space:nowrap}
+
+
+/* E3 review corrections #38-42, #44: shared single-choice segmented UI. */
+.ll-app .ll-lessons:has(.ll-form-card){padding-top:16px;padding-bottom:130px}
+.ll-app .ll-form-heading{justify-content:flex-start;min-height:30px;margin-bottom:12px}
+.ll-app .ll-form-heading h2{font-size:22px;line-height:28px}
+.ll-app .ll-lessons .ll-form-card{background:transparent;border:0;overflow:visible;margin:0;padding:0}
+.ll-app .ll-form-card .ll-field{margin:10px 0;font-size:13px;font-weight:600;color:#555}
+.ll-app .ll-form-card .ll-field input{min-height:44px;margin-top:6px}
+.ll-app .ll-form-section{margin:17px 0 20px}
+.ll-app .ll-field-title{display:block;margin-bottom:8px;font-size:13px;font-weight:600;color:#555}
+.ll-app .ll-segment{display:grid;grid-template-columns:repeat(var(--segments,2),minmax(0,1fr));gap:0;border:1.5px solid #888;border-radius:9px;overflow:hidden;background:#fff}
+.ll-app .ll-quick.ll-segment{--segments:3;margin:0;flex-wrap:nowrap}
+.ll-app .ll-segment button{min-width:0;min-height:44px;padding:7px 5px;border:0;border-right:1px solid #aaa;border-radius:0;background:#fff;color:#242424;font-size:13px;font-weight:500;line-height:1.3;white-space:normal;overflow-wrap:normal}
+.ll-app .ll-segment button:last-child{border-right:0}
+.ll-app .ll-segment button[aria-pressed=true]{background:#242424;color:#fff;font-weight:700}
+.ll-app .ll-segment button:focus-visible{outline:2px solid #333;outline-offset:-4px;position:relative}
+.ll-app .ll-status-segment button{min-height:54px}
+.ll-app .ll-date-row{margin:10px 0 0}
+.ll-app .ll-date-row[hidden]{display:none!important}
+.ll-app .ll-date-row #ll-date-display{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.ll-app .ll-date-row .ll-field{margin:0}
+.ll-app .ll-date-row .ll-field input{min-height:40px}
+.ll-app .ll-numeric-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ll-app .ll-numeric-row .ll-field{min-width:0}
+.ll-app .ll-form-card>.ll-muted{font-size:12px;margin:4px 0}
+.ll-app .ll-fixed-student{display:flex;flex-direction:column;gap:4px;padding:8px 0 10px;border-bottom:1px solid #d5d5d3;font-size:16px}
+.ll-app .ll-fixed-student small{font-size:13px;color:#606060}
+.ll-app .ll-student-label{margin:0 0 9px!important}
+.ll-app .ll-student-scroll{max-height:min(32dvh,260px);overflow-y:auto;overscroll-behavior:contain;background:#fff;border:1px solid #d6d6d2;border-radius:10px}
+.ll-app .ll-student-scroll button{min-height:46px;padding:8px 12px;font-size:14px}
+.ll-app .ll-student-scroll button[aria-selected=true]{background:#242424;color:#fff}
+.ll-app #ll-selection{margin:6px 0 0;font-size:12px}
+.ll-app .ll-history-section{margin-top:24px}
+.ll-app .ll-history-section h3{font-size:16px}
+.ll-app #ll-edit-history p{border-bottom:1px solid #ddd;padding:10px 0;font-size:13px}
+.ll-app .ll-remove-row{margin:22px 0}
+.ll-app .ll-remove-row button{padding-left:0;border:0;background:transparent;text-decoration:underline;font-size:14px}
+.ll-app .ll-form-actions{position:sticky;bottom:0;display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#f4f4f3;margin-top:18px;padding:12px 0 18px;z-index:6}
+.ll-app .ll-form-actions button{width:100%;min-width:0;padding:9px 7px;white-space:nowrap;font-size:14px;min-height:48px}
+.ll-overlay .ll-compare{display:flex;flex-direction:column;gap:0;margin:16px 0}
+.ll-overlay .ll-compare .ll-compare-row{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:12px 4px;border:0;border-bottom:1px solid #ddd;border-radius:0;font-size:13px}
+.ll-overlay .ll-compare-row span{min-width:0}
+.ll-overlay .ll-compare-row b{white-space:nowrap;font-weight:600}
+.ll-overlay .ll-actions button{white-space:nowrap;font-size:13px;padding:8px 6px}
+@media(max-height:730px){.ll-app .ll-student-scroll{max-height:22dvh}.ll-app .ll-form-section{margin:12px 0}.ll-app .ll-status-segment button{min-height:44px}}
+@media(max-width:360px){.ll-app .ll-segment button{font-size:12px}.ll-app .ll-form-actions button{font-size:13px}}
+
+.ll-app .ll-date-display{display:block;margin:10px 0 0;font-size:14px;font-weight:600;color:#333}
+.ll-app .ll-date-row[hidden]{display:none!important}
+
+
+/* Match reference selector treatments: independent date pills, inset status toggle. */
+.ll-app .ll-quick.ll-segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;border:0;border-radius:0;overflow:visible;background:transparent}
+.ll-app .ll-quick.ll-segment button{border:1.5px solid #999;border-radius:8px;min-height:44px;background:#fff;font-size:13px}
+.ll-app .ll-quick.ll-segment button[aria-pressed=true]{background:#242424;border-color:#242424;color:#fff}
+.ll-app .ll-status-segment{border:0;background:#e6e6e3;padding:3px;border-radius:9px;gap:3px}
+.ll-app .ll-status-segment button{border:0;border-radius:7px;background:transparent}
+.ll-app .ll-status-segment button[aria-pressed=true]{background:#fff;color:#242424;box-shadow:0 1px 3px #0002}
+.ll-app .ll-form-card .ll-numeric-row input{font-size:16px}
+
+/* Compact picker leaves space for the lesson controls at 390x844. */
+.ll-app .ll-lessons:has(#ll-search) .ll-student-scroll{max-height:min(25dvh,210px)}
+.ll-app .ll-form-heading>div{min-width:0}
+.ll-app .ll-form-heading .ll-muted{margin:3px 0 0;font-size:13px;font-weight:400}
+.ll-app .ll-history-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:9px 12px;border-bottom:1px solid #e6e6e2;background:#fff;font-size:13px}
+.ll-app .ll-history-row:first-child{border-radius:9px 9px 0 0}
+.ll-app .ll-history-row:last-child{border-radius:0 0 9px 9px;border-bottom:0}
+.ll-app .ll-history-row small{flex:0 0 38%;text-align:right;color:#555;font-size:12px}
+.ll-app #ll-edit-history{border:1px solid #d6d6d2;border-radius:9px;overflow:hidden}
+
+/* Match the reference's separate Student and Lesson cards, with independent date pills. */
+.ll-app .ll-lessons:has(#ll-date) .ll-student-card,
+.ll-app .ll-lessons:has(#ll-date) .ll-form-card{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:13px 14px;margin:0 0 12px;overflow:visible}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-card h3,
+.ll-app .ll-lessons:has(#ll-date) .ll-form-card h3{font-size:15px;font-weight:700;margin:0 0 9px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-card .ll-student-label{margin:0 0 8px!important}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-card .ll-student-scroll{max-height:min(23dvh,194px)}
+.ll-app .ll-lessons:has(#ll-date) .ll-form-section{margin:10px 0 14px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick.ll-segment{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;border:0;border-radius:0;overflow:visible;margin:0;background:transparent}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick.ll-segment button{border:1.5px solid #999;border-radius:8px;background:#fff;min-height:44px;padding:6px 3px;font-size:12px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick.ll-segment button[aria-pressed=true]{background:#242424;border-color:#242424;color:#fff}
+.ll-app .ll-lessons:has(#ll-date) .ll-status-segment{margin:0}
+.ll-app .ll-lessons:has(#ll-date) .ll-numeric-row .ll-field{margin:8px 0}
+.ll-app .ll-lessons:has(#ll-date) .ll-form-card>.ll-muted{margin:2px 0}

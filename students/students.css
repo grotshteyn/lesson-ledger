@@ -47,3 +47,168 @@
 .e2-error{color:#a52b1e;min-height:1.3em}
 .e2-screen button:focus-visible,.e2-screen input:focus-visible,.e2-screen select:focus-visible{outline:3px solid #707070;outline-offset:2px}
 @media(max-width:380px){.e2-screen{padding-left:14px;padding-right:14px}.e2-card{padding:13px}.e2-row-price{font-size:13px}.e2-filters{gap:4px}.e2-filters button{padding:7px 4px;font-size:13px}.e2-student-row{padding:12px}}
+
+/* E3 Students overview: measurements transcribed from the supplied HTML wireframe.
+   Scoped to the list route so student details and editing retain existing behavior. */
+.e2-screen:has(#e2-search){max-width:none;padding:16px 0 110px;color:#222;font-family:Inter,system-ui,sans-serif}
+.e2-screen:has(#e2-search) .e2-search{display:flex;flex-direction:column;gap:6px;margin:0 0 16px;font-size:13px;color:#555}
+.e2-screen:has(#e2-search) .e2-search input{height:44px;min-height:44px;margin:0;padding:0 12px;border:1.5px solid #9a9a96;border-radius:8px;font:15px Inter,system-ui,sans-serif;background:#fff}
+.e2-screen:has(#e2-search) .e2-group{margin:0 0 12px}
+.e2-screen:has(#e2-search) .e2-group h2{font-size:13px;font-weight:600;line-height:18px;color:#555;margin:4px 0 12px}
+.e2-screen:has(#e2-search) .e2-group h2 span{font-weight:600;color:inherit}
+.e2-screen:has(#e2-search) .e2-student-list{background:#fff;border:1px solid #d6d6d2;border-radius:10px;overflow:hidden}
+.e2-screen:has(#e2-search) .e2-student-row{display:flex;align-items:center;justify-content:space-between;min-height:56px;width:100%;margin:0;padding:6px 14px;border:0;border-bottom:1px solid #e6e6e2;border-radius:0;background:#fff;text-align:left;gap:12px}
+.e2-screen:has(#e2-search) .e2-student-row:last-child{border-bottom:0}
+.e2-screen:has(#e2-search) .e2-row-main strong{font-size:15px;line-height:20px;font-weight:400}
+.e2-screen:has(#e2-search) .e2-row-main small{font-size:12px;line-height:16px;margin-top:2px;color:#555}
+.e2-screen:has(#e2-search) .e2-row-price{font-size:15px;line-height:20px;font-weight:400;white-space:nowrap}
+.e2-screen:has(#e2-search) .e2-floating{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:9;margin:0;pointer-events:none}
+.e2-screen:has(#e2-search) .e2-floating button{height:56px;min-height:56px;border:0;border-radius:28px;padding:0 24px;background:#222;color:#fff;font-size:17px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px #0002;pointer-events:auto}
+.e2-screen:has(#e2-search) .e2-student-list>.e2-muted{padding:12px 14px;margin:0;font-size:13px}
+
+/* Students shell only: match the reference's text-only three-tab navigation. */
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-header{min-height:77px;padding:20px 20px 12px;border-bottom-color:#d6d6d2}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-header h1{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:normal}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-settings{width:44px;height:44px;min-width:44px;min-height:44px;border:1.5px solid #9a9a96;border-radius:8px;background:#fff;font-size:22px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-content{padding:0 20px 96px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tabs{display:flex;align-items:stretch;gap:0;padding:0 0 16px;background:#fff;border-top:1px solid #d6d6d2}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab{flex:1;min-height:56px;gap:0;padding:0;border:0;border-top:3px solid transparent;border-radius:0;font-size:13px;font-weight:500;color:#555}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab[aria-current="page"]{border-top-color:#222;color:#222;font-weight:700}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-tab span:first-child{display:none}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-floating{bottom:92px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-floating button{width:72vw;max-width:280.8px;font-size:17px;font-weight:700;box-shadow:0 4px 14px #0004}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-group{margin-bottom:12px}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-price{flex:0 0 auto;overflow-wrap:normal}
+.ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-main small{margin-top:2px}
+
+/* The HTML reference de-emphasizes ended rows and the monthly-rate label. */
+.e2-screen:has(#e2-search) .e2-group:last-child .e2-student-row{color:#555}
+
+
+/* E3: Student details, student lesson history, creation, pricing and payer editors. */
+.ll-app .e2-screen:not(:has(#e2-search)){max-width:none;padding:20px 0 110px;color:#222;font-family:Inter,system-ui,sans-serif}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading{gap:10px;margin:0 0 16px;align-items:flex-start}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading h1{font-size:22px;line-height:28px;letter-spacing:0;font-weight:700}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading p{font-size:13px;margin:3px 0 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-back{border:0;background:transparent;font-size:28px;flex-basis:32px;height:32px}
+.ll-app .e2-screen .e2-tabs{display:flex;gap:0;flex-wrap:nowrap;border:1px solid #aaa;border-radius:9px;overflow:hidden;margin:18px 0 24px}
+.ll-app .e2-screen .e2-tabs button{border:0;border-radius:0;min-height:44px;margin:0;font-size:14px;font-weight:500}
+.ll-app .e2-screen .e2-tabs button+button{border-left:1px solid #aaa}
+.ll-app .e2-screen .e2-tabs button[aria-pressed=true]{background:#222;color:#fff;font-weight:600}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card{padding:14px;border-radius:10px;border-color:#d6d6d2;margin:16px 0;background:#fff}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card h2{font-size:16px;font-weight:700}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card-heading{margin-bottom:10px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-edit{font-size:13px;text-decoration:none;font-weight:600}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-detail{grid-template-columns:38% 1fr;gap:8px;padding:9px 0;font-size:13px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-student-row{min-height:56px;padding:8px 12px;margin:0;border:0;border-bottom:1px solid #e6e6e2;border-radius:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-student-row:last-child{border-bottom:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main strong{font-size:14px;font-weight:500}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main small{font-size:12px;margin-top:2px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-price{font-size:14px;font-weight:500;flex:0 0 auto}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-field{font-size:13px;font-weight:600;margin:15px 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-field input,.ll-app .e2-screen:not(:has(#e2-search)) .e2-field select{min-height:44px;border-radius:8px;border:1.5px solid #9a9a96;font-size:16px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card{padding:0;border:0;background:transparent;margin:20px 0 28px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card h2{font-size:16px;margin-bottom:12px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-actions{position:sticky;bottom:0;padding:12px 0 20px;background:#f4f4f3}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-actions button{min-height:48px;border-radius:9px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-lesson-actions{display:flex;justify-content:center;position:fixed;bottom:92px;left:50%;transform:translateX(-50%);width:72vw;max-width:280.8px;z-index:9;margin:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-lesson-actions button{width:100%;min-height:56px;border-radius:28px;font-size:17px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-finish{margin:26px 0 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-finish button{min-height:48px}
+
+
+/* E3 review corrections #43-44: form hierarchy and uniform segmented selectors. */
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card{margin:14px 0 24px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card-heading{margin:0 0 14px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card h2{font-size:17px}
+.ll-app .e2-choice-field{margin:18px 0 20px}
+.ll-app .e2-choice-label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:8px}
+.ll-app .e2-segment{display:flex;width:100%;border:1.5px solid #888;border-radius:9px;overflow:hidden;background:#fff}
+.ll-app .e2-segment button{flex:1 1 0;min-width:0;min-height:44px;border:0;border-right:1px solid #aaa;border-radius:0;background:#fff;color:#242424;padding:7px 4px;font-size:12px;font-weight:500;line-height:1.25;white-space:normal;overflow-wrap:normal}
+.ll-app .e2-segment button:last-child{border-right:0}
+.ll-app .e2-segment button[aria-pressed=true]{background:#242424;color:#fff;font-weight:700}
+.ll-app .e2-segment button:focus-visible{outline:2px solid #333;outline-offset:-4px;position:relative}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(2){border-right:0}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(-n+2){border-bottom:1px solid #aaa}
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button{font-size:12px}
+.ll-app .e2-other-length[hidden],.ll-app .e2-effective-date[hidden]{display:none!important}
+.ll-app .e2-screen .e2-actions button{white-space:nowrap;font-size:14px;min-width:0;padding:9px 7px}
+.ll-app .e2-screen .e2-tabs{border:1.5px solid #888;gap:0;border-radius:9px;overflow:hidden}
+.ll-app .e2-screen .e2-tabs button{border:0;border-radius:0;margin:0;min-height:44px}
+.ll-app .e2-screen .e2-tabs button+button{border-left:1px solid #aaa}
+.ll-app .e2-screen .e2-tabs button[aria-pressed=true]{background:#242424;color:#fff}
+@media(max-width:360px){.ll-app .e2-segment button{font-size:11px}.ll-app .e2-screen .e2-actions button{font-size:13px}}
+
+
+/* Match wireframe: white bordered form sections, individual length/effective pills. */
+.ll-app .e2-screen:has(#e2-form) form .e2-card,
+.ll-app .e2-screen:has(#e2-edit) form .e2-card{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:14px;margin:8px 0 12px}
+.ll-app .e2-screen:has(#e2-form),.ll-app .e2-screen:has(#e2-edit){padding-top:10px}
+.ll-app .e2-screen:has(#e2-form) .e2-heading,.ll-app .e2-screen:has(#e2-edit) .e2-heading{margin:0 0 12px}
+.ll-app .e2-screen:has(#e2-form) .e2-heading h1,.ll-app .e2-screen:has(#e2-edit) .e2-heading h1{font-size:22px}
+.ll-app .e2-screen:has(#e2-form) .e2-field,.ll-app .e2-screen:has(#e2-edit) .e2-field{margin:10px 0;font-size:13px;font-weight:500}
+.ll-app .e2-screen:has(#e2-form) .e2-field input,.ll-app .e2-screen:has(#e2-edit) .e2-field input{min-height:42px;margin-top:5px;padding:9px 11px;font-size:15px}
+.ll-app .e2-choice-field{margin:11px 0 14px}
+.ll-app .e2-choice-label{font-size:13px;font-weight:500;margin-bottom:6px}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment,
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment{border:0;background:transparent;gap:6px;border-radius:0;overflow:visible}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment button,
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button{border:1.5px solid #aaa;border-radius:8px;background:#fff;min-height:44px}
+.ll-app .e2-choice-field:has([data-choice="length_choice"]) .e2-segment button[aria-pressed=true],
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button[aria-pressed=true]{background:#242424;color:#fff;border-color:#242424}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment{border:0;background:#e6e6e3;border-radius:9px;padding:3px;gap:3px}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button{border:0;border-radius:7px;background:transparent;font-size:13px}
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button[aria-pressed=true]{background:#fff;color:#242424;box-shadow:0 1px 3px #0002}
+.ll-app .e2-screen:has(#e2-form) .e2-card-heading h2,.ll-app .e2-screen:has(#e2-edit) .e2-card-heading h2{font-size:15px;font-weight:700}
+.ll-app .e2-screen:has(#e2-edit) .e2-actions{position:sticky;bottom:0}
+
+
+/* Student tabs and teaching location use the same inset single-select treatment. */
+.ll-app .e2-screen .e2-tabs.e2-single-select,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment{
+  display:flex;
+  flex-wrap:nowrap;
+  width:100%;
+  gap:3px;
+  padding:3px;
+  border:0;
+  border-radius:9px;
+  overflow:hidden;
+  background:#e6e6e3;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{
+  flex:1 1 0;
+  min-width:0;
+  min-height:44px;
+  margin:0;
+  padding:7px 4px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#242424;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.25;
+  white-space:normal;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button+button,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(n){
+  border:0;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button[aria-pressed=true],
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button[aria-pressed=true]{
+  background:#fff;
+  color:#242424;
+  box-shadow:0 1px 3px #0002;
+  font-weight:700;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button:focus-visible,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:focus-visible{
+  outline:2px solid #333;
+  outline-offset:-3px;
+}
+@media(max-width:360px){
+  .ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{font-size:12px}
+}

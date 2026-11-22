@@ -1,0 +1,38 @@
+name: E3 Students wireframe screenshot
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'students/**'
+      - 'tests/e3-students-visual.mjs'
+      - '.github/workflows/e3-students-visual.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  students-390x844:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install authenticated browser test runtime
+        run: |
+          npm install --no-save playwright@1.58.2
+          npx playwright install --with-deps chromium
+      - name: Serve checked-out application
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/e3-students-http.log 2>&1 &
+      - name: Screenshot Students with authenticated E2 mock at 390 x 844
+        run: node tests/e3-students-visual.mjs
+      - name: Existing authenticated browser regression
+        run: node --test tests/e2-browser.test.mjs
+      - name: Upload Students screenshot and measurements
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e3-students-390x844
+          path: browser-evidence/students/
+          if-no-files-found: warn
