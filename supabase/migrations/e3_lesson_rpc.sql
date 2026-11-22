@@ -1,4 +1,7 @@
 alter table public.student_versions add column if not exists no_show_billable boolean not null default true;
+-- Remove pre-confirmation signatures from early development builds.
+drop function if exists public.log_lesson(uuid,date,text,integer,numeric,text,boolean,text,boolean,uuid,text);
+drop function if exists public.replace_lesson(uuid,date,text,integer,numeric,text,boolean,text,boolean,uuid);
 -- Transactional E3 operations. SECURITY DEFINER is limited by explicit auth.uid ownership checks.
 create or replace function public.log_lesson(
  p_student_id uuid, p_lesson_date date, p_status text default 'held',
