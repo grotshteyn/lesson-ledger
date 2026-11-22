@@ -1,3 +1,6 @@
+import {shellMarkup,bindShell} from './frontend/shell.js';
+import {mountStudents} from './students/students.js';
+import {mountLessons} from './lessons/lessons.js';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -95,7 +98,7 @@ function register(){
 }
 
 function verify(email){frame('<p class="eyebrow">Anmeldung</p><h1>Prüfe dein Postfach</h1><p>Wir haben eine Anmeldung an <strong>'+escapeHTML(email)+'</strong> geschickt.</p><p class="muted">Öffne den Link oder gib den sechsstelligen Code ein.</p><div class="card"><label class="field">Bestätigungscode<input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>'+button('Code bestätigen','check')+'<p id="error" class="error" role="alert"></p><button class="link" id="resend">Code erneut senden</button><button class="link" id="wrong">Falsche Adresse?</button></div>');$('wrong').onclick=login;$('resend').onclick=async()=>{if(Date.now()-otpSentAt<60000)return err('Bitte warte 60 Sekunden, bevor du einen neuen Code anforderst.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0],shouldCreateUser:false}});if(error)return err(error);otpSentAt=Date.now();$('error').textContent='Ein neuer Code wurde angefordert.'};$('check').onclick=async()=>{const {error}=await supabase.auth.verifyOtp({email,token:$('otp').value.trim(),type:'email'});if(error)err(error);else await load()}}
-async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabase.auth.getUser();if(recoveryMode)return;user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
+async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabase.auth.getUser();if(recoveryMode)return;user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)allLessonsPage();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
 function setup(){const [key,title]=steps[step];let body='';if(key==='teacher_address'){const a=addr();body=field('street','Straße und Hausnummer',a.street)+field('postcode','Postleitzahl',a.postcode)+field('city','Ort',a.city)+field('country','Land',a.country||'Deutschland')}
 else if(key==='vat_mode'){body=[['small_business','Kleinunternehmer (§ 19 UStG)','Ich berechne keine Umsatzsteuer.'],['exempt_teaching','Steuerfreier Unterricht (§ 4 Nr. 21 UStG)','Ich habe eine entsprechende Bescheinigung.'],['regular_19','Regulär 19 %','Meine Preise enthalten Umsatzsteuer.'],['unsure','Ich bin mir nicht sicher','Rechnungen bleiben gesperrt, bis du dich entschieden hast.']].map(([v,l,d])=>'<label class="choice"><input type="radio" name="vat_mode" value="'+v+'" '+(draft.vat_mode===v?'checked':'')+'><strong>'+l+'</strong><p class="muted small">'+d+'</p></label>').join('')}
@@ -148,7 +151,29 @@ function lessonGroups(lessons,reference=today()){
  }
  return groups.filter(g=>g.items.length);
 }
-function home(){
+let activeModule=null, activeTab='lessons';
+function disposeModule(){if(activeModule){const old=activeModule;activeModule=null;if(typeof old==='function')old();else old.destroy?.();}}
+function renderTab(tab,content='',actionLabel=''){
+ disposeModule();activeTab=tab;
+ frame(shellMarkup({tab,content:'<div id="ll-module-root">'+content+'</div>',actionLabel}),'tab-screen');
+ bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();}});
+}
+function routeTab(tab,options={}){
+ if(tab==='invoices'){renderTab('invoices','<section class="card ll-empty"><h2>Rechnungen</h2><p>Rechnungen sind bald verfügbar. Bereits erfasste Stunden bleiben für die spätere Rechnungsstellung erhalten.</p></section>');return;}
+ renderTab(tab);
+ const mountRoot=$('ll-module-root');
+ if(tab==='students'){
+  activeModule=mountStudents({root:mountRoot,supabase,today,onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
+  if(options.studentId)activeModule.open?.(options.studentId,'lessons');
+ }else{
+  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId});
+  if(options.lessonId)activeModule.openLesson(options.lessonId,options.studentId);
+  else if(options.studentId)activeModule.createLesson(options.studentId);
+ }
+}
+function invoicesPage(){routeTab('invoices');}
+function home(){return routeTab('lessons');}
+function legacyHome(){
  frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
  '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Stunden</h2>'+button('Alle anzeigen','homeAllLessons','secondary')+'</div><div id="homeLessons" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>'+
  '<section class="card dashboard-card"><button id="addStudent" class="student-directory-button">Alle Schüler anzeigen <span aria-hidden="true">›</span></button></section>'+
@@ -167,9 +192,7 @@ function home(){
  }).catch(()=>{if($('homeLessons'))$('homeLessons').textContent='Stunden konnten nicht geladen werden.';});
 }
 async function allLessonsPage(){
- frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Stunden</h1></div>'+
- '<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>');
- $('backHome').onclick=home;
+ renderTab('lessons','<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>', '+ Stunde erfassen');
  try{
   const [lessons,names]=await Promise.all([
    supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
@@ -187,10 +210,10 @@ function settingsPage(onlyKeys=null){
  const s=settings,a=s.teacher_address||{},rows=[
  ['teacher_name','Name auf Rechnungen',s.teacher_name||'Nicht angegeben'],
  ['teacher_address','Postanschrift',[a.street,a.postcode,a.city].filter(Boolean).join(', ')||'Nicht angegeben'],
- ['teacher_email','E-Mail for payers',s.teacher_email||'Nicht angegeben'],
+ ['teacher_email','E-Mail-Adresse für Zahlende',s.teacher_email||'Nicht angegeben'],
  ['phone','Telefon (optional)',s.phone||'Nicht angegeben'],
  ['tax_number','Steuernummer',s.tax_number||'Nicht angegeben'],
- ['vat_mode','Umsatzsteuer',({small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Regular Umsatzsteuer 19%',unsure:'Unsicher'})[s.vat_mode]||'Nicht angegeben'],
+ ['vat_mode','Umsatzsteuer',({small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Reguläre Umsatzsteuer 19 %',unsure:'Unsicher'})[s.vat_mode]||'Nicht angegeben'],
  ['iban','Bankverbindung',s.iban||'Nicht angegeben'],
  ['payment_days','Zahlungsfrist',(s.payment_days||14)+' Tage'],
  ['cancellation_rule','Stornoregel','Bis 24 Stunden vorher kostenlos, danach kostenpflichtig'],
@@ -221,15 +244,13 @@ function studentSearchRank(student,term){
  return tokens.some(x=>Math.abs(x.length-term.length)<=tolerance&&editDistance(x,term)<=tolerance)?3:Infinity;
 }
 async function studentsPage(initialSearch=''){
- frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Schüler</h1>'+button('+ Hinzufügen','newStudent','secondary')+'</div>'+
+ renderTab('students',
  '<label class="field">Suche<input id="studentSearch" placeholder="Name oder Kurzname" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
  '<div class="student-filter-bar" role="group" aria-label="Schülerstatus">'+
  '<button class="filter-pill" data-filter="all" aria-pressed="true">Alle</button><button class="filter-pill" data-filter="active" aria-pressed="false">Aktiv</button>'+
  '<button class="filter-pill" data-filter="paused" aria-pressed="false">Pausiert</button>'+
  '<button class="filter-pill" data-filter="ended" aria-pressed="false">Beendet</button></div>'+
- '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>');
- $('backHome').onclick=home;
- $('newStudent').onclick=()=>studentForm();
+ '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>', '+ Schüler hinzufügen');
  let serial=0,selected='all';
  async function render(){
   const current=++serial,search=$('studentSearch').value.trim();
