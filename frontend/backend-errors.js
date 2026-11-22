@@ -14,6 +14,7 @@ export function germanBackendError(error){
   if(typeof error==='string' && !error)return 'Ein Fehler ist aufgetreten. Bitte erneut versuchen.';
   const message=typeof error==='string'?error:String(error?.message||'');
   const code=String(error?.code||'');
+  if(!code && /^(Bitte |Eine vorhandene Stunde|Speichern wurde nicht bestätigt|Der Schüler |Stunde |Keine Schülerdaten)/.test(message))return message;
   const text=[code,message,String(error?.details||''),String(error?.hint||'')].join(' ');
   for(const [pattern,label] of rules)if(pattern.test(text))return label;
   return 'Die Aktion konnte nicht abgeschlossen werden. Bitte erneut versuchen. Falls der Fehler bleibt, den Support kontaktieren.';
