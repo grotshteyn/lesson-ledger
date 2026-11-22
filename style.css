@@ -26,3 +26,5 @@
 @media(max-width:420px){.lesson-student-row{gap:6px}.lesson-student-row .student-item{padding:12px}.lesson-log-btn{padding:12px 9px;min-width:56px}}
 
 .lesson-duplicate{border-left:4px solid #242424;padding-left:12px;background:#f1f1ef}.lesson-save-notice{margin:6px 0 14px}.lesson-recent{margin-top:20px;border-top:1px solid #dededc;padding-top:18px}.lesson-recent h2{font-size:18px}
+
+.lesson-sheet-btn{flex:0 0 auto;min-width:38px;padding:10px 8px;font-size:24px;line-height:1.1}.lesson-draft{border:1px dashed currentColor;border-radius:8px;font-weight:600}.lesson-date-quick{margin-bottom:8px}.lesson-date-quick button{flex:1}
