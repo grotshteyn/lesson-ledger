@@ -145,8 +145,8 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p><button class="e2-secondary" data-status>Status ändern</button>`)+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
     `<div class="e2-lesson-actions"><button class="e2-primary" data-new-lesson>+ Stunde erfassen</button></div><div id="e2-lessons" aria-live="polite">Stunden werden geladen …</div>`}
-    <p role="alert" class="e2-error"></p><div class="e2-finish"><button class="e2-secondary" data-finish>Fertig</button></div>`);
-   bind('[data-back]',list);bind('[data-finish]',list);
+    <p role="alert" class="e2-error"></p>`);
+   bind('[data-back]',list);
    root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>detailPage(id,b.dataset.tab)));
    root.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editSection(id,v,b.dataset.edit)));
    bind('[data-status]',()=>editStatus(id,v,status));
@@ -160,7 +160,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   if(!alive||token!==sequence)return;
   if(response.error){box.textContent=germanBackendError(response.error);return}
   const groups=groupLessons(response.data||[]);
-  box.innerHTML=groups.length?groups.map(g=>card(new Date(g.month+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'}),g.items.map(l=>`<button class="e2-student-row" data-lesson="${escape(l.id)}"><span class="e2-row-main"><strong>${escape(dateLabel(l.lesson_date))}</strong><small>${escape(l.status==='held'?'Gehalten':l.status==='cancelled_billable'?'Spät abgesagt':'Abgesagt')} · ${escape(l.minutes)} Min.${l.invoice_id?' · Abgerechnet':''}</small></span><span class="e2-row-price">${escape(money(l.billing_mode==='monthly_flat'||l.charge_override==='not_charged'?0:l.rate))}</span></button>`).join(''))).join(''):'<p class="e2-muted">Noch keine Stunden erfasst.</p>';
+  box.innerHTML=groups.length?groups.map(g=>card(new Date(g.month+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'}),g.items.map(l=>`<button class="e2-student-row" data-lesson="${escape(l.id)}"><span class="e2-row-main"><strong>${escape(dateLabel(l.lesson_date))}</strong><small>${escape(l.status==='held'?'Gehalten':l.status==='cancelled_billable'?'Spät abgesagt':'Abgesagt')} · ${escape(l.minutes)} Min.${l.invoice_id?' · Abgerechnet':''}</small></span><span class="e2-row-price">${escape(l.billing_mode==='monthly_flat'?'monatlich':money(l.charge_override==='not_charged'?0:l.rate))}</span></button>`).join(''))).join(''):'<p class="e2-muted">Noch keine Stunden erfasst.</p>';
   box.querySelectorAll('[data-lesson]').forEach(b=>b.addEventListener('click',()=>onLessonOpen(b.dataset.lesson,id)));
  }
  function editSection(id,v,section){
