@@ -92,7 +92,7 @@ test('E2: authenticated three-tab shell, add, pricing edit, pause and search',as
   await page.locator('[data-status]').click();
   await page.locator('#e2-status [type="submit"]').click();
   await page.locator('[data-tab="details"]').waitFor();
-  await page.locator('[data-finish]').click();
+  await page.locator('[data-back]').click();
   await page.locator('#e2-search').fill('Anna');
   await page.locator('[data-student]').first().waitFor();
   assert.match(await page.locator('#e2-results').innerText(),/Anna Test/);
