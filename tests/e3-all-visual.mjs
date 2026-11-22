@@ -88,6 +88,7 @@ try{
  await page.locator('[data-action="list"]').first().click();
  await page.locator('[data-action="new"]').click();
  await page.locator('[data-pick]').first().click();
+ await page.locator('#ll-date').fill(day(-5));
  await page.locator('[data-action="save"]').click();
  await capture('10-duplicate-confirmation','.ll-compare');
  await page.locator('.ll-sheet [data-action="cancel"]').click();
