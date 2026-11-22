@@ -55,7 +55,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(e.message)+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
   async function openLesson(id,studentId){
-    view='detail';subpage(true);html('<p role="status">Stunde wird geladen …</p>');
+    ++revision;view='detail';subpage(true);html('<p role="status">Stunde wird geladen …</p>');
     try{
       const x=unwrap(await supabase.from('lessons').select('*').eq('id',id).single());if(disposed||view!=='detail')return;
       current=x;fixedStudent=studentId||x.student_id;
@@ -65,7 +65,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     }catch(e){html('<p role="alert">'+esc(e.message)+'</p>'+button('Zurück','list'));actions();}
   }
   async function createLesson(studentId=null,original=null){
-    view='form';subpage(true);current=original;fixedStudent=studentId||original?.student_id||null;draftKey=crypto.randomUUID();
+    ++revision;view='form';subpage(true);current=original;fixedStudent=studentId||original?.student_id||null;draftKey=crypto.randomUUID();
     const date=original?.lesson_date||today();
     html('<p role="status">Formular wird geladen …</p>');
     try{
