@@ -28,12 +28,12 @@ people.forEach(([name,subject,minutes,price,status,billing],i)=>{
  lessons.push({id:'visual-lesson-'+(i+1),student_id:s.student_id,lesson_date:day(offset),status:i===3?'cancelled_billable':'held',minutes:s.minutes,rate:s.rate??0,billing_mode:s.billing_mode,created_at:'2026-11-22T12:00:00Z',invoice_id:null,replaces_lesson_id:null});
 });
 const fixture={students,versions,events,seq:people.length,lessons};
-let mock=match[1].replace('const state={students:[],versions:[],events:[],seq:0};','const state='+JSON.stringify(fixture)+';');
+let mock=match[1].replace('const state={students:[],versions:[],events:[],lessons:[],seq:0};','const state='+JSON.stringify(fixture)+';');
 assert.notEqual(mock,match[1],'Fixture was injected');
 mock=mock.replace("name==='active_lessons'||name==='lesson_voids'||name==='lessons'?[]:state.students","name==='active_lessons'||name==='lessons'?state.lessons:name==='lesson_voids'?[]:state.students");
 mock=mock.replace('return {select(){return this},eq(k,v)', 'return {single(){this._single=true;return this},select(){return this},eq(k,v)');
 mock=mock.replace('resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})','{const result=rows.filter(x=>filters.every(f=>f(x)));resolve({data:this._single?result[0]||null:result,error:null})}');
-mock=mock.replace("if(name==='set_student_status')","if(name==='log_lesson_v2'||name==='replace_lesson_v2')return {data:{state:'duplicate'},error:null};\n  if(name==='set_student_status')");
+mock=mock.replace("if(name==='log_lesson_v2'){", "if(name==='log_lesson_v2'||name==='replace_lesson_v2')return {data:{state:'duplicate'},error:null};\n  if(name==='log_lesson_v2'){");
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'de-DE'});
 const page=await context.newPage(),errors=[],records=[];

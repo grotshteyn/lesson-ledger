@@ -3,18 +3,19 @@ import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
 const mockModule = `
-const state={students:[],versions:[],events:[],seq:0};
+const state={students:[],versions:[],events:[],lessons:[],seq:0};
 globalThis.__e2Mock=state;globalThis.__rpcCalls=[];
 const now=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const current=id=>state.versions.filter(v=>v.student_id===id&&v.effective_from<=now()).sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at))[0];
 const status=id=>{const e=state.events.filter(x=>x.student_id===id&&x.effective_from<=now()).at(-1);return e?e.event_type==='pause'?(e.pause_until&&e.pause_until<=now()?'active':'paused'):e.event_type==='restart'?'active':e.event_type==='end'?'ended':'removed':'active'};
-function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},gte(k,v){filters.push(x=>x[k]>=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:name==='active_lessons'||name==='lesson_voids'||name==='lessons'?[]:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
+function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},gte(k,v){filters.push(x=>x[k]>=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:name==='active_lessons'||name==='lessons'?(state.lessons||[]):name==='lesson_voids'?[]:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
 export function createClient(){return {
  auth:{getUser:async()=>({data:{user:{id:'user-1',email:'test@example.com'}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})},
  from:table,
  rpc:async(name,args)=>{
   globalThis.__rpcCalls.push({name,args});
   if(name==='ensure_my_ledger')return {data:'ledger-1',error:null};
+  if(name==='log_lesson_v2'){state.lessons.push({id:'lesson-'+(++state.seq),student_id:args.p_student_id,lesson_date:args.p_lesson_date,status:args.p_status,minutes:args.p_minutes,rate:args.p_rate,created_at:new Date().toISOString()});return {data:{state:'saved'},error:null};}
   if(name==='create_student'){
    const id='student-'+(++state.seq),d=args.p_details;
    state.students.push({id,ledger_id:'ledger-1',created_at:new Date().toISOString()});
@@ -135,4 +136,37 @@ test('E1: three-tab navigation, settings entry and return without legacy Home',a
   assert.deepEqual(pageErrors,[]);
   await context.close();
  }finally{await browser.close()}
+});
+
+test('E3 navigation: cancel a lesson from a student returns to that same student Stunden view',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try{
+  const {context,page}=await startPage(browser,{width:390,height:844});
+  await openStudents(page);
+  await createStudent(page,'Return Context');
+  await page.locator('[data-tab="lessons"]').click();
+  await page.locator('[data-new-lesson]').click();
+  await page.locator('[data-action="list"]').click();
+  await page.locator('[data-tab="lessons"][aria-pressed="true"]').waitFor();
+  assert.match(await page.locator('.e2-heading').innerText(),/Return Context/);
+  assert.equal(await page.locator('[data-ll-tab="students"]').getAttribute('aria-current'),'page');
+  await context.close();
+ }finally{await browser.close();}
+});
+
+test('E3 navigation: saving a student-origin lesson returns to the student lesson history',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try{
+  const {context,page}=await startPage(browser,{width:390,height:844});
+  await openStudents(page);
+  await createStudent(page,'Saved Context');
+  await page.locator('[data-tab="lessons"]').click();
+  await page.locator('[data-new-lesson]').click();
+  await page.locator('[data-action="save"]').click();
+  await page.locator('[data-tab="lessons"][aria-pressed="true"]').waitFor();
+  assert.match(await page.locator('.e2-heading').innerText(),/Saved Context/);
+  assert.equal(await page.locator('[data-ll-tab="students"]').getAttribute('aria-current'),'page');
+  assert.equal(await page.locator('[data-lesson]').count(),1,'new lesson appears in originating student history');
+  await context.close();
+ }finally{await browser.close();}
 });

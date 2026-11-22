@@ -216,5 +216,10 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  }
  void onBack; // Shell owns navigation away from the Students tab.
  list();
- return ()=>{alive=false;sequence++;root.replaceChildren()};
+ const dispose=()=>{alive=false;sequence++;root.replaceChildren()};
+ // The shell restores a student after returning from the Lessons module.
+ // Expose the existing detail renderer without changing the disposal contract.
+ dispose.open=(id,tab='lessons')=>detailPage(id,tab);
+ dispose.create=()=>create();
+ return dispose;
 }
