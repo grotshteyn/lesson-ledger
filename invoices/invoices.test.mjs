@@ -40,3 +40,15 @@ test('issued invoice maps snapshot without recalculating amounts',()=>{
  const row=adaptIssued({invoice_id:'i1',invoice_number:'2026-0001',billing_month:'2026-10-01',gross_amount:'119.00',status:'issued',snapshot:{student_name:'A',payer:{name:'P',address:{street:'X',postcode:'12345',city:'Berlin'}},teacher:{name:'T'}}});
  assert.equal(row.totalCents,'119.00');assert.equal(row.student,'A');assert.equal(row.address,'X, 12345 Berlin');
 });
+
+test('PDF uses authenticated Edge Function and only accepts signed HTTPS URLs',async()=>{
+ const calls=[];
+ const supabase={rpc:async()=>({data:{months:[]},error:null}),functions:{invoke:async(name,options)=>{calls.push({name,options});return {data:{status:'ready',url:'https://example.test/signed-pdf'},error:null};}}};
+ const adapter=supabaseInvoiceAdapter(supabase);
+ assert.equal(await adapter.pdf('invoice-123'),'https://example.test/signed-pdf');
+ assert.deepEqual(calls,[{name:'invoice-pdf',options:{body:{invoice_id:'invoice-123'}}}]);
+});
+test('PDF adapter rejects unsuccessful generation',async()=>{
+ const supabase={functions:{invoke:async()=>({data:{status:'pending'},error:null})}};
+ await assert.rejects(supabaseInvoiceAdapter(supabase).pdf('invoice-123'),/PDF-Link/);
+});
