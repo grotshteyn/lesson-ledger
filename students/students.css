@@ -246,3 +246,13 @@
 .ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-lesson-actions{margin-bottom:16px}
 /* Text settings action on the Students tab. */
 .ll-app:has([data-ll-tab="students"][aria-current="page"]) .ll-settings{width:auto;min-width:74px;padding:0 10px;font-size:14px;font-weight:600}
+
+/* Shared readable type scale for student detail, edit, payer and history views. */
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-detail{font-size:16px;line-height:1.5;grid-template-columns:minmax(0,38%) minmax(0,1fr);gap:12px;padding:12px 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-detail dt{font-size:15px;font-weight:500;line-height:1.45}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-detail dd{font-size:16px;line-height:1.45}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading p{font-size:15px;line-height:1.45}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-edit{font-size:15px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-history{font-size:15px;line-height:1.5}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card-heading h2{font-size:18px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-tabs button{font-size:16px}
