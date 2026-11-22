@@ -89,6 +89,7 @@ try{
  await page.locator('[data-ll-tab="lessons"]').click();
  await page.locator('[data-action="new"]').click();
  await capture('08-new-lesson','.ll-form-card');
+ assert.ok((await page.locator('.ll-student-scroll').boundingBox()).height<=215,'student picker leaves room for the lesson form');
  assert.equal(await page.locator('.ll-status-segment button').count(),2);
  assert.equal(await page.locator('.ll-date-row').isVisible(),false);
  assert.equal(await page.locator('.ll-quick [data-action="today"]').getAttribute('aria-pressed'),'true');
@@ -112,6 +113,9 @@ try{
  await page.locator('[data-action="save"]').click();
  console.log('Duplicate test:',JSON.stringify(await page.evaluate(()=>({date:document.querySelector('#ll-date')?.value,student:document.querySelector('#ll-selection')?.textContent,error:document.querySelector('#ll-error')?.textContent,overlay:!!document.querySelector('.ll-compare'),calls:globalThis.__rpcCalls?.slice(-3)}))));
  await capture('10-duplicate-confirmation','.ll-compare');
+ assert.equal(await page.locator('.ll-compare-row').count(),2);
+ const top=await page.locator('.ll-compare-row').first().boundingBox(),bottom=await page.locator('.ll-compare-row').last().boundingBox();
+ assert.ok(bottom.y>=top.y+top.height,'duplicate comparison rows are vertically stacked');
  await page.locator('.ll-sheet [data-action="cancel"]').click();
  await page.locator('[data-action="list"]').first().click();
  await page.locator('[data-ll-tab="students"]').click();
