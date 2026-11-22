@@ -68,7 +68,9 @@ begin
  on conflict(ledger_id,invoice_year)
  do update set last_number=public.invoice_counters.last_number+1
  returning last_number into v_seq;
- v_number:=v_prefix||v_year::text||'-'||lpad(v_seq::text,4,'0');
+ v_number:=(case when position('YYYY' in v_prefix)>0
+    then replace(v_prefix,'YYYY',v_year::text)
+    else v_prefix||v_year::text end)||'-'||lpad(v_seq::text,4,'0');
  insert into public.invoices(
  ledger_id,student_id,invoice_year,invoice_sequence,invoice_number,kind,
  original_invoice_id,billing_month,issued_on,due_on,vat_mode,
