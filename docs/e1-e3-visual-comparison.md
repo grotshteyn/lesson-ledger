@@ -15,7 +15,7 @@
 | Student lessons | Month groups, invoiced marker, + Stunde erfassen, Fertig | Students module groups by month and invokes lesson callbacks | Pending |
 | Lesson create from global | Searchable independently scrolling students, no default selection | Lessons module renders scrollable selector | Pending |
 | Lesson create from student | Fixed student, date shortcuts, held/cancelled, price and duration | Lessons module accepts fixed student | Pending |
-| Lesson edit | Same fields, stored price/length retained on date change, history, read-only invoiced | Lessons module uses stored fields, history and invoiced guard | Pending; form and history split across screens |
+| Lesson edit | Same fields, stored price/length retained on date change, history, read-only invoiced | Lessons edit form now displays history on the same screen and invoiced guard remains | SOURCE IMPLEMENTED; browser parity pending |
 | Pricing edit | Effective date, old lessons retain recorded prices | Students calls combined RPC with p_reprice=false | Pending browser/DB |
 | Calendar | Monday-first bottom sheet, selected filled, today outline, existing lesson dots | Lessons module implements grid and dot marker | Pending |
 | Duplicate | Side-by-side old/new rows in bottom sheet, default cancel | Lessons module renders comparison sheet | Pending |
@@ -25,9 +25,9 @@ Capture at 360px mobile and a wide desktop viewport after logging into a disposa
 
 ## Known deviations from wireframe by source inspection
 - Students PR #27 now shows active, paused and ended groups simultaneously, including during search; source integrated, browser parity pending.
-- Lessons month heading and newest-first week grouping are source implemented since c94f5d7; browser spacing/typography and timezone behavior remain unaccepted. PR #34 proposes a timezone-safe week calculation.
+- Lessons month heading and newest-first week grouping are source implemented since c94f5d7; browser spacing/typography and timezone behavior remain unaccepted. PR #34 timezone-safe week calculation is now integrated; browser parity pending.
 - Shell PR #32 now uses a centered German invoices empty state; source integrated, browser parity pending.
-- Lesson editing uses a detail view followed by an edit form rather than the single editable view with history shown in the reference.
+- Lesson edit form now includes a history section on the same screen (106c749); visual parity, exact history lineage and invoiced read-only behavior remain unverified.
 - The provided wireframes contain English labels as design references; shipping copy must be German.
 
 ## Full export page-indexed acceptance reference (uploaded 22 November 2026)
