@@ -115,3 +115,27 @@
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-lesson-actions button{width:100%;min-height:56px;border-radius:28px;font-size:17px}
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-finish{margin:26px 0 0}
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-finish button{min-height:48px}
+
+
+/* E3 review corrections #43-44: form hierarchy and uniform segmented selectors. */
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card{margin:14px 0 24px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card-heading{margin:0 0 14px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card h2{font-size:17px}
+.ll-app .e2-choice-field{margin:18px 0 20px}
+.ll-app .e2-choice-label{display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:8px}
+.ll-app .e2-segment{display:flex;width:100%;border:1.5px solid #888;border-radius:9px;overflow:hidden;background:#fff}
+.ll-app .e2-segment button{flex:1 1 0;min-width:0;min-height:44px;border:0;border-right:1px solid #aaa;border-radius:0;background:#fff;color:#242424;padding:7px 4px;font-size:12px;font-weight:500;line-height:1.25;white-space:normal;overflow-wrap:normal}
+.ll-app .e2-segment button:last-child{border-right:0}
+.ll-app .e2-segment button[aria-pressed=true]{background:#242424;color:#fff;font-weight:700}
+.ll-app .e2-segment button:focus-visible{outline:2px solid #333;outline-offset:-4px;position:relative}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(2){border-right:0}
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(-n+2){border-bottom:1px solid #aaa}
+.ll-app .e2-choice-field:has([data-choice="effective_choice"]) .e2-segment button{font-size:12px}
+.ll-app .e2-other-length[hidden],.ll-app .e2-effective-date[hidden]{display:none!important}
+.ll-app .e2-screen .e2-actions button{white-space:nowrap;font-size:14px;min-width:0;padding:9px 7px}
+.ll-app .e2-screen .e2-tabs{border:1.5px solid #888;gap:0;border-radius:9px;overflow:hidden}
+.ll-app .e2-screen .e2-tabs button{border:0;border-radius:0;margin:0;min-height:44px}
+.ll-app .e2-screen .e2-tabs button+button{border-left:1px solid #aaa}
+.ll-app .e2-screen .e2-tabs button[aria-pressed=true]{background:#242424;color:#fff}
+@media(max-width:360px){.ll-app .e2-segment button{font-size:11px}.ll-app .e2-screen .e2-actions button{font-size:13px}}
