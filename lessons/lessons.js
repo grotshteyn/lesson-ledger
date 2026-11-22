@@ -107,6 +107,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   function renderForm(date,original){
     html('<header class="ll-heading"><h2>'+(original?'Stunde bearbeiten':'Neue Stunde')+'</h2>'+button('Abbrechen','list')+'</header><section class="ll-card">'+(fixedStudent?'<p><strong>'+esc(students.find(s=>s.student_id===fixedStudent)?.student_name||names.get(fixedStudent)||'Schüler')+'</strong></p>':'<label class="ll-field">Schüler suchen<input id="ll-search" type="search" placeholder="Name oder Kurzname" autocomplete="off"></label><div id="ll-students" class="ll-student-scroll" role="listbox" aria-label="Schüler auswählen"></div><p id="ll-selection">Bitte Schüler auswählen</p>')+'<div class="ll-quick">'+button('Heute','today')+button('Gestern','yesterday')+button('Datum wählen','calendar')+'</div>'+control('Datum','ll-date','date',date,'required')+'<label class="ll-field">Status<select id="ll-status"><option value="held">Gehalten</option><option value="cancelled_billable">Spät abgesagt oder nicht erschienen</option></select></label>'+control('Dauer (Minuten)','ll-minutes','number',original?.minutes??60,'min="5" max="240" step="1"')+control('Preis (€)','ll-rate','number',original?.rate??0,'min="0" step="0.01"')+'<p class="ll-muted">0 € bedeutet: nicht berechnen.</p></section>'+(original?'<section class="ll-card"><h3>Verlauf</h3><div id="ll-edit-history" role="status">Verlauf wird geladen …</div></section>':'')+'<p id="ll-error" role="alert"></p><div class="ll-actions">'+button('Abbrechen','list')+button('Speichern','save','ll-primary')+'</div>');
     if(original)el('ll-status').value=original.status==='cancelled_billable'?'cancelled_billable':'held';
+     const saveButton=root.querySelector('[data-action="save"]');if(saveButton)saveButton.disabled=!fixedStudent;
     if(!fixedStudent){const search=el('ll-search');search.oninput=()=>showStudents(search.value);showStudents('');}
     el('ll-date').onchange=()=>{if(fixedStudent&&!original)defaults(fixedStudent,el('ll-date').value,true);};
     actions();
@@ -116,7 +117,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     const q=query.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de');
     const rows=students.filter(s=>(s.student_name+' '+(s.nickname||'')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').includes(q)).slice(0,50);
     target.innerHTML=rows.map(s=>'<button type="button" role="option" aria-selected="'+(fixedStudent===s.student_id)+'" data-pick="'+esc(s.student_id)+'">'+esc(s.student_name)+'</button>').join('')||'<p>Keine Treffer</p>';
-    target.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{fixedStudent=b.dataset.pick;el('ll-selection').textContent=students.find(s=>s.student_id===fixedStudent)?.student_name||'';showStudents(el('ll-search').value);await defaults(fixedStudent,el('ll-date').value,true);});
+    target.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{fixedStudent=b.dataset.pick;el('ll-selection').textContent=students.find(s=>s.student_id===fixedStudent)?.student_name||'';root.querySelector('[data-action="save"]').disabled=false;showStudents(el('ll-search').value);await defaults(fixedStudent,el('ll-date').value,true);});
   }
   async function defaults(id,date,update){
     if(!date)return;
