@@ -113,7 +113,9 @@ begin
     );
     if v_lesson is not null then
       update public.lessons set invoice_id=v_invoice
-        where id=v_lesson and ledger_id=v_ledger and invoice_id is null;
+        where id=v_lesson and ledger_id=v_ledger and
+          (invoice_id is null or exists(select 1 from public.invoices c
+            where c.kind='cancellation' and c.original_invoice_id=public.lessons.invoice_id));
       if not found then raise exception 'lesson_already_billed'; end if;
       insert into public.invoice_lessons(invoice_id,ledger_id,lesson_id)
         values(v_invoice,v_ledger,v_lesson);
