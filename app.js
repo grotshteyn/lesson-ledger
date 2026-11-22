@@ -19,22 +19,22 @@ function login(){
  '<label class="field">Passwort<input id="password" type="password" autocomplete="current-password" required></label>'+
  '<button class="primary" type="submit" id="passwordBtn">Anmelden</button>'+
  '<p id="error" class="error" role="alert"></p>'+
- '<button type="button" class="link" id="forgotPasswort">Passwort festlegen oder zurücksetzen</button>'+
+ '<button type="button" class="link" id="forgotPassword">Passwort festlegen oder zurücksetzen</button>'+
  '<button type="button" class="link" id="emailFallback">Stattdessen E-Mail-Code verwenden</button>'+
  '<p class="muted small">Noch kein Konto? <button type="button" class="link" id="createAccount">Konto erstellen</button></p></form>','setup-screen');
  $('loginForm').onsubmit=async e=>{
   e.preventDefault();const email=$('email').value.trim(),password=$('password').value;
   $('passwordBtn').disabled=true;
-  const {error}=await supabase.auth.signInWithPasswort({email,password});
+  const {error}=await supabase.auth.signInWithPassword({email,password});
   if(error){$('passwordBtn').disabled=false;return err(error);}
   await load();
  };
- $('forgotPasswort').onclick=()=>passwordRecovery();
+ $('forgotPassword').onclick=()=>passwordRecovery();
  $('emailFallback').onclick=()=>emailCodeLogin();
  $('createAccount').onclick=()=>register();
 }
 function emailCodeLogin(){
- frame('<h1>Mit E-Mail anmelden</h1><p class="muted">An email code or link will be sent. E-Mail sending limits may apply.</p><div class="card">'+
+ frame('<h1>Mit E-Mail anmelden</h1><p class="muted">Wir senden einen Anmeldecode oder Link per E-Mail. Es gelten Versandlimits.</p><div class="card">'+
  '<label class="field">E-Mail<input id="email" type="email" autocomplete="email"></label>'+
  button('Anmelde-E-Mail senden','emailBtn')+'<p id="error" class="error" role="alert"></p>'+button('Zurück zur Passwortanmeldung','backLogin','secondary')+'</div>','setup-screen');
  $('backLogin').onclick=login;
@@ -49,13 +49,13 @@ function emailCodeLogin(){
 }
 function passwordRecovery(){
  frame('<h1>Passwort festlegen oder zurücksetzen</h1><p class="muted">Verwende die E-Mail-Adresse deines bestehenden Kontos, damit Schüler und Einstellungen erhalten bleiben. Wir senden einen Wiederherstellungslink.</p>'+
- '<form id="recoveryForm" class="card"><label class="field">E-Mail-Adresse des Kontos<input id="recoveryE-Mail" type="email" autocomplete="email" required></label>'+
+ '<form id="recoveryForm" class="card"><label class="field">E-Mail-Adresse des Kontos<input id="recoveryEmail" type="email" autocomplete="email" required></label>'+
  '<button type="submit" class="primary" id="sendRecovery">Wiederherstellungslink senden</button><p id="error" class="error" role="alert"></p>'+
  button('Zurück zur Anmeldung','backLogin','secondary')+'</form>','setup-screen');
  $('backLogin').onclick=login;
  $('recoveryForm').onsubmit=async e=>{
-  e.preventDefault();const email=$('recoveryE-Mail').value.trim();$('sendRecovery').disabled=true;
-  const {error}=await supabase.auth.resetPasswordForE-Mail(email,{redirectTo:location.origin+location.pathname});
+  e.preventDefault();const email=$('recoveryEmail').value.trim();$('sendRecovery').disabled=true;
+  const {error}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
   if(error){$('sendRecovery').disabled=false;return err(error);}
   frame('<h1>Prüfe dein Postfach</h1><p>Öffne den Link in der E-Mail, um ein Passwort festzulegen. Falls das Versandlimit erreicht ist, warte vor einem neuen Versuch.</p>'+button('Zurück zur Anmeldung','backLogin','secondary'),'setup-screen');
   $('backLogin').onclick=login;
@@ -64,13 +64,13 @@ function passwordRecovery(){
 function choosePassword(){
  frame('<h1>Passwort festlegen</h1><p class="muted">Dein bestehendes Konto und deine Daten bleiben erhalten.</p>'+
  '<form id="newPasswordForm" class="card">'+
- '<label class="field">Neues Passwort<input id="newPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
- '<label class="field">Passwort bestätigen<input id="confirmPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
+ '<label class="field">Neues Passwort<input id="newPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
+ '<label class="field">Passwort bestätigen<input id="confirmPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
  '<p id="error" class="error" role="alert"></p><button type="submit" id="savePassword" class="primary">Passwort speichern</button></form>','setup-screen');
  $('newPasswordForm').onsubmit=async e=>{
   e.preventDefault();const password=$('newPassword').value;
-  if(password.length<12)return err('Bitte Min.destens 12 Zeichen verwenden.');
-  if(password!==$('confirmPassword').value)return err('Passworts do not match.');
+  if(password.length<12)return err('Bitte mindestens 12 Zeichen verwenden.');
+  if(password!==$('confirmPassword').value)return err('Die Passwörter stimmen nicht überein.');
   $('savePassword').disabled=true;
   const {error}=await supabase.auth.updateUser({password});
   if(error){$('savePassword').disabled=false;return err(error);}
@@ -78,15 +78,15 @@ function choosePassword(){
  };
 }
 function register(){
- frame('<h1>Konto erstellen</h1><p class="muted">Already used Lesson Ledger? Go back and choose Passwort festlegen oder zurücksetzen to keep your existing data.</p>'+
- '<form id="registerForm" class="card"><label class="field">E-Mail<input id="registerE-Mail" type="email" autocomplete="email" required></label>'+
- '<label class="field">Passwort (mindestens 12 Zeichen)<input id="registerPassword" type="password" autocomplete="new-password" Min.length="12" required></label>'+
+ frame('<h1>Konto erstellen</h1><p class="muted">Du hast bereits ein Konto? Gehe zurück und wähle „Passwort festlegen oder zurücksetzen“, damit deine Daten erhalten bleiben.</p>'+
+ '<form id="registerForm" class="card"><label class="field">E-Mail<input id="registerEmail" type="email" autocomplete="email" required></label>'+
+ '<label class="field">Passwort (mindestens 12 Zeichen)<input id="registerPassword" type="password" autocomplete="new-password" minlength="12" required></label>'+
  '<p id="error" class="error" role="alert"></p><button class="primary" id="registerBtn" type="submit">Konto erstellen</button>'+
  button('Zurück zur Anmeldung','backLogin','secondary')+'</form>','setup-screen');
  $('backLogin').onclick=login;
  $('registerForm').onsubmit=async e=>{
   e.preventDefault();$('registerBtn').disabled=true;
-  const {data,error}=await supabase.auth.signUp({email:$('registerE-Mail').value.trim(),password:$('registerPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});
+  const {data,error}=await supabase.auth.signUp({email:$('registerEmail').value.trim(),password:$('registerPassword').value,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){$('registerBtn').disabled=false;return err(error);}
   if(data.session)return load();
   frame('<h1>Prüfe dein Postfach</h1><p>Bestätige bei einem neuen Konto deine E-Mail-Adresse. Bestehende Nutzer sollten stattdessen ihr Passwort zurücksetzen.</p>'+button('Zurück zur Anmeldung','backLogin','secondary'),'setup-screen');

@@ -8,7 +8,7 @@ globalThis.__e2Mock=state;globalThis.__rpcCalls=[];
 const now=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const current=id=>state.versions.filter(v=>v.student_id===id&&v.effective_from<=now()).sort((a,b)=>b.effective_from.localeCompare(a.effective_from)||b.created_at.localeCompare(a.created_at))[0];
 const status=id=>{const e=state.events.filter(x=>x.student_id===id&&x.effective_from<=now()).at(-1);return e?e.event_type==='pause'?(e.pause_until&&e.pause_until<=now()?'active':'paused'):e.event_type==='restart'?'active':e.event_type==='end'?'ended':'removed':'active'};
-function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
+function table(name){let filters=[];return {select(){return this},eq(k,v){filters.push(x=>x[k]===v);return this},lte(k,v){filters.push(x=>x[k]<=v);return this},gte(k,v){filters.push(x=>x[k]>=v);return this},order(){return this},limit(){return this},then(resolve,reject){let rows=name==='billing_settings_versions'?[{ledger_id:'ledger-1',effective_from:'2026-01-01',teacher_name:'Test Teacher',teacher_address:{street:'Main 1',postcode:'80331',city:'München'},teacher_email:'test@example.com',vat_mode:'small_business',iban:'DE89370400440532013000',payment_days:14}]:name==='student_versions'?state.versions:name==='student_status_events'?state.events:state.students;resolve({data:rows.filter(x=>filters.every(f=>f(x))),error:null})}}}
 export function createClient(){return {
  auth:{getUser:async()=>({data:{user:{id:'user-1',email:'test@example.com'}}}),onAuthStateChange:()=>{},signOut:async()=>({error:null})},
  from:table,
@@ -27,7 +27,7 @@ export function createClient(){return {
    const term=(args.p_query||'').toLowerCase();
    return {data:state.students.map(s=>({...current(s.id),student_id:s.id,status:status(s.id)})).filter(v=>v.student_name&&v.status===args.p_status&&(v.student_name.toLowerCase().includes(term)||(v.nickname||'').toLowerCase().includes(term))),error:null};
   }
-  if(name==='change_student'){
+  if(name==='change_student'||name==='change_student_with_repricing'){
    const old=current(args.p_student_id),c=args.p_changes;
    state.versions.push({...old,...c,id:'version-'+(++state.seq),effective_from:args.p_effective_from,created_at:new Date(Date.now()+state.seq*1000).toISOString(),rate:(c.billing_mode||old.billing_mode)==='per_lesson'?Number(c.price??old.rate):null,monthly_fee:(c.billing_mode||old.billing_mode)==='monthly_flat'?Number(c.price??old.monthly_fee):null});
    return {data:'version-'+state.seq,error:null};
@@ -53,10 +53,11 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   await page.locator('#price').fill('35');
   await page.locator('#payer_name').fill('Parent Test');
   await page.locator('#saveStudent').click();
-  await page.locator('[data-direct-edit="price"]').waitFor();
+  await page.locator('#toggleStudentView').click();
+  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
   assert.match(await page.locator('main').innerText(),/Anna Test/);
-  await page.locator('[data-direct-edit="price"]').click();
-  await page.locator('#price').fill('38');
+  await page.locator('[data-direct-edit="billing_mode"]').click();
+  await page.locator('#newBillingPrice').fill('38');
   await page.locator('#saveChange').click();
   await page.locator('#statusStudent').waitFor();
   assert.match(await page.locator('main').innerText(),/38 € pro Stunde/);
@@ -85,7 +86,8 @@ test('E2 mobile viewport: create student without horizontal overflow',async()=>{
   await page.locator('#price').fill('45');
   await page.locator('#studentPays').check();
   await page.locator('#saveStudent').click();
-  await page.locator('[data-direct-edit="price"]').waitFor();
+  await page.locator('#toggleStudentView').click();
+  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
   const size=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
   assert.ok(size.width<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
  }finally{await browser.close()}
