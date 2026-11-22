@@ -1,0 +1,49 @@
+/* E2 isolated styles. Loaded by the integrator alongside the shared shell CSS. */
+.e2-screen{color:#242424;max-width:580px;margin:0 auto;padding:12px 20px calc(100px + env(safe-area-inset-bottom));overflow-wrap:anywhere}
+.e2-screen *{box-sizing:border-box}
+.e2-heading{display:flex;align-items:center;gap:12px;margin:4px 0 24px}
+.e2-heading>div{min-width:0;flex:1}
+.e2-heading h1{font-size:clamp(25px,6vw,34px);line-height:1.15;letter-spacing:-.025em;margin:0}
+.e2-heading p{margin:7px 0 0}
+.e2-back{flex:0 0 44px;height:44px;background:white;border:1px solid #d5d5d3;border-radius:10px;font-size:29px;line-height:1}
+.e2-muted{color:#606060;line-height:1.45}
+.e2-search,.e2-field{display:block;font-size:15px;color:#606060;margin:14px 0}
+.e2-search input,.e2-field input,.e2-field select{display:block;width:100%;min-width:0;min-height:48px;margin-top:7px;padding:11px 12px;border:1px solid #aaa;border-radius:10px;background:#fff;color:#242424;font:inherit;font-size:16px}
+.e2-filters,.e2-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}
+.e2-filters button,.e2-tabs button{flex:1;min-height:44px;padding:9px;border:1px solid #bbb;background:#fff;border-radius:10px;white-space:nowrap}
+.e2-filters button[aria-pressed=true],.e2-tabs button[aria-pressed=true]{background:#242424;border-color:#242424;color:#fff;font-weight:700}
+.e2-group{margin:22px 0}
+.e2-group h2{font-size:17px;margin:0 0 10px}
+.e2-group h2 span{color:#606060;font-weight:400}
+.e2-card{background:#fff;border:1px solid #d5d5d3;border-radius:12px;padding:16px;margin:16px 0}
+.e2-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.e2-card h2{font-size:19px;margin:0}
+.e2-edit{min-height:44px;background:transparent;border:0;text-decoration:underline;font-weight:650}
+.e2-student-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:74px;width:100%;padding:14px;text-align:left;background:#fff;border:1px solid #d5d5d3;border-radius:12px;margin:8px 0}
+.e2-row-main{min-width:0;flex:1}
+.e2-row-main strong,.e2-row-main small{display:block;overflow-wrap:anywhere}
+.e2-row-main strong{font-size:17px}
+.e2-row-main small{font-size:14px;color:#606060;margin-top:5px}
+.e2-row-price{flex:0 1 42%;text-align:right;font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.e2-detail{display:grid;grid-template-columns:minmax(90px,38%) minmax(0,1fr);gap:12px;border-bottom:1px solid #e7e7e5;padding:11px 0}
+.e2-detail:last-child{border:0}
+.e2-detail dt{color:#606060}
+.e2-detail dd{margin:0;overflow-wrap:anywhere}
+.e2-card dl{margin:0}
+.e2-history{padding-left:22px;margin:0}
+.e2-history li{padding:7px 0}
+.e2-check{display:flex;align-items:center;gap:10px;min-height:44px}
+.e2-check input{width:20px;height:20px}
+.e2-primary,.e2-secondary{min-height:48px;border:2px solid #242424;border-radius:12px;padding:11px 15px;font-weight:700}
+.e2-primary{background:#242424;color:#fff}
+.e2-secondary{background:#fff;color:#242424}
+.e2-floating{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom));display:flex;justify-content:center;margin-top:24px;pointer-events:none}
+.e2-floating button{pointer-events:auto;box-shadow:0 4px 14px #0002}
+.e2-actions{position:sticky;bottom:0;display:flex;gap:10px;background:#f4f4f3;padding:12px 0 calc(12px + env(safe-area-inset-bottom));z-index:2}
+.e2-actions button{flex:1;min-width:0}
+.e2-lesson-actions{margin:16px 0}
+.e2-finish{margin:28px 0}
+.e2-finish button{width:100%}
+.e2-error{color:#a52b1e;min-height:1.3em}
+.e2-screen button:focus-visible,.e2-screen input:focus-visible,.e2-screen select:focus-visible{outline:3px solid #707070;outline-offset:2px}
+@media(max-width:380px){.e2-screen{padding-left:14px;padding-right:14px}.e2-card{padding:13px}.e2-row-price{font-size:13px}.e2-filters{gap:4px}.e2-filters button{padding:7px 4px;font-size:13px}.e2-student-row{padding:12px}}
