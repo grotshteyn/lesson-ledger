@@ -66,3 +66,27 @@ Home students card: override full-width overview button inside flex header. */
 .student-directory-button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:52px;text-align:left;font-weight:650;font-size:18px}
 .lesson-week-group+.lesson-week-group{margin-top:24px;padding-top:12px;border-top:1px solid #dededb}
 .lesson-week-group h2{font-size:18px;margin:0 0 12px}
+
+
+/* E1 shared three-tab navigation. Only .ll-app descendants are affected. */
+.ll-app{min-height:100dvh;background:#f4f4f3;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
+body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
+.ll-header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border-bottom:1px solid #d5d5d3;padding:14px 20px;min-height:70px}
+.ll-header h1{font-size:25px;line-height:1.2;margin:0;min-width:0;overflow-wrap:anywhere}
+.ll-settings{display:grid;place-items:center;min-width:44px;min-height:44px;border:0;background:transparent;font-size:25px;border-radius:10px}
+.ll-content{padding:18px 20px 30px;min-width:0}
+.ll-content .card{margin:0 0 16px;padding:16px;border-radius:12px}
+.ll-tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:10;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:min(100%,680px);background:#fff;border-top:1px solid #d5d5d3;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+.ll-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:54px;border:0;background:transparent;border-radius:9px;color:#606060;font-size:13px}
+.ll-tab span:first-child{font-size:21px;line-height:1.1}
+.ll-tab[aria-current=page]{color:#242424;font-weight:750}
+.ll-floating-action{position:fixed;z-index:9;bottom:calc(78px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:min(calc(100% - 40px),400px);min-height:52px;border:0;border-radius:28px;background:#242424;color:#fff;font-weight:700;padding:12px 20px;box-shadow:0 3px 12px #0002}
+.ll-app:has(.ll-floating-action){padding-bottom:calc(160px + env(safe-area-inset-bottom,0px))}
+.ll-settings:focus-visible,.ll-tab:focus-visible,.ll-floating-action:focus-visible{outline:3px solid #555;outline-offset:2px}
+.ll-empty{text-align:center;padding:48px 12px}.ll-empty h2{font-size:21px}.ll-empty p{color:#606060;line-height:1.5}
+.ll-content .student-item{min-width:0}.ll-content .student-item>span:first-child{min-width:0;overflow-wrap:anywhere}
+@media(max-width:380px){.ll-header{padding:12px 16px}.ll-content{padding:16px}.ll-header h1{font-size:23px}.ll-floating-action{width:calc(100% - 32px)}}
+
+.ll-hidden{display:none!important}
+.ll-module-root{min-height:0}
+.ll-content{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
