@@ -21,6 +21,21 @@ const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const euro = v => Number(v||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 const pretty = v => new Date(v+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
 const statusLabel = x => x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt oder nicht erschienen':'Abgesagt';
+export const lessonReplacementHistory = (rows, lessonId) => {
+  const byId=new Map(rows.map(row=>[row.id,row]));
+  const related=new Set([lessonId]);
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const row of rows){
+      if(related.has(row.id) || (row.replaces_lesson_id && related.has(row.replaces_lesson_id))){
+        if(!related.has(row.id)){related.add(row.id);changed=true;}
+        if(row.replaces_lesson_id && byId.has(row.replaces_lesson_id) && !related.has(row.replaces_lesson_id)){related.add(row.replaces_lesson_id);changed=true;}
+      }
+    }
+  }
+  return rows.filter(row=>related.has(row.id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+};
 export const lessonSaveFingerprint = (payload) => JSON.stringify([payload.studentId,payload.originalId||null,payload.date,payload.status,payload.minutes,payload.rate]);
 const isoToday = () => {const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const control = (label,id,type='text',value='',extra='') => '<label class="ll-field">'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
@@ -64,7 +79,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     try{
       const x=unwrap(await supabase.from('lessons').select('*').eq('id',id).single());if(disposed||view!=='detail')return;
       current=x;fixedStudent=studentId||x.student_id;
-      const history=unwrap(await supabase.from('lessons').select('id,lesson_date,created_at,status,rate,minutes').eq('student_id',x.student_id).order('created_at',{ascending:false}).limit(30));
+      const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',x.student_id).order('created_at',{ascending:false}).limit(250)),x.id);
       html('<header class="ll-heading">'+button('Zurück','list')+'<h2>Stunde bearbeiten</h2></header><section class="ll-card"><h3>'+pretty(x.lesson_date)+'</h3><p>'+esc(names.get(x.student_id)||'Schüler')+'</p><p>'+statusLabel(x)+' · '+esc(x.minutes)+' Min. · '+euro(x.rate)+'</p></section>'+(x.invoice_id?'<p class="ll-card" role="status">Diese Stunde ist bereits abgerechnet und kann nicht verändert werden.</p>':'<div class="ll-actions">'+button('Bearbeiten','edit','ll-primary')+button('Entfernen','remove')+'</div>')+'<section class="ll-card"><h3>Verlauf</h3>'+history.map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')+'</section><p id="ll-error" role="alert"></p>'+button('Fertig','list'));
       actions();
     }catch(e){html('<p role="alert">'+esc(e.message)+'</p>'+button('Zurück','list'));actions();}
@@ -79,7 +94,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       if(original){
         const historyTarget=el('ll-edit-history');
         try{
-          const history=unwrap(await supabase.from('lessons').select('id,lesson_date,created_at,status,rate,minutes').eq('student_id',original.student_id).order('created_at',{ascending:false}).limit(30));
+          const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',original.student_id).order('created_at',{ascending:false}).limit(250)),original.id);
           if(view==='form'&&current?.id===original.id&&historyTarget?.isConnected){
             historyTarget.innerHTML=(history||[]).map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')||'<p>Keine Einträge vorhanden.</p>';
           }
