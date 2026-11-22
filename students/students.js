@@ -5,6 +5,8 @@ const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp
 export const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').trim();
 export const money = value => Number(value || 0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 export const studentPrice = s => s.billing_mode === 'monthly_flat' ? money(s.monthly_fee ?? s.price) + ' / Monat' : money(s.rate ?? s.price) + ' / Stunde';
+export const matchingStudents = (students,query) => students.filter(s=>!normalize(query)||normalize(s.student_name).includes(normalize(query))||normalize(s.nickname).includes(normalize(query)));
+export const duplicateNames = (students,name) => students.some(s=>normalize(s.student_name)===normalize(name));
 export const groupStudents = students => ['active','paused','ended'].map(status => ({status,items:students.filter(s=>s.status===status).sort((a,b)=>String(a.student_name).localeCompare(String(b.student_name),'de'))}));
 export const groupLessons = lessons => Object.entries(lessons.reduce((groups,lesson)=>{const key=String(lesson.lesson_date).slice(0,7);(groups[key] ||= []).push(lesson);return groups;},{})).sort(([a],[b])=>b.localeCompare(a)).map(([month,items])=>({month,items:items.sort((a,b)=>String(b.lesson_date).localeCompare(String(a.lesson_date)))}));
 const statusNames={active:'Aktiv',paused:'Pausiert',ended:'Beendet'};
@@ -44,10 +46,10 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    try{
     const rows=await Promise.all(['active','paused','ended'].map(status=>rpc('find_students',{p_query:search.trim(),p_status:status,p_at:today()}).then(items=>(items||[]).map(s=>({...s,status})))));
     if(!alive||request!==sequence)return;
-    const grouped=groupStudents(rows.flat()).filter(g=>filter==='all'||filter===g.status);
+    const grouped=groupStudents(matchingStudents(rows.flat(),search)).filter(g=>filter==='all'||filter===g.status);
     result.innerHTML=grouped.map(g=>`<section class="e2-group"><h2>${statusNames[g.status]} <span>(${g.items.length})</span></h2>${g.items.length?g.items.map(s=>`<button class="e2-student-row" data-student="${escape(s.student_id)}"><span class="e2-row-main"><strong>${escape(s.student_name)}</strong><small>${escape([s.nickname,s.subject].filter(Boolean).join(' · '))}</small></span><span class="e2-row-price">${escape(studentPrice(s))}</span></button>`).join(''):'<p class="e2-muted">Keine Schüler</p>'}</section>`).join('');
     result.querySelectorAll('[data-student]').forEach(b=>b.addEventListener('click',()=>detailPage(b.dataset.student)));
-   }catch(e){if(request===sequence)showError(e)}
+   }catch(e){if(alive&&request===sequence){result.textContent='Schüler konnten nicht geladen werden.';showError(e)}}
   }
   await refreshList();
  }
@@ -65,8 +67,8 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    const payload={student_name:name,nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject'),start_date:fieldValue(form,'start_date'),minutes,lessons_per_week:weekly,billing_mode:fieldValue(form,'billing_mode'),price:String(price),location:fieldValue(form,'location'),payer_name:form.elements.student_pays.checked?name:fieldValue(form,'payer_name'),payer_email:fieldValue(form,'payer_email'),payer_address:{street:fieldValue(form,'payer_street'),postcode:fieldValue(form,'payer_postcode'),city:fieldValue(form,'payer_city'),country:'Deutschland'}};
    const submit=form.querySelector('[type="submit"]');submit.disabled=true;
    try{
-    const existing=await rpc('find_students',{p_query:name,p_status:'active',p_at:today()});
-    if((existing||[]).some(s=>normalize(s.student_name)===normalize(name))&&!confirm('Ein Schüler mit diesem Namen existiert bereits. Trotzdem hinzufügen?'))return;
+    const existing=(await Promise.all(['active','paused','ended'].map(p_status=>rpc('find_students',{p_query:name,p_status,p_at:today()})))).flat();
+    if(duplicateNames(existing,name)&&!confirm('Ein Schüler mit diesem Namen existiert bereits. Trotzdem hinzufügen?'))return;
     const id=await rpc('create_student',{p_details:payload});await detailPage(id,'details');
    }catch(error){showError(error)}finally{if(submit.isConnected)submit.disabled=false}
   });
@@ -82,7 +84,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    ]);
    if(versions.error||events.error)throw versions.error||events.error;
    if(!alive||token!==sequence)return;
-   const v=current?.[0]||versions.data?.[0];if(!v)throw new Error('Schüler nicht gefunden.');
+   const v=(Array.isArray(current)?current[0]:current)||versions.data?.[0];if(!v)throw new Error('Schüler nicht gefunden.');
    const isDetails=tab==='details',payer=v.payer_address||{};
    const editButton=section=>`<button class="e2-edit" data-edit="${section}">Bearbeiten</button>`;
    render(`<header class="e2-heading">${backButton}<div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs" role="group" aria-label="Schüleransicht"><button data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
