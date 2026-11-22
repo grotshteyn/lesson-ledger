@@ -55,3 +55,31 @@
 
 ## No deployment
 Only GitHub branch commits were made. `main`, production database schema, production data and deployed frontend remain unchanged.
+
+
+## Acceptance gate #33: integration follow-up (22 November 2026)
+
+**Central issue:** https://github.com/grotshteyn/lesson-ledger/issues/33. This section supersedes stale earlier claims about the v2 RPCs and month heading; the original pre-reconciliation audit is retained above for history.
+
+### Source reconciled into integration branch
+- PR #27: simultaneous Aktiv/Pausiert/Beendet groups with search, supported Basics payload allowlist, student name read-only, expanded Students regression suite and handoff. Retained integration-only `onSubpageChange` callback for Shell chrome.
+- PR #32: centered German invoice empty state, responsive navigation and error-handling changes, source checks and browser checklist.
+- PR #31: verified v2 replacement replay payload guard, expanded SQL regression fixture, backend runbook, corrected >365-day contract and pre-E3 schema baseline. Do not overwrite the deployed v2 definition with the older SQL.
+- LE-7: month heading followed by newest-first Monday-based week groups was already integrated in `c94f5d7`. PR #34 adds a timezone-safe week calculation and retry hardening but is still separate.
+
+### Test evidence, distinguished from source
+| Evidence | Actual result | Limits |
+|---|---|---|
+| Students JavaScript cases | 15 passed / 0 failed in V8 harness using fetched integration source and test bodies | Not native Node runner; no browser |
+| Shell JavaScript cases | 4 passed / 0 failed in V8 harness using fetched integration source and test bodies | Includes source assertions; not native Node runner |
+| Lessons JavaScript cases | 3 passed / 0 failed in V8 harness using fetched integration source and test bodies | Does not include separate PR #34 tests |
+| Native `node --test` | NOT RUN | GitHub clone DNS failure in runner |
+| Database v2 RPC presence | Confirmed read-only via Supabase SQL after authorized migration | Existence is not end-to-end acceptance |
+| Backend SQL regression and tenant isolation | Backend agent reports rollback-only fixtures completed without exception, including invoice-lock fixture and fixture cleanup; details in `docs/backend-db-verification.md` and issue #33 | Independently executing full fixtures by Integrator not performed; no E4 invoice issuance flow |
+| Authenticated browser, 12 screens at 360px and wide | NOT RUN | Screenshots, keyboard, safe area, navigation and wireframe parity unaccepted |
+
+### Remaining acceptance work
+- Lessons LE-6: edit form and history on one screen, invoiced read-only parity; owner Lessons.
+- German sweep: legacy/raw error text and all navigation paths; owners Shell/Students/Lessons, Integrator verifies combined build.
+- Authenticated browser checks and complete screenshots for 12 wireframes, plus two-user RLS, duplicate/inactive, pricing, history and invoiced end-to-end evidence.
+- Reviewer sign-off on #33 and PR #20 before any main merge or frontend deployment. No main merge or frontend deployment authorized.
