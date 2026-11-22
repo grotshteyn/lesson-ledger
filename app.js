@@ -156,7 +156,8 @@ function renderTab(tab,content,actionLabel=''){
 function invoicesPage(){
  renderTab('invoices','<section class="card ll-empty"><h2>Rechnungen</h2><p>Hier kannst du später deine Rechnungen verwalten. Diese Funktion ist noch nicht verfügbar.</p></section>');
 }
-function home(){
+function home(){return allLessonsPage();}
+function legacyHome(){
  frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
  '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Stunden</h2>'+button('Alle anzeigen','homeAllLessons','secondary')+'</div><div id="homeLessons" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>'+
  '<section class="card dashboard-card"><button id="addStudent" class="student-directory-button">Alle Schüler anzeigen <span aria-hidden="true">›</span></button></section>'+
