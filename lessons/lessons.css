@@ -178,3 +178,21 @@
 .ll-app .ll-lessons:has(#ll-date) .ll-status-segment{margin:0}
 .ll-app .ll-lessons:has(#ll-date) .ll-numeric-row .ll-field{margin:8px 0}
 .ll-app .ll-lessons:has(#ll-date) .ll-form-card>.ll-muted{margin:2px 0}
+
+
+/* Readability pass: increase small copy while retaining compact controls. */
+.ll-app .ll-lessons{font-size:16px;line-height:1.5}
+.ll-app .ll-lessons .ll-list-row,
+.ll-app .ll-lessons .ll-list-row strong{font-size:16px}
+.ll-app .ll-lessons .ll-list-row small{font-size:14px;line-height:1.35}
+.ll-app .ll-lessons .ll-list-row b{font-size:16px}
+.ll-app .ll-lessons .ll-groups section>h3,
+.ll-app .ll-lessons:has(#ll-date) .ll-field,
+.ll-app .ll-lessons .ll-form-heading .ll-muted{font-size:15px}
+.ll-app .ll-lessons .ll-muted,
+.ll-app .ll-lessons .ll-history-row{font-size:15px}
+.ll-app .ll-lessons .ll-history-row small{font-size:14px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick button,
+.ll-app .ll-lessons:has(#ll-date) .ll-quick.ll-segment button{font-size:14px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-card h3,
+.ll-app .ll-lessons:has(#ll-date) .ll-form-card h3{font-size:17px}
