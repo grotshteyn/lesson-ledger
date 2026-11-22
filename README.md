@@ -40,3 +40,21 @@ Email templates and authentication safeguards still need dashboard configuration
 ## E1 delivery notes (November 2026)
 
 Google login is intentionally out of scope. The frontend includes a one-minute OTP resend cooldown, but this is only a user-interface guard, not a substitute for server-side Supabase rate limits. A 30-day inactivity check is implemented using local browser storage, but this does not enforce a cross-device session lifetime or invalidate an existing server-side session. Confirm and configure both in Supabase Auth before claiming full compliance. Future-dated settings are stored and become active on their effective date; issued-invoice restrictions are deferred to the invoice epic because invoices do not yet exist.
+
+## E1–E3 integration branch status (22 November 2026)
+
+**Development branch only; not deployed and not accepted.** Draft PR [#20](https://github.com/grotshteyn/lesson-ledger/pull/20) integrates source files from draft PRs #26 (shell), #27 (Students), #28 (Lessons), and #30 (backend). The deployed site and `main` are not evidence of this branch's behavior.
+
+- Shared shell: German Stunden / Schüler / Rechnungen tabs, settings entry, invoices placeholder; shell routes to mounted feature modules. Student detail and lesson subpages hide the main tab bar.
+- Students: isolated E2 list, create, details, section edit, effective-date pricing and lesson callbacks imported into the shell. The existing `change_student_with_repricing` signature has been checked against live database metadata; `p_reprice:false` does not replace logged lessons.
+- Lessons: isolated E3 list, form, calendar and duplicate confirmation imported into the shell. Client now calls proposed `log_lesson_v2` and `replace_lesson_v2`. **These functions are absent from production**. The additive SQL migration is committed for isolated-database review only, including the zero-rate constraint adjustment.
+- The older E1 and lesson UI remains in `app.js` as legacy code and requires further cleanup and parity verification.
+- Original wireframes were supplied in the integration conversation. They are **not committed** to this repository. Side-by-side browser verification is still pending.
+
+### Test status
+
+Source integration and live schema inspection have been performed. Node unit tests, browser E2E and disposable Supabase migration/RLS tests **have not been executed by the integrator**. No test is reported as passing without execution. See `docs/e1-e3-integration-audit.md` and `docs/e1-e3-visual-comparison.md` for the acceptance matrix and remaining blockers.
+
+### Safe local validation before review
+
+Run `node --test tests/frontend-shell.test.mjs tests/students.test.mjs lessons/lessons.test.mjs`, syntax checks for `app.js`, `students/students.js` and `lessons/lessons.js`, and the SQL contract fixture in an isolated Supabase database. Apply `supabase/20261122_e3_compatible_lesson_rpcs.sql` **only to a disposable test project after review**. Then perform authenticated mobile and desktop browser checks. Do not deploy the migration or merge into `main` without explicit approval.

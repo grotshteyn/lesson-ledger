@@ -1,3 +1,6 @@
+import {shellMarkup,bindShell} from './frontend/shell.js';
+import {mountStudents} from './students/students.js';
+import {mountLessons} from './lessons/lessons.js';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -7,7 +10,8 @@ const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const $=id=>document.getElementById(id);
 const button=(label,id,kind='primary')=>'<button type="button" id="'+id+'" class="'+kind+'">'+label+'</button>';
 const frame=(html,screen='')=>{document.body.className=screen;root.innerHTML='<main class="shell">'+html+'</main>'};
-const err=e=>{const n=$('error');if(n)n.textContent=e?.message||String(e)};
+const germanError=e=>{const message=String(e?.message||e||'');if(/invalid login credentials/i.test(message))return 'E-Mail-Adresse oder Passwort ist falsch.';if(/email not confirmed/i.test(message))return 'Bitte bestätige zuerst deine E-Mail-Adresse.';if(/rate limit|too many requests|over_email_send_rate_limit/i.test(message))return 'Zu viele Versuche. Bitte warte und versuche es später erneut.';if(/failed to fetch|network|fetch failed/i.test(message))return 'Verbindung fehlgeschlagen. Bitte prüfe deine Internetverbindung.';return 'Die Aktion konnte nicht abgeschlossen werden. Bitte versuche es erneut.';};
+const err=e=>{const n=$('error');if(n)n.textContent=germanError(e)};
 const addr=()=>draft.teacher_address||{street:'',postcode:'',city:'',country:'Deutschland'};
 const ibanValid=s=>{let v=(s||'').replace(/\s/g,'').toUpperCase();if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;v=v.slice(4)+v.slice(0,4);let r=0;for(const c of v){const str=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const digit of str)r=(r*10+Number(digit))%97}return r===1};
 const missing=s=>[['tax_number','Steuernummer'],['vat_mode','Umsatzsteuer'],['iban','IBAN']].filter(([k])=>!s?.[k]||s[k]==='unsure');
@@ -95,7 +99,7 @@ function register(){
 }
 
 function verify(email){frame('<p class="eyebrow">Anmeldung</p><h1>Prüfe dein Postfach</h1><p>Wir haben eine Anmeldung an <strong>'+escapeHTML(email)+'</strong> geschickt.</p><p class="muted">Öffne den Link oder gib den sechsstelligen Code ein.</p><div class="card"><label class="field">Bestätigungscode<input id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>'+button('Code bestätigen','check')+'<p id="error" class="error" role="alert"></p><button class="link" id="resend">Code erneut senden</button><button class="link" id="wrong">Falsche Adresse?</button></div>');$('wrong').onclick=login;$('resend').onclick=async()=>{if(Date.now()-otpSentAt<60000)return err('Bitte warte 60 Sekunden, bevor du einen neuen Code anforderst.');const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:location.href.split('?')[0].split('#')[0],shouldCreateUser:false}});if(error)return err(error);otpSentAt=Date.now();$('error').textContent='Ein neuer Code wurde angefordert.'};$('check').onclick=async()=>{const {error}=await supabase.auth.verifyOtp({email,token:$('otp').value.trim(),type:'email'});if(error)err(error);else await load()}}
-async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabase.auth.getUser();if(recoveryMode)return;user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)home();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
+async function load(){if(recoveryMode)return;const {data:{user:u}}=await supabase.auth.getUser();if(recoveryMode)return;user=u;if(!u)return login();const last=Number(localStorage.getItem(lastUseKey())||0);if(last&&Date.now()-last>30*DAY){await supabase.auth.signOut({scope:'local'});user=null;return login()}localStorage.setItem(lastUseKey(),String(Date.now()));let r=await supabase.rpc('ensure_my_ledger');if(r.error)return frame('<h1>Verbindung fehlgeschlagen</h1><p class="error">'+escapeHTML(r.error.message)+'</p>');ledger=r.data;const q=await supabase.from('billing_settings_versions').select('*').eq('ledger_id',ledger).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}).limit(1);if(q.error)return frame('<p class="error">'+escapeHTML(q.error.message)+'</p>');settings=q.data?.[0]||null;if(settings)allLessonsPage();else{draft=JSON.parse(localStorage.getItem(draftKey())||'null')||defaultDraft();step=Math.min(8,Math.max(0,Number(localStorage.getItem(stepKey())||0)));setup()}}
 function field(key,label,value='',type='text'){return '<label class="field">'+label+'<input id="'+key+'" type="'+type+'" value="'+escapeHTML(value)+'"></label>'}
 function setup(){const [key,title]=steps[step];let body='';if(key==='teacher_address'){const a=addr();body=field('street','Straße und Hausnummer',a.street)+field('postcode','Postleitzahl',a.postcode)+field('city','Ort',a.city)+field('country','Land',a.country||'Deutschland')}
 else if(key==='vat_mode'){body=[['small_business','Kleinunternehmer (§ 19 UStG)','Ich berechne keine Umsatzsteuer.'],['exempt_teaching','Steuerfreier Unterricht (§ 4 Nr. 21 UStG)','Ich habe eine entsprechende Bescheinigung.'],['regular_19','Regulär 19 %','Meine Preise enthalten Umsatzsteuer.'],['unsure','Ich bin mir nicht sicher','Rechnungen bleiben gesperrt, bis du dich entschieden hast.']].map(([v,l,d])=>'<label class="choice"><input type="radio" name="vat_mode" value="'+v+'" '+(draft.vat_mode===v?'checked':'')+'><strong>'+l+'</strong><p class="muted small">'+d+'</p></label>').join('')}
@@ -148,7 +152,29 @@ function lessonGroups(lessons,reference=today()){
  }
  return groups.filter(g=>g.items.length);
 }
-function home(){
+let activeModule=null, activeTab='lessons';
+function disposeModule(){if(activeModule){const old=activeModule;activeModule=null;if(typeof old==='function')old();else old.destroy?.();}}
+function renderTab(tab,content='',actionLabel=''){
+ disposeModule();activeTab=tab;
+ frame(shellMarkup({tab,content:'<div id="ll-module-root">'+content+'</div>',actionLabel}),'tab-screen');
+ bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();}});
+}
+function routeTab(tab,options={}){
+ if(tab==='invoices'){renderTab('invoices','<section class="ll-invoices-empty" role="status" aria-labelledby="ll-invoices-heading"><div class="ll-invoices-message"><h2 id="ll-invoices-heading">Noch keine Rechnungen</h2><p>Die Rechnungsfunktion ist bald verfügbar. Deine erfassten Stunden bleiben erhalten.</p></div></section>');return;}
+ renderTab(tab);
+ const mountRoot=$('ll-module-root');
+ if(tab==='students'){
+  activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
+  if(options.studentId)activeModule.open?.(options.studentId,'lessons');
+ }else{
+  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId,onBack:()=>options.studentId?routeTab('students',{studentId:options.studentId}):routeTab('lessons')});
+  if(options.lessonId)activeModule.openLesson(options.lessonId,options.studentId);
+  else if(options.studentId)activeModule.createLesson(options.studentId);
+ }
+}
+function invoicesPage(){routeTab('invoices');}
+function home(){return routeTab('lessons');}
+function legacyHome(){
  frame('<div class="row"><h1>Hallo, '+escapeHTML(settings.teacher_name.split(/\\s+/)[0])+'</h1><button class="secondary" id="settingsBtn">Einstellungen</button></div>'+
  '<section class="card dashboard-card"><div class="row dashboard-card-heading"><h2>Stunden</h2>'+button('Alle anzeigen','homeAllLessons','secondary')+'</div><div id="homeLessons" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>'+
  '<section class="card dashboard-card"><button id="addStudent" class="student-directory-button">Alle Schüler anzeigen <span aria-hidden="true">›</span></button></section>'+
@@ -167,9 +193,7 @@ function home(){
  }).catch(()=>{if($('homeLessons'))$('homeLessons').textContent='Stunden konnten nicht geladen werden.';});
 }
 async function allLessonsPage(){
- frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Stunden</h1></div>'+
- '<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>');
- $('backHome').onclick=home;
+ renderTab('lessons','<section class="card"><div id="allLessonsList" aria-live="polite"><p class="muted">Stunden werden geladen …</p></div></section>', '+ Stunde erfassen');
  try{
   const [lessons,names]=await Promise.all([
    supabase.from('active_lessons').select('id,student_id,lesson_date,status,no_show,minutes').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
@@ -187,10 +211,10 @@ function settingsPage(onlyKeys=null){
  const s=settings,a=s.teacher_address||{},rows=[
  ['teacher_name','Name auf Rechnungen',s.teacher_name||'Nicht angegeben'],
  ['teacher_address','Postanschrift',[a.street,a.postcode,a.city].filter(Boolean).join(', ')||'Nicht angegeben'],
- ['teacher_email','E-Mail for payers',s.teacher_email||'Nicht angegeben'],
+ ['teacher_email','E-Mail-Adresse für Zahlende',s.teacher_email||'Nicht angegeben'],
  ['phone','Telefon (optional)',s.phone||'Nicht angegeben'],
  ['tax_number','Steuernummer',s.tax_number||'Nicht angegeben'],
- ['vat_mode','Umsatzsteuer',({small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Regular Umsatzsteuer 19%',unsure:'Unsicher'})[s.vat_mode]||'Nicht angegeben'],
+ ['vat_mode','Umsatzsteuer',({small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Reguläre Umsatzsteuer 19 %',unsure:'Unsicher'})[s.vat_mode]||'Nicht angegeben'],
  ['iban','Bankverbindung',s.iban||'Nicht angegeben'],
  ['payment_days','Zahlungsfrist',(s.payment_days||14)+' Tage'],
  ['cancellation_rule','Stornoregel','Bis 24 Stunden vorher kostenlos, danach kostenpflichtig'],
@@ -221,15 +245,13 @@ function studentSearchRank(student,term){
  return tokens.some(x=>Math.abs(x.length-term.length)<=tolerance&&editDistance(x,term)<=tolerance)?3:Infinity;
 }
 async function studentsPage(initialSearch=''){
- frame('<div class="row screen-header"><button id="backHome" class="secondary" aria-label="Zurück zur Startseite">←</button><h1>Schüler</h1>'+button('+ Hinzufügen','newStudent','secondary')+'</div>'+
+ renderTab('students',
  '<label class="field">Suche<input id="studentSearch" placeholder="Name oder Kurzname" value="'+escapeHTML(typeof initialSearch==='string'?initialSearch:'')+'"></label>'+
  '<div class="student-filter-bar" role="group" aria-label="Schülerstatus">'+
  '<button class="filter-pill" data-filter="all" aria-pressed="true">Alle</button><button class="filter-pill" data-filter="active" aria-pressed="false">Aktiv</button>'+
  '<button class="filter-pill" data-filter="paused" aria-pressed="false">Pausiert</button>'+
  '<button class="filter-pill" data-filter="ended" aria-pressed="false">Beendet</button></div>'+
- '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>');
- $('backHome').onclick=home;
- $('newStudent').onclick=()=>studentForm();
+ '<div id="studentResults" class="student-list" aria-live="polite"></div><p id="error" class="error"></p>', '+ Schüler hinzufügen');
  let serial=0,selected='all';
  async function render(){
   const current=++serial,search=$('studentSearch').value.trim();
@@ -306,7 +328,7 @@ async function studentPage(id,view='lessons'){
   supabase.from('student_status_events').select('*').eq('student_id',id).order('effective_from',{ascending:false})
  ]);
  const error=detail.error||status.error||history.error||events.error;
- if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
+ if(error){frame('<p class="error">'+escapeHTML(germanError(error))+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
@@ -349,7 +371,7 @@ async function studentPage(id,view='lessons'){
  if(isSetup){
   document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
   $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
-  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
+  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(germanError(error));studentsPage();};
   if(status.data==='removed')$('removeStudent').hidden=true;
  }else{
   $('studentLog').onclick=()=>logLessonSheet(id);
@@ -474,7 +496,7 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
   else{button.disabled=false;return;}
  }
  button.disabled=false;
- if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
+ if(error){const retry=confirm('Nicht gespeichert: '+germanError(error)+' Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
  if(data?.state!=='saved'){alert('Stunde nicht gespeichert. Bitte die Angaben prüfen.');return;}
  const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
  notice.className='notice lesson-save-notice';
@@ -486,7 +508,7 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
  row?.after(notice);
  let allowed=true;
  const timer=setTimeout(()=>{allowed=false;undo.remove();},10000);
- undo.onclick=async()=>{if(!allowed)return;allowed=false;clearTimeout(timer);undo.disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});notice.textContent=error?'Rückgängig fehlgeschlagen: '+error.message:'Stunde entfernt';};
+ undo.onclick=async()=>{if(!allowed)return;allowed=false;clearTimeout(timer);undo.disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});notice.textContent=error?'Rückgängig fehlgeschlagen: '+germanError(error):'Stunde entfernt';};
 }
 const lessonMoney=x=>x.billing_mode==='monthly_flat'?0:(x.charge_override==='not_charged'?0:x.charge_override==='charged'?Number(x.rate):x.status==='cancelled_free'?0:Number(x.rate));
 async function loadLessonHistory(id){
@@ -516,7 +538,7 @@ async function lessonDetails(lessonId,studentId){
 }
 async function logLessonSheet(studentId,original=null){
  const {data,error}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:original?.lesson_date||today()});
- if(error||!data?.length)return alert(error?.message||'Keine Schülerdaten');
+ if(error||!data?.length)return alert(error?germanError(error):'Keine Schülerdaten');
  const v=data[0],flat=v.billing_mode==='monthly_flat';
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true"><div class="row"><h1>Log: '+escapeHTML(v.student_name)+'</h1>'+button('×','closeLog','secondary')+'</div>'+
  '<label class="field">Art<select id="lessonStatus"><option value="held">Gehalten</option><option value="cancelled">Abgesagt</option><option value="no_show">Nicht erschienen</option></select></label>'+
