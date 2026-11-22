@@ -83,3 +83,35 @@
 
 /* The HTML reference de-emphasizes ended rows and the monthly-rate label. */
 .e2-screen:has(#e2-search) .e2-group:last-child .e2-student-row{color:#555}
+
+
+/* E3: Student details, student lesson history, creation, pricing and payer editors. */
+.ll-app .e2-screen:not(:has(#e2-search)){max-width:none;padding:20px 0 110px;color:#222;font-family:Inter,system-ui,sans-serif}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading{gap:10px;margin:0 0 16px;align-items:flex-start}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading h1{font-size:22px;line-height:28px;letter-spacing:0;font-weight:700}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-heading p{font-size:13px;margin:3px 0 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-back{border:0;background:transparent;font-size:28px;flex-basis:32px;height:32px}
+.ll-app .e2-screen .e2-tabs{display:flex;gap:0;flex-wrap:nowrap;border:1px solid #aaa;border-radius:9px;overflow:hidden;margin:18px 0 24px}
+.ll-app .e2-screen .e2-tabs button{border:0;border-radius:0;min-height:44px;margin:0;font-size:14px;font-weight:500}
+.ll-app .e2-screen .e2-tabs button+button{border-left:1px solid #aaa}
+.ll-app .e2-screen .e2-tabs button[aria-pressed=true]{background:#222;color:#fff;font-weight:600}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card{padding:14px;border-radius:10px;border-color:#d6d6d2;margin:16px 0;background:#fff}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card h2{font-size:16px;font-weight:700}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-card-heading{margin-bottom:10px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-edit{font-size:13px;text-decoration:none;font-weight:600}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-detail{grid-template-columns:38% 1fr;gap:8px;padding:9px 0;font-size:13px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-student-row{min-height:56px;padding:8px 12px;margin:0;border:0;border-bottom:1px solid #e6e6e2;border-radius:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-student-row:last-child{border-bottom:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main strong{font-size:14px;font-weight:500}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main small{font-size:12px;margin-top:2px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-price{font-size:14px;font-weight:500;flex:0 0 auto}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-field{font-size:13px;font-weight:600;margin:15px 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-field input,.ll-app .e2-screen:not(:has(#e2-search)) .e2-field select{min-height:44px;border-radius:8px;border:1.5px solid #9a9a96;font-size:16px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card{padding:0;border:0;background:transparent;margin:20px 0 28px}
+.ll-app .e2-screen:not(:has(#e2-search)) form .e2-card h2{font-size:16px;margin-bottom:12px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-actions{position:sticky;bottom:0;padding:12px 0 20px;background:#f4f4f3}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-actions button{min-height:48px;border-radius:9px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-lesson-actions{display:flex;justify-content:center;position:fixed;bottom:92px;left:50%;transform:translateX(-50%);width:72vw;max-width:280.8px;z-index:9;margin:0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-lesson-actions button{width:100%;min-height:56px;border-radius:28px;font-size:17px}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-finish{margin:26px 0 0}
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-finish button{min-height:48px}
