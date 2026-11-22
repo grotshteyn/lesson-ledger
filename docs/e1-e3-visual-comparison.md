@@ -1,7 +1,7 @@
 # E1–E3 visual comparison (22 November 2026)
 
 ## Reference availability
-**Original wireframes are now supplied in the integration conversation (12 mobile screenshots).** They are available to the reviewer in that conversation, but are not stored in the repository. No authenticated screenshots of the integrated frontend have been captured. Therefore **pixel/behavioral parity is NOT VERIFIED**. Dashed annotation panels in the wireframes are explanatory and must not appear in the application.
+**Original wireframes are now supplied as a 12-page PDF and a self-contained HTML export in the integration conversation, in addition to the earlier screenshots.** They are available to the reviewer in that conversation, but are not stored in the repository. No authenticated screenshots of the integrated frontend have been captured. Therefore **pixel/behavioral parity is NOT VERIFIED**. Dashed annotation panels in the wireframes are explanatory and must not appear in the application.
 
 ## Source-to-reference checklist (not a visual pass)
 
@@ -29,3 +29,24 @@ Capture at 360px mobile and a wide desktop viewport after logging into a disposa
 - Invoices placeholder uses a generic card rather than a vertically centered empty state.
 - Lesson editing uses a detail view followed by an edit form rather than the single editable view with history shown in the reference.
 - The provided wireframes contain English labels as design references; shipping copy must be German.
+
+## Full export page-indexed acceptance reference (uploaded 22 November 2026)
+
+The supplied PDF contains **12 pages**. These are approved *draft* layouts with English copy and dashed explanatory notes. Translate visible app copy to German, but **do not render the dashed draft notes**.
+
+| PDF page | Screen | Specific behavior to preserve |
+|---|---|---|
+| 1 | Lessons tab | Current month, week groups newest first, floating log button, bottom tabs; scroll clearance |
+| 2 | Students tab | Search across active/paused/ended; show all three status groups simultaneously, alphabetically ordered; floating add button |
+| 3 | Student lesson list | Monthly groups, invoiced indicator, student-specific log button, Done; hide global tab bar |
+| 4 | Student details | Basics, Lessons and price, Payer with independent Edit actions; price/payer history; Pause/End |
+| 5 | New student | Basics, Lessons and price, Payer sections; optional short name, payer/contact fields |
+| 6 | Edit lessons and price | Effective date shortcuts and explicit date; old logged lesson amounts unchanged; preview of upcoming price |
+| 7 | Invoices placeholder | Centered empty state until E4, settings button and bottom tabs |
+| 8 | Global new lesson | No student preselected; active students in independent scrolling picker, search for inactive; price/duration defaults based on selected date |
+| 9 | Edit lesson | Student fixed, saved values persist when date changes; edit history on same screen; invoiced record read-only |
+| 10 | Duplicate confirmation | Bottom sheet compares existing/new lesson; Cancel default; voided lessons excluded |
+| 11 | Student-specific new lesson | Student fixed, no picker; save returns to student page with confirmation |
+| 12 | Date picker | Monday-first bottom sheet; today outlined, selected filled, dots for existing lessons; selecting date updates defaults only in new-lesson mode |
+
+**Newly unblocked reference availability:** visual-reference assets are supplied, so the previous 'wireframes unavailable' limitation no longer applies. **Still blocked:** there are no authenticated screenshots of the actual integrated application for a side-by-side comparison, so neither pixel parity nor interactive behavior has been verified. The HTML export is an additional reference, not evidence that the integrated application matches it.
