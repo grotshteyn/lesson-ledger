@@ -159,7 +159,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   const payer=input('payer_name','Name',v.payer_name,'text',true)+input('payer_email','E-Mail',v.payer_email,'email')+input('payer_street','Straße',address.street)+input('payer_postcode','PLZ',address.postcode)+input('payer_city','Ort',address.city);
   const labels={basics:'Grundlagen',pricing:'Stunden und Preis',payer:'Zahlungspflichtige Person'};
   const effective=v.billing_mode==='monthly_flat'&&section==='pricing'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
-  render(`<header class="e2-heading">${backButton}<h1>${labels[section]} bearbeiten</h1></header><form id="e2-edit">${card(labels[section],{basics,pricing,payer}[section]+(section==='pricing'?effectiveChoice(effective):input('effective_from','Gültig ab',effective,'date',true)))}<p class="e2-muted">Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.</p><p role="alert" class="e2-error"></p>${footer()}</form>`);
+  render(`<header class="e2-heading">${backButton}<div><h1>${labels[section]}</h1><p class="e2-muted">${escape(v.student_name)}</p></div></header><form id="e2-edit">${card(labels[section],{basics,pricing,payer}[section]+(section==='pricing'?effectiveChoice(effective):input('effective_from','Gültig ab',effective,'date',true)))}<p class="e2-muted">Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.</p><p role="alert" class="e2-error"></p>${footer()}</form>`);
   const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
   root.querySelector('#e2-edit').addEventListener('submit',async e=>{
    e.preventDefault();const form=e.currentTarget,at=fieldValue(form,'effective_from'),changes={};
