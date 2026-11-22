@@ -420,7 +420,7 @@ async function logLessonSheet(studentId,original=null){
  field('lessonDate','Datum',original?.lesson_date||today(),'date')+field('lessonMinutes','Dauer (Minuten)',original?.minutes||v.minutes,'number')+
  (flat?'':'<div id="lessonPriceField">'+field('lessonRate','Preis (€)',original?.rate||v.rate,'number')+'</div>')+
  '<div id="lessonCancellation" hidden><label class="field">Wer hat abgesagt?<select id="cancelBy"><option value="student">Schüler</option><option value="teacher">Ich</option></select></label><label class="field" id="cancelTimingField">Mindestens 24 Stunden vorher?<select id="cancelInTime"><option value="false">Nein</option><option value="true">Ja</option></select></label></div>'+
- (flat?'':'<label class="choice" id="lessonOverrideRow"><input type="checkbox" id="lessonFree"> Diesmal nicht berechnen</label>')+
+ (flat?'':'<label class="field" id="lessonOverrideRow">Berechnung<select id="lessonOverride"><option value="">Nach Regel</option><option value="not_charged">Nicht berechnen</option><option value="charged">Trotzdem berechnen</option></select></label>')+
  '<section class="lesson-recent"><h2>Letzte 14 Tage</h2><div id="recentLessons" class="muted">Wird geladen …</div></section>'+ 
  '<p id="error" class="error"></p>'+button('Speichern','saveLesson')+'</section></div>','change-screen');
  $('closeLog').onclick=()=>studentPage(studentId);
@@ -445,14 +445,14 @@ async function logLessonSheet(studentId,original=null){
  });
  refreshRecent();
 
- if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonFree'))$('lessonFree').checked=original.charge_override==='not_charged';}
+ if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonOverride'))$('lessonOverride').value=original.charge_override||'';}
  const refresh=()=>{$('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';$('cancelTimingField').hidden=$('cancelBy').value!=='student';};
  $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;refresh();
  let key=crypto.randomUUID();
  $('saveLesson').onclick=async()=>{
   $('saveLesson').disabled=true;
   const status=$('lessonStatus').value;
-  const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonFree').checked?'not_charged':null,p_idempotency_key:key};
+  const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonOverride').value||null,p_idempotency_key:key};
   const rpc=original?'replace_lesson':'log_lesson';if(original)params.p_old_lesson_id=original.id;
   let {data,error}=await supabase.rpc(rpc,params);
   if(!error&&data?.state==='duplicate'){
