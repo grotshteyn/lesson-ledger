@@ -167,7 +167,7 @@ function routeTab(tab,options={}){
   activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
   if(options.studentId)activeModule.open?.(options.studentId,'lessons');
  }else{
-  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId});
+  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId,onBack:()=>options.studentId?routeTab('students',{studentId:options.studentId}):routeTab('lessons')});
   if(options.lessonId)activeModule.openLesson(options.lessonId,options.studentId);
   else if(options.studentId)activeModule.createLesson(options.studentId);
  }
@@ -328,7 +328,7 @@ async function studentPage(id,view='lessons'){
   supabase.from('student_status_events').select('*').eq('student_id',id).order('effective_from',{ascending:false})
  ]);
  const error=detail.error||status.error||history.error||events.error;
- if(error){frame('<p class="error">'+escapeHTML(error.message)+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
+ if(error){frame('<p class="error">'+escapeHTML(germanError(error))+'</p>'+button('Zurück','backStudents'));$('backStudents').onclick=()=>studentsPage();return;}
  const v=detail.data?.[0]||(history.data||[]).slice().sort((a,b)=>a.effective_from.localeCompare(b.effective_from))[0];if(!v)return studentsPage();
  const pending=(history.data||[]).filter(x=>x.effective_from>today());
  const pendingEvents=(events.data||[]).filter(x=>x.effective_from>today());
@@ -371,7 +371,7 @@ async function studentPage(id,view='lessons'){
  if(isSetup){
   document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
   $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
-  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
+  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(germanError(error));studentsPage();};
   if(status.data==='removed')$('removeStudent').hidden=true;
  }else{
   $('studentLog').onclick=()=>logLessonSheet(id);
@@ -496,7 +496,7 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
   else{button.disabled=false;return;}
  }
  button.disabled=false;
- if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
+ if(error){const retry=confirm('Nicht gespeichert: '+germanError(error)+' Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
  if(data?.state!=='saved'){alert('Stunde nicht gespeichert. Bitte die Angaben prüfen.');return;}
  const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
  notice.className='notice lesson-save-notice';
@@ -508,7 +508,7 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
  row?.after(notice);
  let allowed=true;
  const timer=setTimeout(()=>{allowed=false;undo.remove();},10000);
- undo.onclick=async()=>{if(!allowed)return;allowed=false;clearTimeout(timer);undo.disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});notice.textContent=error?'Rückgängig fehlgeschlagen: '+error.message:'Stunde entfernt';};
+ undo.onclick=async()=>{if(!allowed)return;allowed=false;clearTimeout(timer);undo.disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});notice.textContent=error?'Rückgängig fehlgeschlagen: '+germanError(error):'Stunde entfernt';};
 }
 const lessonMoney=x=>x.billing_mode==='monthly_flat'?0:(x.charge_override==='not_charged'?0:x.charge_override==='charged'?Number(x.rate):x.status==='cancelled_free'?0:Number(x.rate));
 async function loadLessonHistory(id){
@@ -538,7 +538,7 @@ async function lessonDetails(lessonId,studentId){
 }
 async function logLessonSheet(studentId,original=null){
  const {data,error}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:original?.lesson_date||today()});
- if(error||!data?.length)return alert(error?.message||'Keine Schülerdaten');
+ if(error||!data?.length)return alert(error?germanError(error):'Keine Schülerdaten');
  const v=data[0],flat=v.billing_mode==='monthly_flat';
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true"><div class="row"><h1>Log: '+escapeHTML(v.student_name)+'</h1>'+button('×','closeLog','secondary')+'</div>'+
  '<label class="field">Art<select id="lessonStatus"><option value="held">Gehalten</option><option value="cancelled">Abgesagt</option><option value="no_show">Nicht erschienen</option></select></label>'+

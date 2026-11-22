@@ -1,3 +1,4 @@
+import {germanBackendError} from '../frontend/backend-errors.js';
 // E2 Students screens. Mount only after the shell has selected the Schüler route.
 // All writes use existing tenant-scoped Supabase RPCs; no direct DB mutations.
 export const STUDENT_STORIES = ['ST-1','ST-3','ST-4','ST-6','ST-6.5'];
@@ -28,7 +29,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  let alive=true,sequence=0,search='',selected=null,view='lessons';
  const render=html=>{if(alive)root.innerHTML=`<div class="e2-screen">${html}</div>`};
  const bind=(selector,callback)=>root.querySelector(selector)?.addEventListener('click',callback);
- const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=error?.message||String(error)};
+ const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data};
  const backButton='<button type="button" class="e2-back" data-back aria-label="Zurück">‹</button>';
  const footer=(save='Speichern')=>`<div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button></div>`;
@@ -104,13 +105,13 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    bind('[data-status]',()=>editStatus(id,v,status));
    bind('[data-new-lesson]',()=>onLessonCreate(id));
    if(!isDetails)await loadLessons(id,token);
-  }catch(error){if(token===sequence){render(`<p role="alert" class="e2-error">${escape(error.message)}</p><button class="e2-secondary" data-back>Zurück</button>`);bind('[data-back]',list)}}
+  }catch(error){if(token===sequence){render(`<p role="alert" class="e2-error">${escape(germanBackendError(error))}</p><button class="e2-secondary" data-back>Zurück</button>`);bind('[data-back]',list)}}
  }
  async function loadLessons(id,token){
   const box=root.querySelector('#e2-lessons');if(!box)return;
   const response=await supabase.from('active_lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(250);
   if(!alive||token!==sequence)return;
-  if(response.error){box.textContent=response.error.message;return}
+  if(response.error){box.textContent=germanBackendError(response.error);return}
   const groups=groupLessons(response.data||[]);
   box.innerHTML=groups.length?groups.map(g=>card(new Date(g.month+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'}),g.items.map(l=>`<button class="e2-student-row" data-lesson="${escape(l.id)}"><span class="e2-row-main"><strong>${escape(dateLabel(l.lesson_date))}</strong><small>${escape(l.status==='held'?'Gehalten':l.status==='cancelled_billable'?'Spät abgesagt':'Abgesagt')} · ${escape(l.minutes)} Min.${l.invoice_id?' · Abgerechnet':''}</small></span><span class="e2-row-price">${escape(money(l.billing_mode==='monthly_flat'||l.charge_override==='not_charged'?0:l.rate))}</span></button>`).join(''))).join(''):'<p class="e2-muted">Noch keine Stunden erfasst.</p>';
   box.querySelectorAll('[data-lesson]').forEach(b=>b.addEventListener('click',()=>onLessonOpen(b.dataset.lesson,id)));

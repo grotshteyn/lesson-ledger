@@ -1,0 +1,39 @@
+name: E1-E3 isolated acceptance evidence
+on:
+  push:
+    branches: [integration/browser-acceptance-e1-e3]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-node-and-browser-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Native Node test suite
+        run: |
+          mkdir -p browser-evidence
+          node --test tests/frontend-shell.test.mjs tests/students.test.mjs lessons/lessons.test.mjs tests/backend-errors.test.mjs 2>&1 | tee browser-evidence/native-node.log
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Serve exact checked-out frontend and run browser smoke
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/lesson-ledger-http.log 2>&1 &
+          echo $! > /tmp/lesson-ledger-http.pid
+          node --test tests/e2-browser.test.mjs 2>&1 | tee browser-evidence/e2-browser.log
+          node tests/browser-smoke.mjs 2>&1 | tee browser-evidence/unauthenticated-smoke.log
+      - name: Upload screenshots and evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e1-e3-browser-smoke
+          path: |
+            browser-evidence/
+            /tmp/lesson-ledger-http.log
+          if-no-files-found: ignore

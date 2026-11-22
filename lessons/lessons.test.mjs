@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('./lessons.js',import.meta.url),'utf8');
-const {lessonWeekGroups,lessonCalendarDays,lessonSaveFingerprint}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {lessonWeekGroups,lessonCalendarDays,lessonSaveFingerprint,lessonReplacementHistory}=await import('./lessons.js');
 
 test('LE-7: groups are Monday-first and newest first, without mutating input',()=>{
   const input=[{lesson_date:'2026-11-15'},{lesson_date:'2026-11-16'},{lesson_date:'2026-11-22'},{lesson_date:'2026-11-09'}];
@@ -33,4 +33,19 @@ test('LE-4: retries reuse identity only for the same intended payload',()=>{
 test('LE-7: Monday grouping is timezone independent across year boundary',()=>{
   const groups=lessonWeekGroups([{lesson_date:'2027-01-01'},{lesson_date:'2026-12-28'}]);
   assert.deepEqual(groups.map(g=>g.week),['2026-12-28']);
+});
+
+
+test('LE-6: replacement history includes only the related chain, not unrelated student lessons',()=>{
+ const rows=[
+  {id:'old',created_at:'2026-11-01',replaces_lesson_id:null},
+  {id:'new',created_at:'2026-11-02',replaces_lesson_id:'old'},
+  {id:'latest',created_at:'2026-11-03',replaces_lesson_id:'new'},
+  {id:'unrelated',created_at:'2026-11-04',replaces_lesson_id:null}
+ ];
+ assert.deepEqual(lessonReplacementHistory(rows,'new').map(x=>x.id),['latest','new','old']);
+ assert.deepEqual(lessonReplacementHistory(rows,'old').map(x=>x.id),['latest','new','old']);
+});
+test('LE-6: replacement history is empty for a missing lesson',()=>{
+ assert.deepEqual(lessonReplacementHistory([{id:'other',replaces_lesson_id:null}], 'missing'),[]);
 });

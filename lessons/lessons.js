@@ -1,3 +1,4 @@
+import {germanBackendError} from '../frontend/backend-errors.js';
 // E3 isolated UI. The integrator mounts this inside the shell's content root.
 export const lessonWeekGroups = (rows) => {
   const monday = date => { const [y,m,day] = date.split('-').map(Number); const d = new Date(Date.UTC(y,m-1,day)); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
@@ -20,6 +21,21 @@ const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const euro = v => Number(v||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 const pretty = v => new Date(v+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
 const statusLabel = x => x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt oder nicht erschienen':'Abgesagt';
+export const lessonReplacementHistory = (rows, lessonId) => {
+  const byId=new Map(rows.map(row=>[row.id,row]));
+  const related=new Set([lessonId]);
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(const row of rows){
+      if(related.has(row.id) || (row.replaces_lesson_id && related.has(row.replaces_lesson_id))){
+        if(!related.has(row.id)){related.add(row.id);changed=true;}
+        if(row.replaces_lesson_id && byId.has(row.replaces_lesson_id) && !related.has(row.replaces_lesson_id)){related.add(row.replaces_lesson_id);changed=true;}
+      }
+    }
+  }
+  return rows.filter(row=>related.has(row.id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+};
 export const lessonSaveFingerprint = (payload) => JSON.stringify([payload.studentId,payload.originalId||null,payload.date,payload.status,payload.minutes,payload.rate]);
 const isoToday = () => {const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const control = (label,id,type='text',value='',extra='') => '<label class="ll-field">'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
@@ -35,7 +51,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   let disposed=false, view='list', students=[], names=new Map(), lessons=[], current=null, fixedStudent=null, draftKey=null, draftFingerprint=null, sheetReturn=null, revision=0, defaultsRevision=0;
   const el = id => root.querySelector('#'+id);
   const html = markup => {if(!disposed)root.innerHTML='<div class="ll-lessons">'+markup+'</div>';};
-  const alertError = error => {const n=el('ll-error');if(n)n.textContent=error?.message||String(error);};
+  const alertError = error => {const n=el('ll-error');if(n)n.textContent=germanBackendError(error);};
   const actions = () => root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>dispatch(b.dataset.action));
   const subpage = value => onSubpageChange(Boolean(value));
   async function load(){
@@ -56,14 +72,14 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
       html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>Woche ab '+pretty(g.week)+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+' · '+statusLabel(x)+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
-    }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(e.message)+'</p>'+button('Erneut versuchen','reload'));actions();}}
+    }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(germanBackendError(e))+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
   async function openLesson(id,studentId){
     ++revision;view='detail';subpage(true);html('<p role="status">Stunde wird geladen …</p>');
     try{
       const x=unwrap(await supabase.from('lessons').select('*').eq('id',id).single());if(disposed||view!=='detail')return;
       current=x;fixedStudent=studentId||x.student_id;
-      const history=unwrap(await supabase.from('lessons').select('id,lesson_date,created_at,status,rate,minutes').eq('student_id',x.student_id).order('created_at',{ascending:false}).limit(30));
+      const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',x.student_id).order('created_at',{ascending:false}).limit(250)),x.id);
       html('<header class="ll-heading">'+button('Zurück','list')+'<h2>Stunde bearbeiten</h2></header><section class="ll-card"><h3>'+pretty(x.lesson_date)+'</h3><p>'+esc(names.get(x.student_id)||'Schüler')+'</p><p>'+statusLabel(x)+' · '+esc(x.minutes)+' Min. · '+euro(x.rate)+'</p></section>'+(x.invoice_id?'<p class="ll-card" role="status">Diese Stunde ist bereits abgerechnet und kann nicht verändert werden.</p>':'<div class="ll-actions">'+button('Bearbeiten','edit','ll-primary')+button('Entfernen','remove')+'</div>')+'<section class="ll-card"><h3>Verlauf</h3>'+history.map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')+'</section><p id="ll-error" role="alert"></p>'+button('Fertig','list'));
       actions();
     }catch(e){html('<p role="alert">'+esc(e.message)+'</p>'+button('Zurück','list'));actions();}
@@ -78,7 +94,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       if(original){
         const historyTarget=el('ll-edit-history');
         try{
-          const history=unwrap(await supabase.from('lessons').select('id,lesson_date,created_at,status,rate,minutes').eq('student_id',original.student_id).order('created_at',{ascending:false}).limit(30));
+          const history=lessonReplacementHistory(unwrap(await supabase.from('lessons').select('id,replaces_lesson_id,lesson_date,created_at,status,rate,minutes').eq('student_id',original.student_id).order('created_at',{ascending:false}).limit(250)),original.id);
           if(view==='form'&&current?.id===original.id&&historyTarget?.isConnected){
             historyTarget.innerHTML=(history||[]).map(h=>'<p>'+pretty(h.lesson_date)+' · '+statusLabel(h)+' · '+euro(h.rate)+' <small>'+esc(h.created_at)+'</small></p>').join('')||'<p>Keine Einträge vorhanden.</p>';
           }
@@ -138,7 +154,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();proceed();};
   }
   async function save(confirmInactive=false,confirmDuplicate=false){
-    const btn=root.querySelector('[data-action="save"]');if(btn?.disabled)return;if(btn)btn.disabled=true;
+    const btn=root.querySelector('[data-action="save"]');if(btn?.disabled && !confirmInactive && !confirmDuplicate)return;if(btn)btn.disabled=true;
     const date=el('ll-date').value,minutes=Number(el('ll-minutes').value),rate=Number(el('ll-rate').value),status=el('ll-status').value;
     if(!fixedStudent||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!['held','cancelled_billable'].includes(status)||!Number.isInteger(minutes)||minutes<5||minutes>240||!Number.isFinite(rate)||rate<0){alertError(Error('Bitte Schüler, Datum, Dauer (5–240) und einen Preis ab 0 € prüfen.'));if(btn)btn.disabled=false;return;}
     const fingerprint=lessonSaveFingerprint({studentId:fixedStudent,originalId:current?.id,date,status,minutes,rate});
@@ -151,11 +167,11 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       if(result?.state==='inactive'){
         const {overlay,close}=sheet('<h3>Inaktiver Schüler</h3><p>Der Schüler ist an diesem Datum nicht aktiv. Trotzdem speichern?</p>',button('Abbrechen','cancel')+button('Trotzdem speichern','confirm','ll-primary'));
         overlay.querySelector('[data-action="cancel"]').onclick=()=>{close();if(btn)btn.disabled=false;};
-        overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();save(true,confirmDuplicate);};return;
+        overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();if(btn)btn.disabled=false;save(true,confirmDuplicate);};return;
       }
       if(result?.state==='duplicate'){
         const existing=lessons.find(x=>x.student_id===fixedStudent&&x.lesson_date===date&&x.id!==current?.id);
-        if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>save(confirmInactive,true));return;
+        if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>{if(btn)btn.disabled=false;save(confirmInactive,true);});return;
       }
       if(result?.state!=='saved')throw Error('Speichern wurde nicht bestätigt.');
       await load();
@@ -165,11 +181,12 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     if(current?.invoice_id)return;
     const {overlay,close}=sheet('<h3>Stunde entfernen?</h3><p>Die Änderung bleibt im Verlauf nachvollziehbar.</p>',button('Abbrechen','cancel')+button('Entfernen','confirm','ll-primary'));
     overlay.querySelector('[data-action="cancel"]').onclick=close;
-    overlay.querySelector('[data-action="confirm"]').onclick=async()=>{close();try{unwrap(await supabase.rpc('void_lesson',{p_lesson_id:current.id,p_reason:'remove',p_idempotency_key:crypto.randomUUID()}));await load();}catch(e){alertError(e);}};
+    overlay.querySelector('[data-action="confirm"]').onclick=async()=>{close();try{unwrap(await supabase.rpc('void_lesson',{p_lesson_id:current.id,p_reason:'remove',p_idempotency_key:crypto.randomUUID()}));if(initialStudentId)onBack();else await load();}catch(e){alertError(e);}};
   }
   function dispatch(action){
     if(action==='new')createLesson();
-    else if(action==='reload'||action==='list')load();
+    else if(action==='reload')load();
+    else if(action==='list'){if(initialStudentId)onBack();else load();}
     else if(action==='edit')createLesson(current.student_id,current);
     else if(action==='remove')remove();
     else if(action==='calendar')calendar();

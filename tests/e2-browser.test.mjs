@@ -38,81 +38,98 @@ export function createClient(){return {
 }};
 `;
 
-test('E2 browser smoke: add, edit, pause and search',async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- const page=await browser.newPage();
- page.on('dialog',d=>d.accept());
- page.on('pageerror',e=>{throw e});
- await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:mockModule}));
- try{
-  await page.goto('http://127.0.0.1:8765/',{waitUntil:'networkidle'});
-  await page.locator('#addStudent').click();
-  await page.locator('#newStudent').click();
-  await page.locator('#student_name').fill('Anna Test');
-  await page.locator('#subject').fill('Maths');
-  await page.locator('#price').fill('35');
-  await page.locator('#payer_name').fill('Parent Test');
-  await page.locator('#saveStudent').click();
-  await page.locator('#toggleStudentView').click();
-  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
-  assert.match(await page.locator('main').innerText(),/Anna Test/);
-  await page.locator('[data-direct-edit="billing_mode"]').click();
-  await page.locator('#newBillingPrice').fill('38');
-  await page.locator('#saveChange').click();
-  await page.locator('#statusStudent').waitFor();
-  assert.match(await page.locator('main').innerText(),/38 € pro Stunde/);
-  await page.locator('#statusStudent').click();
-  await page.locator('#saveStatus').click();
-  await page.locator('#backStudents').click();
-  await page.locator('[data-filter="paused"]').click();
-  await page.waitForTimeout(500);
-  const list=await page.locator('#studentResults').innerText();
-  const state=await page.evaluate(()=>({events:globalThis.__e2Mock.events,versions:globalThis.__e2Mock.versions,calls:globalThis.__rpcCalls}));
-  assert.match(list,/Anna Test/,'Paused student missing: '+JSON.stringify({list,state}));
- }finally{await browser.close()}
-});
-
-test('E2 mobile viewport: create student without horizontal overflow',async()=>{
- const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+const BASE='http://127.0.0.1:8765/';
+async function startPage(browser,viewport={width:1280,height:800}){
+ const context=await browser.newContext({viewport});
+ const page=await context.newPage();
+ const pageErrors=[],failedRequests=[];
+ page.on('pageerror',e=>pageErrors.push(e.message));
+ page.on('requestfailed',r=>failedRequests.push(r.url()+' '+r.failure()?.errorText));
  page.on('dialog',d=>d.accept());
  await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:mockModule}));
+ await page.goto(BASE,{waitUntil:'domcontentloaded'});
  try{
-  await page.goto('http://127.0.0.1:8765/',{waitUntil:'networkidle'});
-  await page.locator('#addStudent').click();
-  await page.locator('#newStudent').click();
-  await page.locator('#student_name').fill('Mobile Student');
-  await page.locator('#subject').fill('Music');
-  await page.locator('#price').fill('45');
-  await page.locator('#studentPays').check();
-  await page.locator('#saveStudent').click();
-  await page.locator('#toggleStudentView').click();
-  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
-  const size=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
-  assert.ok(size.width<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
+  await page.locator('[data-ll-tab="students"]').waitFor({timeout:10000});
+ }catch(e){
+  throw new Error('Three-tab shell did not load: '+JSON.stringify({url:page.url(),body:(await page.locator('body').innerText()).slice(0,700),pageErrors,failedRequests})+'; '+e.message);
+ }
+ assert.equal(await page.locator('.ll-tab').count(),3,'exactly three navigation tabs');
+ assert.equal(await page.locator('#loginForm').count(),0,'mock authenticated session must not show login');
+ assert.equal(await page.locator('[role="alert"]:visible').filter({hasText:/Verbindung fehlgeschlagen|Keine Berechtigung|Anmelden/}).count(),0,'no visible auth/server error');
+ assert.deepEqual(pageErrors,[],'JavaScript page errors during app boot');
+ return {context,page,pageErrors,failedRequests};
+}
+async function openStudents(page){
+ await page.locator('[data-ll-tab="students"]').click();
+ await page.locator('#e2-results .e2-group').first().waitFor();
+ assert.equal(await page.locator('#e2-results .e2-group').count(),3,'all three student status groups');
+ assert.equal(await page.locator('[data-ll-tab="students"]').getAttribute('aria-current'),'page');
+}
+async function createStudent(page,name,{selfPays=false}={}){
+ await page.locator('[data-add]').click();
+ await page.locator('#e2-form').waitFor();
+ assert.equal(await page.locator('.ll-tabs:visible').count(),0,'tab bar hidden on student form');
+ await page.locator('[name="student_name"]').fill(name);
+ await page.locator('[name="subject"]').fill('Mathematik');
+ await page.locator('[name="price"]').fill('35');
+ if(selfPays)await page.locator('[name="student_pays"]').check();
+ else await page.locator('[name="payer_name"]').fill('Test Parent');
+ await page.locator('#e2-form [type="submit"]').click();
+ await page.locator('[data-tab="details"]').waitFor();
+ assert.match(await page.locator('.e2-heading').innerText(),new RegExp(name));
+}
+test('E2: authenticated three-tab shell, add, pricing edit, pause and search',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try{
+  const {context,page,pageErrors}=await startPage(browser);
+  await openStudents(page);
+  await createStudent(page,'Anna Test');
+  await page.locator('[data-edit="pricing"]').click();
+  await page.locator('#e2-edit [name="price"]').fill('38');
+  await page.locator('#e2-edit [type="submit"]').click();
+  await page.locator('[data-edit="pricing"]').waitFor();
+  assert.match(await page.locator('.e2-screen').innerText(),/38,00/);
+  await page.locator('[data-status]').click();
+  await page.locator('#e2-status [type="submit"]').click();
+  await page.locator('[data-tab="details"]').waitFor();
+  await page.locator('[data-finish]').click();
+  await page.locator('#e2-search').fill('Anna');
+  await page.locator('[data-student]').first().waitFor();
+  assert.match(await page.locator('#e2-results').innerText(),/Anna Test/);
+  const calls=await page.evaluate(()=>globalThis.__rpcCalls.map(c=>c.name));
+  assert.ok(calls.includes('create_student'));
+  assert.ok(calls.includes('change_student_with_repricing'));
+  assert.ok(calls.includes('set_student_status'));
+  assert.deepEqual(pageErrors,[]);
+  await context.close();
  }finally{await browser.close()}
 });
-
-test('German Home layout, student navigation and direct editing are present',async()=>{
+test('E2: 360px student create and detail without horizontal overflow',async()=>{
  const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
- const page=await browser.newPage();
- await page.route('https://esm.sh/**',route=>route.fulfill({status:200,contentType:'application/javascript',headers:{'access-control-allow-origin':'*'},body:mockModule}));
  try{
-  await page.goto('http://127.0.0.1:8765/',{waitUntil:'networkidle'});
-  await page.locator('#settingsBtn').waitFor();
-  assert.equal(await page.locator('#settingsBtn').innerText(),'Einstellungen');
-  assert.equal(await page.getByText('To do').count(),0);
-  assert.equal(await page.locator('.dashboard-card').count(),3);
-  assert.equal(await page.locator('#logLesson').count(),0);
-  assert.equal(await page.locator('#homeStudents').count(),0);
-  assert.equal(await page.locator('#addStudent').count(),1);
-  assert.equal(await page.locator('#homeLessons').count(),1);
-  await page.locator('#homeAllLessons').click();
-  await page.locator('#backHome').click();
-  await page.locator('#addStudent').click();
-  assert.equal(await page.locator('[data-log]').count(),0);
-  assert.equal(await page.locator('[data-log-sheet]').count(),0);
-  await page.locator('#backHome').click();
-  await page.locator('#settingsBtn').waitFor();
+  const {context,page,pageErrors}=await startPage(browser,{width:360,height:780});
+  await openStudents(page);
+  await createStudent(page,'Mobile Student',{selfPays:true});
+  const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
+  assert.ok(size.scroll<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
+  assert.deepEqual(pageErrors,[]);
+  await context.close();
+ }finally{await browser.close()}
+});
+test('E1: three-tab navigation, settings entry and return without legacy Home',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try{
+  const {context,page,pageErrors}=await startPage(browser);
+  assert.equal(await page.locator('#settingsBtn').count(),0,'legacy settings selector is absent');
+  assert.equal(await page.locator('#addStudent').count(),0,'legacy add selector is absent');
+  assert.equal(await page.locator('[data-ll-tab]').count(),3);
+  await page.locator('[data-ll-tab="invoices"]').click();
+  await page.getByRole('heading',{name:'Noch keine Rechnungen'}).waitFor();
+  await page.locator('[data-ll-tab="students"]').click();
+  await page.locator('[data-add]').waitFor();
+  await page.locator('[data-ll-settings]').click();
+  await page.getByRole('heading',{name:/Einstellungen/}).first().waitFor();
+  assert.deepEqual(pageErrors,[]);
+  await context.close();
  }finally{await browser.close()}
 });
