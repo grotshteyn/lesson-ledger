@@ -37,6 +37,20 @@ begin
  if v_second->>'state'<>'saved' then raise exception 'No-show logging failed'; end if;
  if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and no_show and charge_override='not_charged')
  then raise exception 'No-show override not preserved'; end if;
+ -- Cancellation decision matrix for the 24-hour policy.
+ v_second:=public.log_lesson(v_student,current_date,'cancelled',null,null,'student',true,null,true,gen_random_uuid(),'web');
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_free')
+ then raise exception 'Timely cancellation must be free'; end if;
+ v_second:=public.log_lesson(v_student,current_date,'cancelled',null,null,'student',false,null,true,gen_random_uuid(),'web');
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_billable')
+ then raise exception 'Late cancellation must be billable'; end if;
+ v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,null,true,gen_random_uuid(),'web');
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_billable' and no_show)
+ then raise exception 'Default no-show must be billable'; end if;
+ update public.student_versions set no_show_billable=false where student_id=v_student;
+ v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,null,true,gen_random_uuid(),'web');
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_free' and no_show)
+ then raise exception 'No-show with no-show billing off must be free'; end if;
  v_void:=public.void_lesson((v_edit->>'id')::uuid,'undo',gen_random_uuid(),'web');
  if v_void is null then raise exception 'Undo failed'; end if;
 end $test$;
