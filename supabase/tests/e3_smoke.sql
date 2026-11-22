@@ -47,7 +47,9 @@ begin
  v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,null,true,gen_random_uuid(),'web');
  if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_billable' and no_show)
  then raise exception 'Default no-show must be billable'; end if;
+ execute 'set local role postgres';
  update public.student_versions set no_show_billable=false where student_id=v_student;
+ execute 'set local role authenticated';
  v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,null,true,gen_random_uuid(),'web');
  if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_free' and no_show)
  then raise exception 'No-show with no-show billing off must be free'; end if;
