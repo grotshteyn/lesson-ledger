@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
   if (invoice.vat_mode === "small_business") {
     write("Keine Umsatzsteuer gemaess Paragraph 19 UStG.");
   } else if (invoice.vat_mode === "exempt_teaching") {
-    write("Umsatzsteuerbefreiung fuer Unterrichtsleistungen (Angaben pruefen).");
+    write("Umsatzsteuerfrei nach Paragraph 4 Nr. 21 UStG.");
   } else {
     write("Umsatzsteuer 19 % ist im Gesamtbetrag enthalten.");
   }
