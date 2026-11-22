@@ -83,4 +83,3 @@
 
 /* The HTML reference de-emphasizes ended rows and the monthly-rate label. */
 .e2-screen:has(#e2-search) .e2-group:last-child .e2-student-row{color:#555}
-.e2-screen:has(#e2-search) .e2-row-price:has(+ *){color:inherit}
