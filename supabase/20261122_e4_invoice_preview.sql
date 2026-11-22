@@ -89,7 +89,10 @@ begin
         and il.billing_month=p_billing_month
         and not exists (select 1 from public.invoices c
                         where c.original_invoice_id=i.id and c.kind='cancellation')
-    ) and public.student_status_at(p_student_id,p_billing_month)='active';
+    ) and exists (
+      select 1 from generate_series(p_billing_month,v_month_end-1,'1 day'::interval) d
+      where public.student_status_at(p_student_id,d::date)='active'
+    );
     if v_has_flat and coalesce(v_student.monthly_fee,0)>0 then
       v_gross := round(v_student.monthly_fee,2);
       v_lines := jsonb_build_array(jsonb_build_object(
