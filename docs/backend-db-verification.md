@@ -76,3 +76,15 @@ After running, collect exit status, stdout/stderr, migration version, schema dif
 
 ## Release gate
 Do not switch production clients to v2 until a controlled migration and disposable-DB regression suite pass, and an authorized production rollout is approved. Do not merge to main on this report alone.
+
+## Cost and configuration check (read-only, 22 Nov 2026)
+
+The connected Lesson Ledger organization's Supabase branch quote returned **USD 0.01344 per hour**, or approximately **USD 9.68 for 720 hours**. At 2, 4, and 8 billable hours, compute is approximately USD 0.03, 0.05, and 0.11 respectively. This is compute only, not a capped total. Supabase's published branching documentation says branches also incur their own disk, egress, storage and other usage, charged against organization allowances, and **branch compute is not covered by the normal compute credits or Spend Cap**. See https://supabase.com/docs/guides/platform/manage-your-usage/branching and https://supabase.com/docs/guides/deployment/branching.
+
+The project currently has **zero existing Supabase branches**. A separate existing Supabase project named `pybudget-3-dev` is INACTIVE and belongs to another application; do not repurpose it without owner authorization. Free local Postgres/Docker or Supabase CLI testing could avoid cloud branch compute, but no `docker`, `psql`, `postgres`, or `supabase` executable is installed in the current runner. Node is available. A developer machine with Docker + Supabase CLI remains a potential no-additional-cloud-cost option, not a verified ready-to-run environment.
+
+Proposed, **not created**: ephemeral development branch `lesson-ledger-e3-backend-regression` from `lesson-ledger`, default Micro compute, same EU region/settings as parent, no production data or storage copied, test fixtures only, remove promptly after acceptance. Estimate **2–4 hours**, allow up to 8 hours if migration baseline reconciliation is required. A branch built from migration history may lack E3 database objects because the parent has E3 routines not represented by its 15 recorded E1/E2 migrations; baseline reconciliation is mandatory before applying tests. No cost confirmation, branch creation, migration or fixture execution was performed.
+
+Read-only security advisors returned 7 warnings for externally callable `SECURITY DEFINER` RPCs (`change_student`, `change_student_with_repricing`, `create_student`, `log_lesson`, `replace_lesson`, `set_student_status`, `void_lesson`) and 1 warning that leaked-password protection is disabled. The definer warnings require per-function authorization review, not indiscriminate removal of required RPC access. Reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+
+**User authorization remains limited to read-only cost/configuration inspection. Creation and charges require separate explicit approval.**
