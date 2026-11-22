@@ -44,3 +44,40 @@
 .ll-dot{position:absolute;bottom:3px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:currentColor}
 .ll-lessons button:focus-visible,.ll-overlay button:focus-visible{outline:3px solid #666;outline-offset:2px}
 @media(max-width:360px){.ll-lessons{padding:12px 14px 105px}.ll-heading h2{font-size:23px}.ll-list-row b{font-size:14px}.ll-compare{gap:6px}.ll-compare>div{padding:8px}}
+
+
+/* E3: Lessons overview, lesson form, edit, duplicate and date picker. */
+.ll-app .ll-lessons{max-width:none;padding:16px 0 110px;font-family:Inter,system-ui,sans-serif;color:#222}
+.ll-app .ll-lessons .ll-heading{margin:0 0 14px}
+.ll-app .ll-lessons .ll-heading h2{font-size:22px;font-weight:700;line-height:28px}
+.ll-app .ll-lessons .ll-groups>h3{font-size:17px;color:#222;margin:0 0 14px}
+.ll-app .ll-lessons .ll-groups section{margin:0 0 20px}
+.ll-app .ll-lessons .ll-groups section>h3{font-size:13px;font-weight:600;color:#555;margin:0 0 9px}
+.ll-app .ll-lessons .ll-card{border:1px solid #d6d6d2;border-radius:10px;padding:0;margin:0 0 16px;overflow:hidden}
+.ll-app .ll-lessons .ll-list-row{min-height:56px;margin:0;padding:7px 14px;border-bottom:1px solid #e6e6e2;gap:10px;font-size:14px}
+.ll-app .ll-lessons .ll-list-row strong{font-size:14px;font-weight:500;line-height:20px}
+.ll-app .ll-lessons .ll-list-row small{font-size:12px;line-height:16px;margin-top:2px}
+.ll-app .ll-lessons .ll-list-row b{font-size:15px;font-weight:500}
+.ll-app .ll-lessons .ll-floating{position:fixed;bottom:92px;left:50%;transform:translateX(-50%);z-index:9;margin:0;width:72vw;max-width:280.8px}
+.ll-app .ll-lessons .ll-floating .ll-btn{height:56px;min-height:56px;width:100%;border:0;border-radius:28px;background:#222;color:#fff;font-size:17px;font-weight:700;box-shadow:0 4px 14px #0004}
+.ll-app .ll-lessons:has(#ll-date){padding-top:20px;padding-bottom:120px}
+.ll-app .ll-lessons:has(#ll-date) .ll-heading{margin-bottom:20px}
+.ll-app .ll-lessons:has(#ll-date) .ll-card{border:0;border-radius:0;background:transparent;overflow:visible;margin-bottom:20px}
+.ll-app .ll-lessons:has(#ll-date) .ll-field{font-size:13px;font-weight:600;color:#555;margin:16px 0}
+.ll-app .ll-lessons:has(#ll-date) .ll-field input,.ll-app .ll-lessons:has(#ll-date) .ll-field select{min-height:44px;margin-top:7px;border-radius:8px;border:1.5px solid #9a9a96;background:#fff;font-size:16px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick{margin-top:16px;gap:0;border:1px solid #aaa;border-radius:9px;overflow:hidden}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick button{border:0;border-right:1px solid #aaa;border-radius:0;min-height:44px;font-size:13px}
+.ll-app .ll-lessons:has(#ll-date) .ll-quick button:last-child{border-right:0}
+.ll-app .ll-lessons:has(#ll-date) .ll-actions{position:sticky;bottom:0;background:#f4f4f3;padding:12px 0 20px;z-index:5}
+.ll-app .ll-lessons:has(#ll-date) .ll-actions .ll-btn{min-height:48px;border-radius:9px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-scroll{max-height:42dvh;border:1px solid #d6d6d2;border-radius:10px}
+.ll-app .ll-lessons:has(#ll-date) .ll-student-scroll button{min-height:56px;padding:10px 14px;border-bottom:1px solid #e6e6e2}
+.ll-app .ll-lessons:has(#ll-date) #ll-search{min-height:44px}
+.ll-overlay .ll-sheet{max-width:390px;border-radius:18px 18px 0 0;padding:22px 20px 24px}
+.ll-overlay .ll-sheet h3{font-size:19px;line-height:26px}
+.ll-overlay .ll-calendar{gap:1px}
+.ll-overlay .ll-calendar button{min-height:44px;border-radius:8px;font-size:15px}
+.ll-overlay .ll-calendar>b{font-size:12px;font-weight:600}
+.ll-overlay .ll-cal-head strong{font-size:16px}
+.ll-overlay .ll-compare{gap:8px}
+.ll-overlay .ll-compare>div{padding:10px;font-size:13px}
