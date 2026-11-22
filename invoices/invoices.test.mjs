@@ -52,3 +52,23 @@ test('PDF adapter rejects unsuccessful generation',async()=>{
  const supabase={functions:{invoke:async()=>({data:{status:'pending'},error:null})}};
  await assert.rejects(supabaseInvoiceAdapter(supabase).pdf('invoice-123'),/PDF-Link/);
 });
+
+test('missing student names resolve from owner-scoped student search, including paused students',async()=>{
+ const calls=[];
+ const supabase={rpc:async(name,args)=>{
+  calls.push({name,args});
+  if(name==='list_invoice_overview')return {data:{months:[{billing_month:'2026-10-01',candidates:[{student_id:'s1',student_name:null,status:'missing_details',gross_amount:'160.00',validation_errors:['payer_address']}],issued:[]}]},error:null};
+  if(name==='find_students')return {data:[{student_id:'s1',student_name:'Clara Hoffmann'}],error:null};
+  throw new Error('Unexpected RPC '+name);
+ }};
+ const rows=await supabaseInvoiceAdapter(supabase).list();
+ assert.equal(rows[0].student,'Clara Hoffmann');
+ assert.equal(rows[0].totalCents,'160.00');
+ assert.equal(calls[1].name,'find_students');
+ assert.equal(calls[1].args.p_status,null);
+});
+test('missing student names remain visible if name lookup fails',async()=>{
+ const supabase={rpc:async(name)=>name==='list_invoice_overview'?{data:{months:[{billing_month:'2026-10-01',candidates:[{student_id:'s1',status:'missing_details',gross_amount:'160.00'}]}]},error:null}:{data:null,error:new Error('lookup unavailable')}};
+ const rows=await supabaseInvoiceAdapter(supabase).list();
+ assert.equal(rows[0].student,'Schülername nicht verfügbar');
+});
