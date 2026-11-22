@@ -163,7 +163,7 @@ function routeTab(tab,options={}){
  renderTab(tab);
  const mountRoot=$('ll-module-root');
  if(tab==='students'){
-  activeModule=mountStudents({root:mountRoot,supabase,today,onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
+  activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
   if(options.studentId)activeModule.open?.(options.studentId,'lessons');
  }else{
   activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId});
