@@ -49,8 +49,11 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       names=new Map();students=[];
       for(const s of versions)if(!names.has(s.student_id)){names.set(s.student_id,s.student_name);students.push(s);}
       if(disposed||token!==revision)return;
-      const groups=lessonWeekGroups(lessons);
-      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups">'+(groups.length?groups.map(g=>'<section><h3>Woche ab '+pretty(g.week)+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+' · '+statusLabel(x)+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
+      const currentMonth=today().slice(0,7);
+      const monthLessons=lessons.filter(x=>x.lesson_date.slice(0,7)===currentMonth);
+      const groups=lessonWeekGroups(monthLessons);
+      const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>Woche ab '+pretty(g.week)+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+' · '+statusLabel(x)+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
     }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(e.message)+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
