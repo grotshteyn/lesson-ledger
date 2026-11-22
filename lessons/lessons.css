@@ -153,3 +153,13 @@
 .ll-app .ll-status-segment button{border:0;border-radius:7px;background:transparent}
 .ll-app .ll-status-segment button[aria-pressed=true]{background:#fff;color:#242424;box-shadow:0 1px 3px #0002}
 .ll-app .ll-form-card .ll-numeric-row input{font-size:16px}
+
+/* Compact picker leaves space for the lesson controls at 390x844. */
+.ll-app .ll-lessons:has(#ll-search) .ll-student-scroll{max-height:min(25dvh,210px)}
+.ll-app .ll-form-heading>div{min-width:0}
+.ll-app .ll-form-heading .ll-muted{margin:3px 0 0;font-size:13px;font-weight:400}
+.ll-app .ll-history-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:9px 12px;border-bottom:1px solid #e6e6e2;background:#fff;font-size:13px}
+.ll-app .ll-history-row:first-child{border-radius:9px 9px 0 0}
+.ll-app .ll-history-row:last-child{border-radius:0 0 9px 9px;border-bottom:0}
+.ll-app .ll-history-row small{flex:0 0 38%;text-align:right;color:#555;font-size:12px}
+.ll-app #ll-edit-history{border:1px solid #d6d6d2;border-radius:9px;overflow:hidden}
