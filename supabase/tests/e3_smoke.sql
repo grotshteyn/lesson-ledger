@@ -80,5 +80,12 @@ begin
  execute 'set local role authenticated';
  v_void:=public.void_lesson((v_edit->>'id')::uuid,'undo',gen_random_uuid(),'web');
  if v_void is null then raise exception 'Undo failed'; end if;
+ if exists(select 1 from public.active_lessons where id=(v_edit->>'id')::uuid)
+ then raise exception 'Voided lesson appears in active lessons view'; end if;
+ if exists(select 1 from public.active_lessons where id=(v_first->>'id')::uuid)
+ then raise exception 'Replaced lesson appears in active lessons view'; end if;
+ v_second:=public.log_lesson(v_student,current_date,'held',null,null,null,null,'not_charged',true,gen_random_uuid(),'web');
+ if not exists(select 1 from public.active_lessons where id=(v_second->>'id')::uuid and billable_amount=0)
+ then raise exception 'Waived lesson contributes to billed amount'; end if;
 end $test$;
 rollback;
