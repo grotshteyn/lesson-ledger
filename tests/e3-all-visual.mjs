@@ -89,7 +89,8 @@ try{
  assert.equal(await page.locator('#e2-form [data-choice="billing_mode"]').count(),2);
  await page.locator('[data-cancel]').click();
  await page.locator('[data-ll-tab="invoices"]').click();
- await capture('07-invoices','.ll-invoices-empty');
+ // E4 replaced the E3 empty-state placeholder with its own invoice screen.
+ await capture('07-invoices','.e4');
  await page.locator('[data-ll-tab="lessons"]').click();
  await page.locator('[data-action="new"]').click();
  await capture('08-new-lesson','.ll-form-card');
