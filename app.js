@@ -256,7 +256,7 @@ function studentForm(prefill=''){
  };
 }
 
-async function studentPage(id){
+async function studentPage(id,view='lessons'){
  const [detail,status,history,events]=await Promise.all([
   supabase.rpc('student_details_at',{p_student_id:id,p_at:today()}),
   supabase.rpc('student_status_at',{p_student_id:id,p_at:today()}),
@@ -273,25 +273,33 @@ async function studentPage(id){
  const startDate=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);
  const locationLabel={my_place:'Bei mir',student_home:'Beim Schüler',online:'Online'}[v.location]||'Nicht angegeben';
  const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde';
- frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück zu Schülern">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
- '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
+ const isSetup=view==='setup';
+ frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück zu Schülern">←</button><div style="flex:1;min-width:0"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' · '+escapeHTML(v.subject)+'</p></div>'+button(isSetup?'Stunden':'Setup','toggleStudentView','secondary')+'</div></div>'+
+ (isSetup?
+ '<section class="card"><h2>Schülerdetails</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
  '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
  '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd><dt>Nicht erschienen</dt><dd>'+(v.no_show_billable===false?'Nicht berechnen':'Berechnen')+' '+editStudentButton('no_show_billable')+'</dd></dl>'+
  (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
- '<div class="actions">'+button('Log','studentLog')+button('Status ändern','statusStudent','secondary')+'</div>'+
- '<section class="card"><h2>Stunden</h2><div id="lessonHistory">Wird geladen …</div></section>'+
+ '<div class="actions">'+button('Status ändern','statusStudent','secondary')+'</div>'+
  '<section class="card"><h2>Verlauf</h2>'+
  (history.data||[]).map((x,i)=>'<div class="history-entry">'+(i===(history.data||[]).length-1?'Schüler hinzugefügt':'Angaben gültig ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x)))+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+
  (events.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.event_type)+' ab '+niceDate(x.effective_from)+'<div class="muted">erfasst am '+niceDate(x.created_at)+'</div></div>').join('')+'</section>'+
- '<div style="margin-top:24px">'+button('Versehentlich hinzugefügten Schüler entfernen','removeStudent','secondary')+'</div>');
-
+ '<div style="margin-top:24px">'+button('Versehentlich hinzugefügten Schüler entfernen','removeStudent','secondary')+'</div>'
+ :
+ '<div class="actions">'+button('+ Stunde erfassen','studentLog')+'</div>'+
+ '<section class="card"><h2>Stunden</h2><div id="lessonHistory">Wird geladen …</div></section>'));
+ 
  $('backStudents').onclick=()=>studentsPage();
- document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
- $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
- $('studentLog').onclick=()=>logLessonSheet(id);
- loadLessonHistory(id);
- $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
- if(status.data==='removed')$('removeStudent').hidden=true;
+ $('toggleStudentView').onclick=()=>studentPage(id,isSetup?'lessons':'setup');
+ if(isSetup){
+  document.querySelectorAll('[data-direct-edit]').forEach(b=>b.onclick=()=>studentChangeForm(id,v,b.dataset.directEdit));
+  $('statusStudent').onclick=()=>studentStatusForm(id,v,status.data);
+  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
+  if(status.data==='removed')$('removeStudent').hidden=true;
+ }else{
+  $('studentLog').onclick=()=>logLessonSheet(id);
+  loadLessonHistory(id);
+ }
 }
 const editStudentButton=key=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="Bearbeiten">Bearbeiten</button>';
 function studentChangeForm(id,v,initialKey='price'){
@@ -344,7 +352,7 @@ function studentChangeForm(id,v,initialKey='price'){
   $('repriceLessons').checked=false;box.hidden=!eligible.length&&!invoiced.length;
  };
  $('effective_from').addEventListener('change',refreshReprice);refreshReprice();
- $('backChange').onclick=()=>studentPage(id);
+ $('backChange').onclick=()=>studentPage(id,'setup');
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
   if(!g('effective_from'))return err('Bitte ein Gültigkeitsdatum wählen.');
@@ -369,7 +377,7 @@ function studentChangeForm(id,v,initialKey='price'){
   if(priceChange){params.p_reprice=reprice;params.p_idempotency_key=crypto.randomUUID();}
   const {error}=await supabase.rpc(rpc,params);
   if(error){$('saveChange').disabled=false;return err(error);}
-  studentPage(id);
+  studentPage(id,'setup');
  };
 }
 
@@ -380,7 +388,7 @@ function studentStatusForm(id,v,current){
  field('statusDate','Gültig ab',v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+field('pauseUntil','Pause bis (optional)','','date')+
  '<p class="muted small">Bei Monatspauschalen gelten Statusänderungen ab dem Monatsersten.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Status speichern','saveStatus')+'</div>');
- $('backStatus').onclick=()=>studentPage(id);
+ $('backStatus').onclick=()=>studentPage(id,'setup');
  $('statusEvent').value=current==='paused'||current==='ended'?'restart':'pause';
  const toggle=()=>{$('pauseUntil').closest('label').hidden=$('statusEvent').value!=='pause';};
  $('statusEvent').onchange=toggle;toggle();
@@ -391,7 +399,7 @@ function studentStatusForm(id,v,current){
   $('saveStatus').disabled=true;
   const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:action,p_effective_from:date,p_pause_until:action==='pause'?until:null});
   if(error){$('saveStatus').disabled=false;return err(error);}
-  studentPage(id);
+  studentPage(id,'setup');
  };
 }
 
