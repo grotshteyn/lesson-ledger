@@ -15,7 +15,9 @@ jobs:
         with:
           node-version: '22'
       - name: Native Node test suite
-        run: node --test tests/frontend-shell.test.mjs tests/students.test.mjs lessons/lessons.test.mjs tests/backend-errors.test.mjs
+        run: |
+          mkdir -p browser-evidence
+          node --test tests/frontend-shell.test.mjs tests/students.test.mjs lessons/lessons.test.mjs tests/backend-errors.test.mjs 2>&1 | tee browser-evidence/native-node.log
       - name: Install browser test runtime
         run: |
           npm install --no-save playwright@1.56.1
@@ -24,8 +26,8 @@ jobs:
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/lesson-ledger-http.log 2>&1 &
           echo $! > /tmp/lesson-ledger-http.pid
-          node --test tests/e2-browser.test.mjs
-          node tests/browser-smoke.mjs
+          node --test tests/e2-browser.test.mjs 2>&1 | tee browser-evidence/e2-browser.log
+          node tests/browser-smoke.mjs 2>&1 | tee browser-evidence/unauthenticated-smoke.log
       - name: Upload screenshots and evidence
         if: always()
         uses: actions/upload-artifact@v4
