@@ -14,6 +14,7 @@ begin
  if auth.uid() is null then raise exception 'Authentication required'; end if;
  if p_idempotency_key is null then raise exception 'Idempotency key required'; end if;
  if p_lesson_date is null or p_lesson_date > current_date + 365 then raise exception 'Invalid lesson date'; end if;
+ if p_status='held' and p_lesson_date>current_date then raise exception 'Held lessons cannot be future-dated'; end if;
  if p_status not in ('held','cancelled','no_show') then raise exception 'Invalid status'; end if;
  if p_channel not in ('web','mcp') then raise exception 'Invalid channel'; end if;
  select s.ledger_id into v_ledger from public.students s
@@ -82,3 +83,43 @@ begin
 end $$;
 revoke all on function public.void_lesson(uuid,text,uuid,text) from public,anon;
 grant execute on function public.void_lesson(uuid,text,uuid,text) to authenticated;
+
+-- Atomic edit: a failed replacement rolls back the void as well.
+create or replace function public.replace_lesson(
+ p_old_lesson_id uuid, p_lesson_date date, p_status text,
+ p_minutes integer, p_rate numeric,
+ p_cancelled_by text, p_cancelled_in_time boolean,
+ p_charge_override text, p_confirm_duplicate boolean,
+ p_idempotency_key uuid
+) returns jsonb language plpgsql security definer set search_path=''
+as $$
+declare v_old public.lessons%rowtype; v_result jsonb; v_void_id uuid; v_new_id uuid;
+begin
+ if auth.uid() is null then raise exception 'Authentication required'; end if;
+ if p_idempotency_key is null then raise exception 'Idempotency key required'; end if;
+ select x.* into v_old from public.lessons x
+ join public.ledgers l on l.id=x.ledger_id and l.owner_id=auth.uid()
+ where x.id=p_old_lesson_id for update of x;
+ if v_old.id is null then raise exception 'Lesson not found'; end if;
+ select x.id into v_new_id from public.lessons x
+ where x.ledger_id=v_old.ledger_id and x.idempotency_key=p_idempotency_key;
+ if v_new_id is not null then
+  if exists(select 1 from public.lesson_voids z where z.lesson_id=p_old_lesson_id and z.replacement_id=v_new_id)
+  then return jsonb_build_object('state','saved','id',v_new_id,'replayed',true); end if;
+  raise exception 'Idempotency key reused';
+ end if;
+ if v_old.invoice_id is not null then raise exception 'Lesson was invoiced in the meantime'; end if;
+ if exists(select 1 from public.lesson_voids where lesson_id=v_old.id) then raise exception 'Lesson already voided'; end if;
+ -- Void before logging so the old record is excluded from duplicate checks.
+ insert into public.lesson_voids(ledger_id,lesson_id,reason,idempotency_key,channel)
+ values(v_old.ledger_id,v_old.id,'edit',gen_random_uuid(),'web') returning id into v_void_id;
+ v_result:=public.log_lesson(v_old.student_id,p_lesson_date,p_status,p_minutes,p_rate,
+ p_cancelled_by,p_cancelled_in_time,p_charge_override,p_confirm_duplicate,p_idempotency_key,'web');
+ if v_result->>'state'<>'saved' then raise exception 'Another lesson exists on this date; confirm the second lesson'; end if;
+ v_new_id:=(v_result->>'id')::uuid;
+ update public.lesson_voids set replacement_id=v_new_id where id=v_void_id;
+ update public.lessons set replaces_lesson_id=v_old.id where id=v_new_id;
+ return v_result;
+end $$;
+revoke all on function public.replace_lesson(uuid,date,text,integer,numeric,text,boolean,text,boolean,uuid) from public,anon;
+grant execute on function public.replace_lesson(uuid,date,text,integer,numeric,text,boolean,text,boolean,uuid) to authenticated;
