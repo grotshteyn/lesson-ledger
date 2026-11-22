@@ -206,7 +206,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
         if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>{if(btn)btn.disabled=false;save(confirmInactive,true);});return;
       }
       if(result?.state!=='saved')throw Error('Speichern wurde nicht bestätigt.');
-      await load();
+      if(initialStudentId)onBack();else await load();
     }catch(e){alertError(e);}finally{if(btn)btn.disabled=false;}
   }
   async function remove(){
