@@ -49,7 +49,7 @@ export function supabaseInvoiceAdapter(supabase){
  async list(){
  const rows=adaptOverview(await rpc('list_invoice_overview',{p_through_month:previousMonth()}));
  const ids=[...new Set(rows.map(r=>r.studentId).filter(Boolean))];
- if(ids.length){
+ if(ids.length&&typeof supabase.from==='function'){
   const {data,error}=await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').in('student_id',ids).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false});
   if(!error){const names=new Map();for(const v of data||[])if(!names.has(v.student_id))names.set(v.student_id,v.student_name);for(const row of rows)row.student=names.get(row.studentId)||row.student;}
  }
