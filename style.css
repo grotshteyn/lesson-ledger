@@ -24,3 +24,5 @@
 /* E3 logging actions */
 .lesson-student-row{display:flex;align-items:center;gap:9px;margin:12px 0}.lesson-student-row .student-item{flex:1;min-width:0;margin:0}.lesson-log-btn{flex:0 0 auto;min-width:68px}.change-screen .sheet #saveLesson{width:100%;margin-top:20px}.change-screen .sheet .field{margin:14px 0}
 @media(max-width:420px){.lesson-student-row{gap:6px}.lesson-student-row .student-item{padding:12px}.lesson-log-btn{padding:12px 9px;min-width:56px}}
+
+.lesson-duplicate{border-left:4px solid #242424;padding-left:12px;background:#f1f1ef}.lesson-save-notice{margin:6px 0 14px}.lesson-recent{margin-top:20px;border-top:1px solid #dededc;padding-top:18px}.lesson-recent h2{font-size:18px}
