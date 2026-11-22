@@ -460,9 +460,11 @@ async function logLessonSheet(studentId,original=null){
    else{$('saveLesson').disabled=false;return;}
   }
   if(error){$('saveLesson').disabled=false;return err(error);}
+  if(data?.state!=='saved'){$('saveLesson').disabled=false;return err({message:'Speichern wurde nicht bestätigt.'});}
   frame('<div class="card"><h2>'+(original?'Stunde geändert':'Stunde gespeichert')+'</h2><p>'+escapeHTML(params.p_lesson_date)+' · '+params.p_minutes+' Min.</p>'+button('Rückgängig','undoLesson','secondary')+button('Fertig','doneLesson')+'<p id="error" class="error"></p></div>');
   $('doneLesson').onclick=()=>studentPage(studentId);
-  $('undoLesson').onclick=async()=>{const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
+  let undoAllowed=true;setTimeout(()=>{undoAllowed=false;const b=$('undoLesson');if(b)b.remove();},10000);
+  $('undoLesson').onclick=async()=>{if(!undoAllowed)return;undoAllowed=false;$('undoLesson').disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
  };
 }
 
