@@ -79,7 +79,17 @@ begin
  v.id,v.billing_month,current_date,current_date,v.vat_mode,
  -v.net_amount,-v.vat_amount,-v.gross_amount,
  v.snapshot||jsonb_build_object('kind','cancellation','invoice_number',v_number,
-   'original_invoice_id',v.id,'original_invoice_number',v.invoice_number),
+   'original_invoice_id',v.id,'original_invoice_number',v.invoice_number,
+   'invoice_date',current_date,'due_date',current_date,
+   'net_amount',to_char(-v.net_amount,'FM999999999990.00'),
+   'vat_amount',to_char(-v.vat_amount,'FM999999999990.00'),
+   'gross_amount',to_char(-v.gross_amount,'FM999999999990.00'),
+   'lines',(select coalesce(jsonb_agg(
+     x.value||jsonb_build_object(
+       'description','Storno: '||(x.value->>'description'),
+       'gross_amount',to_char(-(x.value->>'gross_amount')::numeric,'FM999999999990.00'))
+     order by x.ordinality),'[]'::jsonb)
+     from jsonb_array_elements(v.snapshot->'lines') with ordinality as x(value,ordinality))),
  p_idempotency_key) returning id into v_id;
  insert into public.invoice_lines(
  invoice_id,ledger_id,line_number,description,lesson_date,billing_month,
