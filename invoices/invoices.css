@@ -145,3 +145,10 @@
 .e4-detail .e4-lesson strong{text-align:right;white-space:nowrap}
 .e4-form-error{color:#9b2e22;font-size:14px;font-weight:600;margin:12px 0 20px}
 .e4 #e4-data-form{padding-bottom:110px}
+
+/* Invoice overview: give the student's name a dedicated full-width line on phones. */
+.e4-line>button:first-child{grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:12px;row-gap:4px}
+.e4-line>button .e4-student-name{grid-column:1/-1;grid-row:1;display:block;white-space:normal;overflow-wrap:anywhere;text-overflow:clip;font-weight:700;font-size:15px;line-height:1.35}
+.e4-line>button small{grid-column:1;grid-row:2;justify-self:start}
+.e4-line>button strong{grid-column:2;grid-row:2;justify-self:end}
+.e4-line{min-height:68px}

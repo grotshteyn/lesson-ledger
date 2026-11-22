@@ -11,7 +11,7 @@ export function adaptOverview(response){
  const out=[];
  for(const month of response.months||[]){
   const billingMonth=String(month.billing_month).slice(0,7);
-  for(const r of month.candidates||[])out.push({id:'draft:'+r.student_id+':'+billingMonth,studentId:r.student_id,student:r.student_name||'Schülername fehlt',billingMonth,status:r.status,totalCents:r.gross_amount,validationErrors:r.validation_errors||[],kind:'draft'});
+  for(const r of month.candidates||[])out.push({id:'draft:'+r.student_id+':'+billingMonth,studentId:r.student_id,student:r.student_name?.trim()||'Schülername wird geladen',billingMonth,status:r.status,totalCents:r.gross_amount,validationErrors:r.validation_errors||[],kind:'draft'});
   for(const r of month.issued||[])out.push({id:r.invoice_id,studentId:r.student_id,student:r.student_name||'Schülername wird geladen',billingMonth,status:r.status,totalCents:r.gross_amount,number:r.invoice_number,kind:'issued',pdfStatus:r.pdf_status});
  }
  return out;
@@ -48,11 +48,17 @@ export function supabaseInvoiceAdapter(supabase){
  return {mode:'live',
  async list(){
  const rows=adaptOverview(await rpc('list_invoice_overview',{p_through_month:previousMonth()}));
- const ids=[...new Set(rows.map(r=>r.studentId).filter(Boolean))];
- if(ids.length&&typeof supabase.from==='function'){
-  const {data,error}=await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').in('student_id',ids).lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false});
-  if(!error){const names=new Map();for(const v of data||[])if(!names.has(v.student_id))names.set(v.student_id,v.student_name);for(const row of rows)row.student=names.get(row.studentId)||row.student;}
+ const missing=rows.filter(r=>!r.student||r.student==='Schülername wird geladen'||r.student==='Schülername fehlt');
+ if(missing.length){
+  try{
+   // Existing owner-scoped RPC includes paused students; direct student_versions access can be RLS-filtered.
+   const students=await rpc('find_students',{p_query:'',p_status:null,p_at:today()});
+   const names=new Map((students||[]).map(x=>[x.student_id,x.student_name]));
+   for(const row of rows)if(names.get(row.studentId))row.student=names.get(row.studentId);
+  }catch(e){console.warn('E4 student-name lookup failed',e);}
  }
+ for(const row of rows)if(!row.student||row.student.startsWith('Schülername wird'))row.student='Schülername nicht verfügbar';
+
  return rows;
 },
  async preview(id){const parts=id.split(':');return adaptPreview(await rpc('get_invoice_preview',{p_student_id:parts[1],p_billing_month:parts[2]+'-01'}));},
@@ -75,7 +81,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const status={ready:'Bereit',missing_details:'Angaben fehlen',in_progress:'In Bearbeitung',issued:'Ausgestellt',cancelled:'Storniert'};
  const button=(label,action,extra='')=>'<button type="button" data-e4="'+action+'" '+extra+'>'+esc(label)+'</button>';
  const card=(title,body,action='')=>'<section class="e4-card"><div class="e4-card-heading"><h3>'+title+'</h3>'+action+'</div>'+body+'</section>';
- const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span>'+esc(r.student)+'</span><small>'+(r.status==='issued'?'✓ ':'')+esc(r.number||status[r.status]||r.status)+'</small><strong>'+eur(r.totalCents)+'</strong></button>'+(r.status==='issued'&&adapter.mode==='fixture'?button('↓','pdf-'+r.id,'aria-label="PDF herunterladen"'):'')+'</div>';
+ const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span class="e4-student-name">'+esc(r.student||'Schülername nicht verfügbar')+'</span><small>'+(r.status==='issued'?'✓ ':'')+esc(r.number||status[r.status]||r.status)+'</small><strong>'+eur(r.totalCents)+'</strong></button>'+(r.status==='issued'&&adapter.mode==='fixture'?button('↓','pdf-'+r.id,'aria-label="PDF herunterladen"'):'')+'</div>';
  const groups=items=>groupInvoices(items).map(g=>'<section class="e4-month"><h2>'+esc(monthLabel(g.month))+' <span>'+eur(g.totalCents)+'</span></h2><div class="e4-rows">'+g.items.map(line).join('')+'</div></section>').join('');
  const foot=html=>'<div class="e4-foot">'+html+'</div>';
  const warning=msg=>'<p class="e4-warning" role="status">'+esc(msg)+'</p>';
