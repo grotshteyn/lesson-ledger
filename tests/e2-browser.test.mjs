@@ -75,7 +75,10 @@ async function createStudent(page,name,{selfPays=false}={}){
  if(selfPays)await page.locator('[name="student_pays"]').check();
  else await page.locator('[name="payer_name"]').fill('Test Parent');
  await page.locator('#e2-form [type="submit"]').click();
- await page.locator('[data-tab="details"]').waitFor();
+ await page.locator('#e2-search').waitFor();
+ assert.equal(await page.locator('[data-ll-tab="students"]').getAttribute('aria-current'),'page');
+ await page.locator('[data-student]').filter({hasText:name}).click();
+ await page.locator('[data-tab="details"]').click();
  assert.match(await page.locator('.e2-heading').innerText(),new RegExp(name));
 }
 test('E2: authenticated three-tab shell, add, pricing edit, pause and search',async()=>{
