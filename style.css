@@ -125,3 +125,13 @@ body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
 .ll-app .ll-invoices-message h2{font-size:18px;font-weight:700}
 .ll-app .ll-invoices-message p{font-size:14px;line-height:1.5}
 @media(max-width:380px){.ll-app .ll-header{padding:20px 20px 12px}.ll-app .ll-content{padding:0 20px 96px}.ll-app .ll-tab{font-size:13px}}
+
+
+/* Readability pass: modest +2px type increase without changing page geometry. */
+.ll-app{font-size:16px;line-height:1.5}
+.ll-app .ll-tab,
+.ll-app .ll-tab[aria-current="page"]{font-size:15px}
+.ll-app .ll-invoices-message p{font-size:16px}
+.ll-app .ll-invoices-message h2{font-size:20px}
+.ll-app .ll-floating-action{font-size:17px}
+@media(max-width:380px){.ll-app .ll-tab{font-size:15px}}
