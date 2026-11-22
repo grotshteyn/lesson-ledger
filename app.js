@@ -446,7 +446,7 @@ async function logLessonSheet(studentId,original=null){
   const date=$('lessonDate').value;
   if(!original){
    const {data}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:date});
-   if(data?.length){$('lessonMinutes').value=data[0].minutes;if(!flat)$('lessonRate').value=data[0].rate;}
+   if(data?.length){$('lessonMinutes').value=data[0].minutes;if(!flat)$('lessonRate').value=data[0].rate;v.no_show_billable=data[0].no_show_billable;refresh();}
   }
   refreshRecent();
  });
@@ -458,7 +458,7 @@ async function logLessonSheet(studentId,original=null){
   $('cancelTimingField').hidden=$('cancelBy').value!=='student';
   const preview=$('lessonBillingPreview');if(!preview)return;
   const status=$('lessonStatus').value,override=$('lessonOverride')?.value||'';
-  const billable=override==='charged'||(override!=='not_charged'&&(status==='held'||status==='no_show'||(status==='cancelled'&&$('cancelBy').value==='student'&&$('cancelInTime').value==='false')));
+  const billable=override==='charged'||(override!=='not_charged'&&(status==='held'||(status==='no_show'&&v.no_show_billable!==false)||(status==='cancelled'&&$('cancelBy').value==='student'&&$('cancelInTime').value==='false')));
   preview.textContent=flat?'Monatspauschale: keine zusätzliche Berechnung':billable?'Voraussichtlich berechnet: '+(Number($('lessonRate').value)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'}):'Voraussichtlich nicht berechnet';
  };
  $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;$('cancelInTime').onchange=refresh;if($('lessonOverride'))$('lessonOverride').onchange=refresh;if($('lessonRate'))$('lessonRate').oninput=refresh;refresh();
