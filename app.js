@@ -421,13 +421,16 @@ async function logLessonSheet(studentId,original=null){
  const v=data[0],flat=v.billing_mode==='monthly_flat';
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true"><div class="row"><h1>Log: '+escapeHTML(v.student_name)+'</h1>'+button('×','closeLog','secondary')+'</div>'+
  '<label class="field">Art<select id="lessonStatus"><option value="held">Gehalten</option><option value="cancelled">Abgesagt</option><option value="no_show">Nicht erschienen</option></select></label>'+
- field('lessonDate','Datum',original?.lesson_date||today(),'date')+field('lessonMinutes','Dauer (Minuten)',original?.minutes||v.minutes,'number')+
+ '<div class="row lesson-date-quick"><button type="button" class="secondary" id="lessonToday">Heute</button><button type="button" class="secondary" id="lessonYesterday">Gestern</button></div>'+field('lessonDate','Datum',original?.lesson_date||today(),'date')+field('lessonMinutes','Dauer (Minuten)',original?.minutes||v.minutes,'number')+
  (flat?'':'<div id="lessonPriceField">'+field('lessonRate','Preis (€)',original?.rate||v.rate,'number')+'</div>')+
  '<div id="lessonCancellation" hidden><label class="field">Wer hat abgesagt?<select id="cancelBy"><option value="student">Schüler</option><option value="teacher">Ich</option></select></label><label class="field" id="cancelTimingField">Mindestens 24 Stunden vorher?<select id="cancelInTime"><option value="false">Nein</option><option value="true">Ja</option></select></label></div>'+
  (flat?'':'<label class="field" id="lessonOverrideRow">Berechnung<select id="lessonOverride"><option value="">Nach Regel</option><option value="not_charged">Nicht berechnen</option><option value="charged">Trotzdem berechnen</option></select></label>')+
- '<section class="lesson-recent"><h2>Letzte 14 Tage</h2><div id="recentLessons" class="muted">Wird geladen …</div></section>'+ 
+ '<p class="muted" id="lessonBillingPreview" aria-live="polite"></p><section class="lesson-recent"><h2>Letzte 14 Tage</h2><div id="recentLessons" class="muted">Wird geladen …</div></section>'+ 
  '<p id="error" class="error"></p>'+button('Speichern','saveLesson')+'</section></div>','change-screen');
  $('closeLog').onclick=()=>studentPage(studentId);
+ const yesterday=()=>{const d=new Date();d.setDate(d.getDate()-1);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
+ $('lessonToday').onclick=()=>{$('lessonDate').value=today();$('lessonDate').dispatchEvent(new Event('change'));};
+ $('lessonYesterday').onclick=()=>{$('lessonDate').value=yesterday();$('lessonDate').dispatchEvent(new Event('change'));};
  const recentSince=new Date(Date.now()-13*86400000).toISOString().slice(0,10);
  const refreshRecent=async()=>{
   const [a,b]=await Promise.all([supabase.from('lessons').select('id,lesson_date,minutes,status,rate').eq('student_id',studentId).gte('lesson_date',recentSince).order('lesson_date',{ascending:false}).limit(50),supabase.from('lesson_voids').select('lesson_id')]);
@@ -450,8 +453,15 @@ async function logLessonSheet(studentId,original=null){
  refreshRecent();
 
  if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonOverride'))$('lessonOverride').value=original.charge_override||'';if(original.cancelled_by)$('cancelBy').value=original.cancelled_by;if(original.cancelled_in_time!==null)$('cancelInTime').value=String(original.cancelled_in_time);}
- const refresh=()=>{$('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';$('cancelTimingField').hidden=$('cancelBy').value!=='student';};
- $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;refresh();
+ const refresh=()=>{
+  $('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';
+  $('cancelTimingField').hidden=$('cancelBy').value!=='student';
+  const preview=$('lessonBillingPreview');if(!preview)return;
+  const status=$('lessonStatus').value,override=$('lessonOverride')?.value||'';
+  const billable=override==='charged'||(override!=='not_charged'&&(status==='held'||status==='no_show'||(status==='cancelled'&&$('cancelBy').value==='student'&&$('cancelInTime').value==='false')));
+  preview.textContent=flat?'Monatspauschale: keine zusätzliche Berechnung':billable?'Voraussichtlich berechnet: '+(Number($('lessonRate').value)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'}):'Voraussichtlich nicht berechnet';
+ };
+ $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;$('cancelInTime').onchange=refresh;if($('lessonOverride'))$('lessonOverride').onchange=refresh;if($('lessonRate'))$('lessonRate').oninput=refresh;refresh();
  let key=crypto.randomUUID();
  $('saveLesson').onclick=async()=>{
   $('saveLesson').disabled=true;
