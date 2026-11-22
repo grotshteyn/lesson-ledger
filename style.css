@@ -26,3 +26,10 @@
 .card>.row:has(>#addStudent)>h2{flex:1 1 auto;min-width:max-content;margin:0;overflow-wrap:normal;word-break:normal}
 .card>.row>#addStudent{width:auto;flex:0 0 auto;min-width:0;min-height:44px;padding:10px 14px;white-space:nowrap;font-size:15px}
 @media(max-width:360px){.card>.row:has(>#addStudent)>h2{font-size:21px}.card>.row>#addStudent{font-size:14px;padding:9px 11px}}
+
+/* Student details share the invoice-settings row design. */
+.student-details-card .settings-row{min-height:70px;align-items:center}
+.student-details-card .settings-row>div{min-width:0;overflow-wrap:break-word}
+.student-details-card .settings-row .link{flex-shrink:0;white-space:nowrap;margin-left:8px}
+.student-details-card .settings-row:last-of-type{border-bottom:0}
+@media(max-width:380px){.student-details-card .settings-row{gap:8px;font-size:15px}.student-details-card .settings-row .link{font-size:14px}}
