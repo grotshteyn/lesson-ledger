@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../students/students.js',import.meta.url),'utf8');
-const {normalize,studentPrice,groupStudents,groupLessons,matchingStudents,duplicateNames,basicsChanges,STUDENT_STORIES}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {normalize,studentPrice,groupStudents,groupLessons,matchingStudents,duplicateNames,basicsChanges,STUDENT_STORIES}=await import('../students/students.js');
 
 test('ST-3: name and nickname search normalization handles accents and case',()=>{
  assert.equal(normalize('  JÖRG Müller  '),'jorg muller');
