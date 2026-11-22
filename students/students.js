@@ -20,7 +20,7 @@ const emailValid=v=>!v||/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const todayLocal=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};
 const monthStart=date=>date.slice(0,7)+'-01';
 const nextMonthStart=date=>{const d=new Date(date+'T12:00:00');d.setMonth(d.getMonth()+1,1);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),'01'].join('-')};
-export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{},onLessonOpen=()=>{},today=todayLocal}){
+export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{},onLessonOpen=()=>{},onSubpageChange=()=>{},today=todayLocal}){
  if(!root||!supabase)throw new Error('Schüleransicht benötigt ein Element und Supabase');
  let alive=true,sequence=0,search='',filter='all',selected=null,view='lessons';
  const render=html=>{if(alive)root.innerHTML=`<div class="e2-screen">${html}</div>`};
@@ -31,6 +31,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  const footer=(save='Speichern')=>`<div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button></div>`;
  const loading=()=>render('<p role="status">Wird geladen …</p>');
  async function list(){
+  onSubpageChange(false);
   selected=null;const token=++sequence;
   render(`<header class="e2-heading"><h1>Schüler</h1></header><label class="e2-search">Schüler suchen<input id="e2-search" type="search" placeholder="Name oder Kurzname" value="${escape(search)}"></label><div class="e2-filters" aria-label="Statusfilter">${[['all','Alle'],...Object.entries(statusNames)].map(([k,v])=>`<button data-filter="${k}" aria-pressed="${filter===k}">${v}</button>`).join('')}</div><div id="e2-results" aria-live="polite"><p>Wird geladen …</p></div><p role="alert" class="e2-error"></p><div class="e2-floating"><button class="e2-primary" data-add>+ Schüler hinzufügen</button></div>`);
   const searchInput=root.querySelector('#e2-search');
@@ -52,6 +53,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   await refreshList();
  }
  function create(prefill=''){
+  onSubpageChange(true);
   ++sequence;
   render(`<header class="e2-heading">${backButton}<h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true)+input('start_date','Startdatum *',today(),'date',true))}${card('Stunden und Preis',input('minutes','Dauer in Minuten *',45,'number',true)+input('lessons_per_week','Stunden pro Woche *',1,'number',true)+select('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],'per_lesson')+input('price','Betrag in Euro *','','number',true)+select('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],''))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Schüler speichern')}</form>`);
   bind('[data-back]',list);bind('[data-cancel]',list);
@@ -72,6 +74,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   });
  }
  async function detailPage(id,tab='lessons'){
+  onSubpageChange(true);
   selected=id;view=tab;const token=++sequence;loading();
   try{
    const [current,status,versions,events]=await Promise.all([
@@ -111,6 +114,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   box.querySelectorAll('[data-lesson]').forEach(b=>b.addEventListener('click',()=>onLessonOpen(b.dataset.lesson,id)));
  }
  function editSection(id,v,section){
+  onSubpageChange(true);
   ++sequence;
   const address=v.payer_address||{};
   const basics=input('student_name','Name',v.student_name,'text',true)+input('nickname','Kurzname',v.nickname)+input('subject','Fach',v.subject,'text',true);
@@ -144,6 +148,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   });
  }
  function editStatus(id,v,current){
+  onSubpageChange(true);
   ++sequence;const effective=v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
   render(`<header class="e2-heading">${backButton}<h1>Status ändern</h1></header><form id="e2-status">${card('Status',select('event','Aktion',[['pause','Pausieren'],['restart','Wieder starten'],['end','Beenden']],current==='paused'||current==='ended'?'restart':'pause')+input('effective_from','Gültig ab',effective,'date',true)+input('pause_until','Pause bis (optional)','','date'))}<p class="e2-muted">Bei Monatspauschalen beginnen Statusänderungen am Monatsersten.</p><p role="alert" class="e2-error"></p>${footer('Status speichern')}</form>`);
   const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
