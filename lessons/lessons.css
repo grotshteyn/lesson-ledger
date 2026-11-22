@@ -88,3 +88,8 @@
 .ll-app .ll-lessons .ll-list-row small{color:#333}
 .ll-app .ll-lessons .ll-list-row b{font-weight:500}
 @media(max-width:360px){.ll-app .ll-lessons .ll-list-row>span{grid-template-columns:64px minmax(0,1fr);gap:6px}.ll-app .ll-lessons .ll-list-row strong,.ll-app .ll-lessons .ll-list-row small{font-size:13px}}
+
+/* One Lessons title in the shared header, as on PDF page 1. */
+.ll-app .ll-lessons:has(.ll-groups)>.ll-heading{display:none}
+.ll-app .ll-lessons .ll-list-row>span{grid-template-columns:76px minmax(0,1fr)}
+.ll-app .ll-lessons .ll-list-row strong{white-space:nowrap}
