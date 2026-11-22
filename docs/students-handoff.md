@@ -39,8 +39,8 @@ This module intentionally does not edit `app.js`, `style.css`, `index.html`, sha
 
 ## Checks
 - JavaScript syntax parsed successfully with the V8 Function parser.
-- Six focused checks passed: normalization, grouped statuses, price formatting, lesson chronology, story mapping, exported mount function.
-- Added `tests/students.test.mjs` with five Node test cases. **Node test runner was not executed in the GitHub-connected environment.**
+- Previous handoff reported six focused checks; these have not been independently rerun in this continuation.
+- `tests/students.test.mjs` now contains nine Node test cases (five existing and four new). **Node test runner was not executed:** a local clone attempt failed because github.com DNS resolution was unavailable. No passing test claim is made for these changes.
 - Not run: authenticated Supabase integration tests, 360px and desktop screenshots, keyboard/safe-area browser testing, network/offline and invoiced-record regression tests. These remain acceptance gates for the integrator.
 
 ## Risks and follow-up
@@ -53,3 +53,24 @@ This module intentionally does not edit `app.js`, `style.css`, `index.html`, sha
 
 ## Files
 `students/students.js`, `students/students.css`, `tests/students.test.mjs`, `docs/students-handoff.md`.
+
+## Continuation audit (22 Nov 2026)
+
+### Verified from source/contracts
+- Reviewed `docs/parallel-agents.md`, `docs/frontend-redesign.md`, issue #22 discussion, Shell #21 handoff and Backend #24 contract (`docs/backend-e3-contract.md`).
+- Backend confirms `find_students(text,text,date)`, `student_details_at(uuid,date)`, `student_status_at(uuid,date)`, `create_student(jsonb)`, and `set_student_status(uuid,text,date,date)`. The client uses the documented parameter names for these calls. `find_students` exposes name, nickname, subject, billing mode, rate, monthly fee and status. `create_student` requires price > 0.
+- **Unverified/likely blocker:** `change_student` and `change_student_with_repricing` are used for section edits but are absent from the Backend #24 published RPC inventory. Do not accept editing until Backend confirms existence, exact JSON payload semantics, effective-date behavior and invoice protection. Do not substitute direct writes without contract agreement.
+- Shell exports `shellMarkup` and `bindShell` with navigation keys `lessons/students/invoices`; integrator must mount this module into shell content, suppress main tabs on student subpages and avoid double floating create buttons.
+- Lessons agent must implement `onLessonCreate(studentId)` with fixed student and `onLessonOpen(lessonId,studentId)` with a valid lesson ID; check `active_lessons` column names (especially `id`, `minutes`, `rate`, `invoice_id`) against the deployed view.
+
+### Changes in this continuation
+- Added client-side name/nickname filtering after server search and explicit duplicate-name checks across active, paused and ended groups.
+- Made list search failures visible in the results region and guarded stale error responses; handled object or array response shape for student details.
+- Added four regression test cases for accent/nickname search, inactive duplicate names, unexpected statuses and empty lesson history.
+
+### Acceptance status and gaps
+- **Source inspection performed:** German headings, grouped list, search, three-card create form, three independent edit forms, effective-date input, status form and month-grouped lesson history.
+- **Not verified against original images:** pixel/layout fidelity, 360px/desktop screenshots, keyboard/safe-area, fixed action bar, wrapping and absence of tab bar on detail screens. Original screenshots are not in the available repository materials.
+- **Not executed:** Node test suite (GitHub clone DNS failure), authenticated browser interactions, SQL/RLS/invoice-lock tests, offline/error simulations, production/development RPC calls. Do not interpret static coverage as runtime validation.
+- **Outstanding:** validate/edit RPCs; confirm student price-effective-date and version history semantics; test list/search behavior against Supabase, including whether server search returns all intended nickname matches; verify lesson read-model fields, status labels and billed amounts; resolve shell and Lessons callbacks through #21/#23. Zero-priced student defaults need product/backend decision; no change to backend or production data made.
+- **No merge/deployment/production write performed.**
