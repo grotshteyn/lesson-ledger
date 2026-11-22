@@ -81,3 +81,10 @@
 .ll-overlay .ll-cal-head strong{font-size:16px}
 .ll-overlay .ll-compare{gap:8px}
 .ll-overlay .ll-compare>div{padding:10px;font-size:13px}
+
+/* Reference lesson rows: date / student / price on one line. */
+.ll-app .ll-lessons .ll-list-row>span{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;flex:1;gap:8px}
+.ll-app .ll-lessons .ll-list-row strong,.ll-app .ll-lessons .ll-list-row small{margin:0;font-size:14px;line-height:19px}
+.ll-app .ll-lessons .ll-list-row small{color:#333}
+.ll-app .ll-lessons .ll-list-row b{font-weight:500}
+@media(max-width:360px){.ll-app .ll-lessons .ll-list-row>span{grid-template-columns:64px minmax(0,1fr);gap:6px}.ll-app .ll-lessons .ll-list-row strong,.ll-app .ll-lessons .ll-list-row small{font-size:13px}}
