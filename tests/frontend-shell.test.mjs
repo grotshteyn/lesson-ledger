@@ -45,5 +45,5 @@ test('settings control has a visible text label and keeps settings event',()=>{
  const markup=shellMarkup({tab:'lessons'});
  assert.match(markup,/>Settings<\/button>/);
  assert.match(markup,/data-ll-settings/);
- assert.match(markup,/aria-label="Settings"/);
+ assert.match(markup,/aria-label="Einstellungen öffnen"/);
 });
