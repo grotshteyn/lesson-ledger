@@ -1,6 +1,6 @@
 // E3 isolated UI. The integrator mounts this inside the shell's content root.
 export const lessonWeekGroups = (rows) => {
-  const monday = date => { const d = new Date(date + 'T12:00:00'); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d.toISOString().slice(0, 10); };
+  const monday = date => { const [y,m,day] = date.split('-').map(Number); const d = new Date(Date.UTC(y,m-1,day)); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
   const groups = new Map();
   [...rows].sort((a,b) => b.lesson_date.localeCompare(a.lesson_date) || String(b.created_at||'').localeCompare(String(a.created_at||''))).forEach(row => {
     const key = monday(row.lesson_date);
@@ -20,6 +20,7 @@ const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const euro = v => Number(v||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 const pretty = v => new Date(v+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
 const statusLabel = x => x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt oder nicht erschienen':'Abgesagt';
+export const lessonSaveFingerprint = (payload) => JSON.stringify([payload.studentId,payload.originalId||null,payload.date,payload.status,payload.minutes,payload.rate]);
 const isoToday = () => {const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const control = (label,id,type='text',value='',extra='') => '<label class="ll-field">'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
 const button = (text,action,kind='') => '<button type="button" class="ll-btn '+kind+'" data-action="'+action+'">'+esc(text)+'</button>';
@@ -31,7 +32,7 @@ const unwrap = result => {if(result.error)throw result.error;return result.data;
  */
 export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{},today=isoToday,initialLessonId=null,initialStudentId=null}){
   if(!root || !supabase)throw new Error('root und supabase erforderlich');
-  let disposed=false, view='list', students=[], names=new Map(), lessons=[], current=null, fixedStudent=null, draftKey=null, sheetReturn=null, revision=0;
+  let disposed=false, view='list', students=[], names=new Map(), lessons=[], current=null, fixedStudent=null, draftKey=null, draftFingerprint=null, sheetReturn=null, revision=0, defaultsRevision=0;
   const el = id => root.querySelector('#'+id);
   const html = markup => {if(!disposed)root.innerHTML='<div class="ll-lessons">'+markup+'</div>';};
   const alertError = error => {const n=el('ll-error');if(n)n.textContent=error?.message||String(error);};
@@ -68,7 +69,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     }catch(e){html('<p role="alert">'+esc(e.message)+'</p>'+button('Zurück','list'));actions();}
   }
   async function createLesson(studentId=null,original=null){
-    ++revision;view='form';subpage(true);current=original;fixedStudent=studentId||original?.student_id||null;draftKey=crypto.randomUUID();
+    ++revision;view='form';subpage(true);current=original;fixedStudent=studentId||original?.student_id||null;draftKey=crypto.randomUUID();draftFingerprint=null;
     const date=original?.lesson_date||today();
     html('<p role="status">Formular wird geladen …</p>');
     try{
@@ -93,10 +94,11 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   }
   async function defaults(id,date,update){
     if(!date)return;
+    const request=++defaultsRevision;
     try{
       const rows=unwrap(await supabase.rpc('student_details_at',{p_student_id:id,p_at:date}));
       if(!rows || (Array.isArray(rows)&&!rows.length))throw Error('Keine Schülerdaten für dieses Datum.');
-      if(update&&view==='form'&&el('ll-date')?.value===date){const details=Array.isArray(rows)?rows[0]:rows;el('ll-minutes').value=details.minutes;el('ll-rate').value=details.billing_mode==='monthly_flat'?0:details.rate;}
+      if(update&&request===defaultsRevision&&view==='form'&&fixedStudent===id&&el('ll-date')?.value===date){const details=Array.isArray(rows)?rows[0]:rows;el('ll-minutes').value=details.minutes;el('ll-rate').value=details.billing_mode==='monthly_flat'?0:details.rate;}
     }catch(e){alertError(e);}
   }
   function sheet(content,buttons){
@@ -127,9 +129,11 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();proceed();};
   }
   async function save(confirmInactive=false,confirmDuplicate=false){
-    const btn=root.querySelector('[data-action="save"]');if(btn)btn.disabled=true;
+    const btn=root.querySelector('[data-action="save"]');if(btn?.disabled)return;if(btn)btn.disabled=true;
     const date=el('ll-date').value,minutes=Number(el('ll-minutes').value),rate=Number(el('ll-rate').value),status=el('ll-status').value;
-    if(!fixedStudent||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isInteger(minutes)||minutes<5||minutes>240||!Number.isFinite(rate)||rate<0){alertError(Error('Bitte Schüler, Datum, Dauer (5–240) und einen Preis ab 0 € prüfen.'));if(btn)btn.disabled=false;return;}
+    if(!fixedStudent||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!['held','cancelled_billable'].includes(status)||!Number.isInteger(minutes)||minutes<5||minutes>240||!Number.isFinite(rate)||rate<0){alertError(Error('Bitte Schüler, Datum, Dauer (5–240) und einen Preis ab 0 € prüfen.'));if(btn)btn.disabled=false;return;}
+    const fingerprint=lessonSaveFingerprint({studentId:fixedStudent,originalId:current?.id,date,status,minutes,rate});
+    if(draftFingerprint!==fingerprint){draftKey=crypto.randomUUID();draftFingerprint=fingerprint;}
     const params={p_lesson_date:date,p_status:status,p_minutes:minutes,p_rate:rate,p_idempotency_key:draftKey,p_confirm_inactive:confirmInactive,p_confirm_duplicate:confirmDuplicate};
     const rpc=current?'replace_lesson_v2':'log_lesson_v2';
     if(current)params.p_old_lesson_id=current.id;else params.p_student_id=fixedStudent;
