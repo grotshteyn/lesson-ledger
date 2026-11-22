@@ -1,3 +1,4 @@
+alter table public.student_versions add column if not exists no_show_billable boolean not null default true;
 -- Transactional E3 operations. SECURITY DEFINER is limited by explicit auth.uid ownership checks.
 create or replace function public.log_lesson(
  p_student_id uuid, p_lesson_date date, p_status text default 'held',
@@ -50,7 +51,7 @@ begin
  end if;
  v_no_show:=p_status='no_show';
  v_status:=case when p_status='held' then 'held'
- when v_no_show or (p_cancelled_by='student' and not p_cancelled_in_time) then 'cancelled_billable'
+ when (v_no_show and v_version.no_show_billable) or (p_cancelled_by='student' and not p_cancelled_in_time) then 'cancelled_billable'
  else 'cancelled_free' end;
  insert into public.lessons (ledger_id,student_id,lesson_date,minutes,rate,billing_mode,status,no_show,charge_override,cancelled_by,cancelled_in_time,channel,idempotency_key)
  values(v_ledger,p_student_id,p_lesson_date,v_minutes,v_rate,v_bill,v_status,v_no_show,p_charge_override,p_cancelled_by,p_cancelled_in_time,p_channel,p_idempotency_key)
