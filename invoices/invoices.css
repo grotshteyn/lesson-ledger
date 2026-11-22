@@ -70,3 +70,33 @@
 .e4 button{cursor:pointer}
 .e4 button:focus-visible,.e4 input:focus-visible{outline:3px solid #555;outline-offset:2px}
 @media(max-width:360px){.e4-line>button:first-child{gap:5px;padding:10px 8px}.e4-line>button span{font-size:13px}.e4-line>button small{font-size:11px}.e4-line>button strong{font-size:13px}}
+
+/* E4 subpages use the same full-width, two-button modal action bar as
+   Students' .e2-actions. Only the overview retains a floating CTA. */
+.ll-app:has(.ll-tabs.ll-hidden) .ll-content:has(.e4){padding-bottom:0}
+.ll-app:has(.ll-tabs.ll-hidden) .e4{padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot{
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+  width:min(100%,680px);max-width:680px;
+  display:flex;flex-direction:row;gap:10px;
+  padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));
+  background:#f4f4f3;border-top:1px solid #e6e6e2;
+  z-index:11;pointer-events:auto
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot button{
+  flex:1 1 0;min-width:0;min-height:48px;height:auto;
+  padding:10px 8px;border:2px solid #242424;border-radius:12px;
+  background:#fff;color:#242424;box-shadow:none;
+  font:700 15px/1.25 Inter,system-ui,sans-serif;
+  overflow-wrap:anywhere
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot button:last-child{
+  background:#242424;color:#fff
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot button:disabled{
+  background:#999;color:#fff;border-color:#999;opacity:.65
+}
+@media(max-width:360px){
+ .ll-app:has(.ll-tabs.ll-hidden) .e4-foot{padding-left:14px;padding-right:14px;gap:8px}
+ .ll-app:has(.ll-tabs.ll-hidden) .e4-foot button{font-size:13px}
+}
