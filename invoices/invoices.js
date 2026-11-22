@@ -150,7 +150,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
      const days=Number(v('payment_days'));if(!Number.isInteger(days)||days<1||days>365)throw new Error('Zahlungsfrist muss zwischen 1 und 365 Tagen liegen.');
      await adapter.saveSettings(ledger,{teacher_name:v('name'),teacher_address:address,teacher_email:v('email'),phone:v('phone'),tax_number:v('tax'),vat_mode:f.querySelector('input[name="vat"]:checked')?.value||'unsure',iban:v('iban').replace(/\\s/g,'').toUpperCase(),bank_name:v('bank'),payment_days:days,cancellation_rule:data.cancellation_rule||'24h',invoice_prefix:data.invoice_prefix||null});
     }
-    notice='Angaben gespeichert.';await refresh();if(payer)await details('draft:'+current.studentId+':'+current.billingMonth);
+    const returnId=payer?'draft:'+current.studentId+':'+current.billingMonth:null;notice='Angaben gespeichert.';await refresh();if(returnId)await details(returnId);
    }catch(ex){error.textContent='Speichern fehlgeschlagen: '+(ex.message||'Unbekannter Fehler');submit.disabled=false;}
   });
  };
