@@ -382,7 +382,11 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
  if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
  if(data?.state!=='saved')return;
  const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
- notice.className='notice lesson-save-notice';notice.textContent='Stunde gespeichert. ';
+ notice.className='notice lesson-save-notice';
+ const name=row?.querySelector('strong')?.textContent||'Schüler';
+ const {data:defaults}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:today()});
+ const v=defaults?.[0];
+ notice.textContent='Gespeichert: '+name+', '+new Date(today()+'T12:00:00').toLocaleDateString('de-DE',{day:'numeric',month:'short'})+', '+(v?.minutes||'')+' Min., '+(v?.billing_mode==='monthly_flat'?'Monatspauschale':(v?.rate??'')+' €')+'. ';
  const undo=document.createElement('button');undo.className='link';undo.textContent='Rückgängig';notice.append(undo);
  row?.after(notice);
  let allowed=true;
