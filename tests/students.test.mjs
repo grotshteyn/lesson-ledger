@@ -76,3 +76,12 @@ test('ST-4: Basics form uses the payload allowlist, keeping name read-only',()=>
  assert.match(source,/Name: \$\{escape\(v\.student_name\)\} \(nicht bearbeitbar\)/);
  assert.doesNotMatch(source,/input\('student_name','Name',v\.student_name/);
 });
+
+
+test('student details use back arrow without redundant Fertig action',()=>{
+ assert.doesNotMatch(source,/data-finish/);
+ assert.match(source,/bind\('\[data-back\]',list\)/);
+});
+test('monthly lesson history shows monatlich while per-lesson uses saved rate',()=>{
+ assert.match(source,/l\.billing_mode==='monthly_flat'\?'monatlich':money\(l\.charge_override==='not_charged'\?0:l\.rate\)/);
+});
