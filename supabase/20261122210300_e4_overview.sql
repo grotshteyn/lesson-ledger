@@ -12,15 +12,12 @@ begin
  select id into v_ledger from public.ledgers where owner_id=(select auth.uid());
  if v_ledger is null then raise exception 'not_found'; end if;
  -- Limit a single overview call to 24 months to prevent unbounded RPC work.
- v_start:=greatest(p_through_month-interval '23 months',
-    (select coalesce(date_trunc('month',min(s.created_at))::date,p_through_month)
-     from public.students s where s.ledger_id=v_ledger));
+ v_start:=(p_through_month-interval '23 months')::date;
  for v_month in select g::date from generate_series(v_start,p_through_month,'1 month') g
  loop
    v_candidates:='[]'::jsonb;
    for v_student in
      select s.id from public.students s where s.ledger_id=v_ledger
-       and s.created_at<(v_month+interval '1 month')
        and not exists(select 1 from public.invoices i
          where i.student_id=s.id and i.ledger_id=v_ledger
          and i.billing_month=v_month and i.kind='standard'
