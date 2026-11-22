@@ -20,5 +20,15 @@ begin
  then raise exception 'Repriced lesson amount or replacement history is incorrect'; end if;
  v_repeat:=public.change_student_with_repricing(v_student,current_date,jsonb_build_object('price',v_price+3),true,v_key);
  if v_repeat->>'replayed'<>'true' then raise exception 'Reprice idempotency failed'; end if;
+ -- A later effective-dated price change must not mutate an older lesson snapshot.
+ if exists(select 1 from public.student_versions where student_id=v_student and effective_from<=current_date-1)
+ and public.student_status_at(v_student,current_date-1)='active' then
+  v_lesson:=public.log_lesson(v_student,current_date-1,'held',60,null,null,null,null,true,gen_random_uuid(),'web');
+  if v_lesson->>'state'<>'saved' then raise exception 'Historical fixture failed'; end if;
+  select rate into v_price from public.lessons where id=(v_lesson->>'id')::uuid;
+  perform public.change_student_with_repricing(v_student,current_date,jsonb_build_object('price',v_price+5),false,gen_random_uuid());
+  if not exists(select 1 from public.lessons where id=(v_lesson->>'id')::uuid and rate=v_price)
+  then raise exception 'Historical price snapshot was mutated'; end if;
+ end if;
 end $$;
 rollback;
