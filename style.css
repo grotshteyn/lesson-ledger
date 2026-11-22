@@ -90,3 +90,19 @@ body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
 .ll-hidden{display:none!important}
 .ll-module-root{min-height:0}
 .ll-content{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+
+/* IN-1: empty state fills available space between header and bottom navigation. */
+.ll-app:has(.ll-invoices-empty){display:flex;flex-direction:column}
+.ll-app:has(.ll-invoices-empty)>.ll-content{flex:1;display:flex;flex-direction:column;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.ll-invoices-empty{flex:1;display:flex;align-items:center;justify-content:center;min-height:260px;text-align:center;padding:32px 12px}
+.ll-invoices-message{max-width:340px;margin:auto;overflow-wrap:anywhere}
+.ll-invoices-message h2{font-size:21px;line-height:1.3;margin:0 0 12px}
+.ll-invoices-message p{color:#606060;line-height:1.5;margin:0}
+/* Responsive shell navigation and long labels; do not change feature-module styles. */
+.ll-tabs{min-width:0;max-width:100vw}
+.ll-tab{overflow-wrap:anywhere;text-align:center;padding:4px;touch-action:manipulation}
+.ll-tab span:last-child{min-width:0;max-width:100%}
+.ll-header h1{flex:1}
+.ll-settings{flex-shrink:0}
+@media(min-width:681px){.ll-app{width:100%;max-width:680px;margin-inline:auto}}
+@media(max-width:380px){.ll-tabs{padding-inline:4px}.ll-tab{font-size:12px}}

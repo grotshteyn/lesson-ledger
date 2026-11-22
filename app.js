@@ -10,7 +10,8 @@ const escapeHTML=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const $=id=>document.getElementById(id);
 const button=(label,id,kind='primary')=>'<button type="button" id="'+id+'" class="'+kind+'">'+label+'</button>';
 const frame=(html,screen='')=>{document.body.className=screen;root.innerHTML='<main class="shell">'+html+'</main>'};
-const err=e=>{const n=$('error');if(n)n.textContent=e?.message||String(e)};
+const germanError=e=>{const message=String(e?.message||e||'');if(/invalid login credentials/i.test(message))return 'E-Mail-Adresse oder Passwort ist falsch.';if(/email not confirmed/i.test(message))return 'Bitte bestätige zuerst deine E-Mail-Adresse.';if(/rate limit|too many requests|over_email_send_rate_limit/i.test(message))return 'Zu viele Versuche. Bitte warte und versuche es später erneut.';if(/failed to fetch|network|fetch failed/i.test(message))return 'Verbindung fehlgeschlagen. Bitte prüfe deine Internetverbindung.';return 'Die Aktion konnte nicht abgeschlossen werden. Bitte versuche es erneut.';};
+const err=e=>{const n=$('error');if(n)n.textContent=germanError(e)};
 const addr=()=>draft.teacher_address||{street:'',postcode:'',city:'',country:'Deutschland'};
 const ibanValid=s=>{let v=(s||'').replace(/\s/g,'').toUpperCase();if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;v=v.slice(4)+v.slice(0,4);let r=0;for(const c of v){const str=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const digit of str)r=(r*10+Number(digit))%97}return r===1};
 const missing=s=>[['tax_number','Steuernummer'],['vat_mode','Umsatzsteuer'],['iban','IBAN']].filter(([k])=>!s?.[k]||s[k]==='unsure');
@@ -159,7 +160,7 @@ function renderTab(tab,content='',actionLabel=''){
  bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();}});
 }
 function routeTab(tab,options={}){
- if(tab==='invoices'){renderTab('invoices','<section class="card ll-empty"><h2>Rechnungen</h2><p>Rechnungen sind bald verfügbar. Bereits erfasste Stunden bleiben für die spätere Rechnungsstellung erhalten.</p></section>');return;}
+ if(tab==='invoices'){renderTab('invoices','<section class="ll-invoices-empty" role="status" aria-labelledby="ll-invoices-heading"><div class="ll-invoices-message"><h2 id="ll-invoices-heading">Noch keine Rechnungen</h2><p>Die Rechnungsfunktion ist bald verfügbar. Deine erfassten Stunden bleiben erhalten.</p></div></section>');return;}
  renderTab(tab);
  const mountRoot=$('ll-module-root');
  if(tab==='students'){
