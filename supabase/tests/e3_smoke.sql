@@ -28,6 +28,15 @@ begin
  if v_edit->>'state'<>'saved' then raise exception 'Atomic edit failed: %',v_edit; end if;
  if not exists(select 1 from public.lesson_voids where lesson_id=(v_first->>'id')::uuid and replacement_id=(v_edit->>'id')::uuid)
  then raise exception 'Replacement history missing'; end if;
+ -- Verify cancellation, override, no-show and flat-fee snapshot behavior.
+ v_second:=public.log_lesson(v_student,current_date,'cancelled',null,null,'teacher',null,'charged',true,gen_random_uuid(),'web');
+ if v_second->>'state'<>'saved' then raise exception 'Cancellation override logging failed'; end if;
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_free' and charge_override='charged')
+ then raise exception 'Charge override not preserved'; end if;
+ v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,'not_charged',true,gen_random_uuid(),'web');
+ if v_second->>'state'<>'saved' then raise exception 'No-show logging failed'; end if;
+ if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and no_show and charge_override='not_charged')
+ then raise exception 'No-show override not preserved'; end if;
  v_void:=public.void_lesson((v_edit->>'id')::uuid,'undo',gen_random_uuid(),'web');
  if v_void is null then raise exception 'Undo failed'; end if;
 end $test$;
