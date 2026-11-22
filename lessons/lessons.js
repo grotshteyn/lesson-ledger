@@ -104,7 +104,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   }
   function renderForm(date,original){
     const initialStatus=original?.status==='cancelled_billable'?'cancelled_billable':'held';
-    const dateChoice=original?'calendar':'today';
+    const dateChoice=original?(date===today()?'today':'calendar'):'today';
     const chosenName=students.find(s=>s.student_id===fixedStudent)?.student_name||names.get(fixedStudent)||'Schüler';
     const nameBlock=fixedStudent?'<div class="ll-fixed-student"><strong>'+esc(chosenName)+'</strong><small>'+esc(students.find(s=>s.student_id===fixedStudent)?.subject||'')+'</small></div>':'<label class="ll-field ll-student-label">Schüler<input id="ll-search" type="search" placeholder="Name oder Kurzname" autocomplete="off"></label><div id="ll-students" class="ll-student-scroll" role="listbox" aria-label="Schüler auswählen"></div><p id="ll-selection" class="ll-muted">Bitte Schüler auswählen</p>';
     html('<header class="ll-heading ll-form-heading"><h2>'+(original?'Stunde bearbeiten':'Neue Stunde')+'</h2></header><section class="ll-card ll-form-card">'+nameBlock+
@@ -122,6 +122,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       el('ll-date-display').textContent=new Date(dateInput.value+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
       if(openCalendar)calendar();
     };
+    actions();
     root.querySelectorAll('[data-status]').forEach(b=>b.onclick=()=>{
       el('ll-status').value=b.dataset.status;
       root.querySelectorAll('[data-status]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
@@ -139,7 +140,6 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     if(original?.invoice_id)root.querySelectorAll('.ll-form-card input,.ll-status-segment button,.ll-quick button').forEach(x=>x.disabled=true);
     const saveButton=root.querySelector('[data-action="save"]');if(saveButton)saveButton.disabled=!fixedStudent;
     if(!fixedStudent){const search=el('ll-search');search.oninput=()=>showStudents(search.value);showStudents('');}
-    actions();
   }
   function showStudents(query){
     const target=el('ll-students');if(!target)return;
