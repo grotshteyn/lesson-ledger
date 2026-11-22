@@ -136,3 +136,19 @@ test('E1: three-tab navigation, settings entry and return without legacy Home',a
   await context.close();
  }finally{await browser.close()}
 });
+
+test('E3 navigation: cancel a lesson from a student returns to that same student Stunden view',async()=>{
+ const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+ try{
+  const {context,page}=await startPage(browser,{width:390,height:844});
+  await openStudents(page);
+  await createStudent(page,'Return Context');
+  await page.locator('[data-tab="lessons"]').click();
+  await page.locator('[data-new-lesson]').click();
+  await page.locator('[data-action="list"]').click();
+  await page.locator('[data-tab="lessons"][aria-pressed="true"]').waitFor();
+  assert.match(await page.locator('.e2-heading').innerText(),/Return Context/);
+  assert.equal(await page.locator('[data-ll-tab="students"]').getAttribute('aria-current'),'page');
+  await context.close();
+ }finally{await browser.close();}
+});
