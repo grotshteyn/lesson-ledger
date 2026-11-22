@@ -30,10 +30,16 @@ begin
  select id into v_id from public.lessons where ledger_id=v_ledger and idempotency_key=p_idempotency_key;
  if v_id is not null then return jsonb_build_object('state','saved','id',v_id,'replayed',true); end if;
  select * into v_version from public.student_details_at(p_student_id,p_lesson_date);
- if v_version.id is null then raise exception 'No student settings for date'; end if;
- select public.student_status_at(p_student_id,p_lesson_date) into v_status;
- if v_status <> 'active' and not p_confirm_inactive then
-  return jsonb_build_object('state','inactive','student_status',v_status);
+ if v_version.id is null then
+  select * into v_version from public.student_versions where student_id=p_student_id
+  order by effective_from asc, created_at asc, id asc limit 1;
+  if v_version.id is null then raise exception 'No student settings available'; end if;
+  v_status:='not_started';
+ else
+  select public.student_status_at(p_student_id,p_lesson_date) into v_status;
+ end if;
+ if v_status is distinct from 'active' and not p_confirm_inactive then
+  return jsonb_build_object('state','inactive','student_status',coalesce(v_status,'unknown'));
  end if;
  select x.id into v_existing from public.lessons x where x.student_id=p_student_id
  and x.lesson_date=p_lesson_date and not exists
