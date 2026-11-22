@@ -10,7 +10,7 @@ This document describes the **current deployed RPCs**, not the earlier token-bas
 - `get_invoice_preview({p_student_id:"uuid",p_billing_month:"2026-10-01"})`: returns invoice date, due date, teacher, payer, student name, VAT mode, `lines`, `excluded_lessons`, decimal-string totals and `validation_errors`.
 - `issue_invoices({p_selections:[{student_id:"uuid",billing_month:"2026-10-01"}],p_idempotency_key:"uuid"})`: batch of 1–30, each independently attempted; returns `{results:[{student_id,billing_month,status:"issued",invoice_id,invoice_number,replayed:false}|{student_id,billing_month,status:"failed",error_code:"..."}]}`. Generate one UUID for each confirmation and reuse it on retry. Some items may succeed while others fail.
 - `issue_invoice({p_student_id:"uuid",p_billing_month:"2026-10-01",p_idempotency_key:"uuid"})`: optional single-item call; returns `{status:"issued",invoice_id,invoice_number,replayed:boolean}`; errors are Postgres exceptions.
-- `get_invoice({p_invoice_id:"uuid"})`: immutable `snapshot`, `lines`, totals, status, cancellation ID, and currently `pdf_status:"pending"` (this field does **not** dynamically track Storage).
+- `get_invoice({p_invoice_id:"uuid"})`: immutable `snapshot`, `lines`, totals, status, cancellation ID, and `pdf_status:"on_demand"` (this field does **not** dynamically track Storage).
 - `cancel_invoice({p_invoice_id:"uuid",p_idempotency_key:"uuid"})`: creates a numbered negative invoice, returns `{status:"cancelled",invoice_id,invoice_number,replayed:boolean}`; original invoice is retained, lesson locks released. The caller must fetch the new invoice and reissue corrections separately. This path needs full success-path E2E.
 
 All billing months are **first-of-month** ISO dates, all monetary JSON values are decimal strings, and invoice date is today's date. Server is the source of truth. No preview/confirmation tokens.
@@ -30,7 +30,7 @@ No emails are sent automatically. Do not construct Storage paths or use service-
 - Batch reports per-item outcomes. Frontend must not show an invoice as issued before RPC success.
 - No automated replacement: cancel, edit lessons/settings via E3, then issue a new invoice.
 - Missing payer address, teacher IBAN/tax/VAT mode and empty billable items block issuance.
-- `get_invoice` PDF status is provisional; use Edge Function response as the authoritative availability check.
+- `get_invoice` reports `on_demand`; use Edge Function response as the authoritative availability check.
 - Error codes in `validation_errors` are stable-ish but still need frontend contract review; failed batch `error_code` currently carries truncated database exception text, not a normalized enum.
 
 ## Release gates (NOT all met)
