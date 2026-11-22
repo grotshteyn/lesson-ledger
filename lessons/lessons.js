@@ -89,6 +89,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     html('<p role="status">Formular wird geladen …</p>');
     try{
       if(!students.length){const r=unwrap(await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}));const seen=new Set();students=r.filter(s=>{if(seen.has(s.student_id))return false;seen.add(s.student_id);return true;});}
+       if(!original&&!fixedStudent){try{const all=(await Promise.all(['active','paused','ended'].map(p_status=>supabase.rpc('find_students',{p_query:'',p_status,p_at:today()})))).flatMap((r,i)=>unwrap(r).map(s=>({...s,status:['active','paused','ended'][i]})));if(all.length)students=all.sort((a,b)=>a.student_name.localeCompare(b.student_name,'de'));}catch(e){/* retain version-list fallback if status discovery unavailable */}}
       renderForm(date,original);
       if(original){
         const historyTarget=el('ll-edit-history');
@@ -108,7 +109,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     const chosenName=students.find(s=>s.student_id===fixedStudent)?.student_name||names.get(fixedStudent)||'Schüler';
     const nameBlock=fixedStudent?'<div class="ll-fixed-student"><strong>'+esc(chosenName)+'</strong><small>'+esc(students.find(s=>s.student_id===fixedStudent)?.subject||'')+'</small></div>':'<label class="ll-field ll-student-label">Schüler<input id="ll-search" type="search" placeholder="Name oder Kurzname" autocomplete="off"></label><div id="ll-students" class="ll-student-scroll" role="listbox" aria-label="Schüler auswählen"></div><p id="ll-selection" class="ll-muted">Bitte Schüler auswählen</p>';
     html('<header class="ll-heading ll-form-heading"><h2>'+(original?'Stunde bearbeiten':'Neue Stunde')+'</h2></header><section class="ll-card ll-form-card">'+nameBlock+
-      '<div class="ll-form-section"><label class="ll-field-title">Datum</label><div class="ll-quick ll-segment" role="group" aria-label="Datum auswählen">'+button('Heute','today')+button('Gestern','yesterday')+button('Datum wählen','calendar')+'</div><div class="ll-date-row" id="ll-date-row"><span id="ll-date-display"></span>'+control('Datum','ll-date','date',date,'required')+'</div></div>'+
+      '<div class="ll-form-section"><label class="ll-field-title">Datum</label><div class="ll-quick ll-segment" role="group" aria-label="Datum auswählen">'+button('Heute','today')+button('Gestern','yesterday')+button('Datum wählen','calendar')+'</div><span id="ll-date-display" class="ll-date-display"></span><div class="ll-date-row" id="ll-date-row">'+control('Datum','ll-date','date',date,'required')+'</div></div>'+
       '<div class="ll-form-section"><span class="ll-field-title">Was ist passiert?</span><div class="ll-status-segment ll-segment" role="group" aria-label="Was ist passiert?"><button type="button" data-status="held" aria-pressed="'+(initialStatus==='held')+'">Gehalten</button><button type="button" data-status="cancelled_billable" aria-pressed="'+(initialStatus==='cancelled_billable')+'">Spät abgesagt oder nicht erschienen</button></div><input type="hidden" id="ll-status" value="'+initialStatus+'"></div>'+
       '<div class="ll-numeric-row">'+control('Dauer (Minuten)','ll-minutes','number',original?.minutes??60,'min="5" max="240" step="1"')+control('Preis (€)','ll-rate','number',original?.rate??0,'min="0" step="0.01"')+'</div><p class="ll-muted">0 € bedeutet: nicht berechnen.</p></section>'+
       (original?'<section class="ll-history-section"><h3>Verlauf</h3><div id="ll-edit-history" role="status">Verlauf wird geladen …</div></section>':'')+
@@ -144,7 +145,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   function showStudents(query){
     const target=el('ll-students');if(!target)return;
     const q=query.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de');
-    const rows=students.filter(s=>(s.student_name+' '+(s.nickname||'')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').includes(q)).slice(0,50);
+    const rows=students.filter(s=>(q || !s.status || s.status==='active')&&(s.student_name+' '+(s.nickname||'')).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').includes(q)).slice(0,50);
     target.innerHTML=rows.map(s=>'<button type="button" role="option" aria-selected="'+(fixedStudent===s.student_id)+'" data-pick="'+esc(s.student_id)+'">'+esc(s.student_name)+'</button>').join('')||'<p>Keine Treffer</p>';
     target.querySelectorAll('[data-pick]').forEach(b=>b.onclick=async()=>{fixedStudent=b.dataset.pick;el('ll-selection').textContent=students.find(s=>s.student_id===fixedStudent)?.student_name||'';root.querySelector('[data-action="save"]').disabled=false;showStudents(el('ll-search').value);await defaults(fixedStudent,el('ll-date').value,true);});
   }
