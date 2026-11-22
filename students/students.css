@@ -162,3 +162,53 @@
 .ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button[aria-pressed=true]{background:#fff;color:#242424;box-shadow:0 1px 3px #0002}
 .ll-app .e2-screen:has(#e2-form) .e2-card-heading h2,.ll-app .e2-screen:has(#e2-edit) .e2-card-heading h2{font-size:15px;font-weight:700}
 .ll-app .e2-screen:has(#e2-edit) .e2-actions{position:sticky;bottom:0}
+
+
+/* Student tabs and teaching location use the same inset single-select treatment. */
+.ll-app .e2-screen .e2-tabs.e2-single-select,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment{
+  display:flex;
+  flex-wrap:nowrap;
+  width:100%;
+  gap:3px;
+  padding:3px;
+  border:0;
+  border-radius:9px;
+  overflow:hidden;
+  background:#e6e6e3;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{
+  flex:1 1 0;
+  min-width:0;
+  min-height:44px;
+  margin:0;
+  padding:7px 4px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#242424;
+  font-size:13px;
+  font-weight:500;
+  line-height:1.25;
+  white-space:normal;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button+button,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:nth-child(n){
+  border:0;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button[aria-pressed=true],
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button[aria-pressed=true]{
+  background:#fff;
+  color:#242424;
+  box-shadow:0 1px 3px #0002;
+  font-weight:700;
+}
+.ll-app .e2-screen .e2-tabs.e2-single-select button:focus-visible,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button:focus-visible{
+  outline:2px solid #333;
+  outline-offset:-3px;
+}
+@media(max-width:360px){
+  .ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{font-size:12px}
+}
