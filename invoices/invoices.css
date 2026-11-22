@@ -131,3 +131,9 @@
 .e4-detail .e4-foot button:last-child{background:#242424;color:#fff}
 .e4-detail .e4-foot button:disabled{background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1}
 @media(max-width:360px){.e4-detail{padding-left:16px;padding-right:16px}.e4-detail .e4-subhead{margin-inline:-16px;padding-inline:16px}.e4-detail>.e4-warning,.e4-detail>.e4-ready,.e4-detail>.e4-success{margin-inline:-16px;padding-inline:16px}}
+
+/* Win over the generic subpage footer without affecting batch dialogs. */
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot{background:#fff;border-top:1px solid #d6d6d2}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:first-child{background:#fff;color:#242424;border-color:#242424}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:last-child{background:#242424;color:#fff;border-color:#242424}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:last-child:disabled{background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1}
