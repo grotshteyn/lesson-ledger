@@ -63,7 +63,7 @@
 .e2-screen:has(#e2-search) .e2-row-main small{font-size:12px;line-height:16px;margin-top:2px;color:#555}
 .e2-screen:has(#e2-search) .e2-row-price{font-size:15px;line-height:20px;font-weight:400;white-space:nowrap}
 .e2-screen:has(#e2-search) .e2-floating{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:9;margin:0;pointer-events:none}
-.e2-screen:has(#e2-search) .e2-floating button{height:56px;min-height:56px;border:0;border-radius:28px;padding:0 24px;background:#222;color:#fff;font-size:15px;font-weight:600;white-space:nowrap;box-shadow:0 3px 12px #0002;pointer-events:auto}
+.e2-screen:has(#e2-search) .e2-floating button{height:56px;min-height:56px;border:0;border-radius:28px;padding:0 24px;background:#222;color:#fff;font-size:17px;font-weight:700;white-space:nowrap;box-shadow:0 3px 12px #0002;pointer-events:auto}
 .e2-screen:has(#e2-search) .e2-student-list>.e2-muted{padding:12px 14px;margin:0;font-size:13px}
 
 /* Students shell only: match the reference's text-only three-tab navigation. */
@@ -80,3 +80,7 @@
 .ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-group{margin-bottom:12px}
 .ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-price{flex:0 0 auto;overflow-wrap:normal}
 .ll-app:has([data-ll-tab="students"][aria-current="page"]) .e2-row-main small{margin-top:2px}
+
+/* The HTML reference de-emphasizes ended rows and the monthly-rate label. */
+.e2-screen:has(#e2-search) .e2-group:last-child .e2-student-row{color:#555}
+.e2-screen:has(#e2-search) .e2-row-price:has(+ *){color:inherit}
