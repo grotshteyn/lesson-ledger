@@ -110,6 +110,14 @@ begin
  end if;
  if v_old.invoice_id is not null then raise exception 'Lesson was invoiced in the meantime'; end if;
  if exists(select 1 from public.lesson_voids where lesson_id=v_old.id) then raise exception 'Lesson already voided'; end if;
+ if not p_confirm_duplicate then
+  select x.id into v_new_id from public.lessons x
+  where x.student_id=v_old.student_id and x.lesson_date=p_lesson_date
+  and x.id<>v_old.id
+  and not exists(select 1 from public.lesson_voids z where z.lesson_id=x.id)
+  order by x.created_at desc limit 1;
+  if v_new_id is not null then return jsonb_build_object('state','duplicate','existing_id',v_new_id); end if;
+ end if;
  -- Void before logging so the old record is excluded from duplicate checks.
  insert into public.lesson_voids(ledger_id,lesson_id,reason,idempotency_key,channel)
  values(v_old.ledger_id,v_old.id,'edit',gen_random_uuid(),'web') returning id into v_void_id;
