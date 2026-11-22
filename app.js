@@ -199,7 +199,7 @@ async function studentsPage(initialSearch=''){
   const matches=responses[statuses.indexOf(selected)].data||[];
   $('studentResults').innerHTML=matches.length?matches.map(x=>'<div class="lesson-student-row"><button class="student-item" data-student="'+escapeHTML(x.student_id)+'"><span><strong>'+escapeHTML(x.student_name)+'</strong><span>'+escapeHTML(x.subject)+' · '+escapeHTML(x.minutes||'')+' Min.</span></span><span class="student-price">'+escapeHTML(x.billing_mode==='monthly_flat'?x.monthly_fee+' € / Monat':x.rate+' € / Stunde')+'</span></button>'+(selected==='active'?'<button class="primary lesson-log-btn" data-log="'+escapeHTML(x.student_id)+'">Log</button>':'')+'</div>').join(''):'<p class="muted">Keine Schüler gefunden.</p>'+button('+ Schüler hinzufügen','addFromSearch','secondary');
   document.querySelectorAll('[data-student]').forEach(b=>b.onclick=()=>studentPage(b.dataset.student));
-  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>logLessonSheet(b.dataset.log));
+  document.querySelectorAll('[data-log]').forEach(b=>b.onclick=()=>quickLogLesson(b.dataset.log,b));
   if($('addFromSearch'))$('addFromSearch').onclick=()=>studentForm($('studentSearch').value.trim());
  }
  $('studentSearch').oninput=render;
@@ -367,6 +367,25 @@ function studentStatusForm(id,v,current){
 }
 
 
+async function quickLogLesson(studentId,button){
+ const key=crypto.randomUUID();button.disabled=true;
+ const args={p_student_id:studentId,p_lesson_date:today(),p_idempotency_key:key};
+ let {data,error}=await supabase.rpc('log_lesson',args);
+ if(!error&&data?.state==='duplicate'){
+  if(confirm('Für heute ist bereits eine Stunde erfasst. Eine zweite speichern?'))({data,error}=await supabase.rpc('log_lesson',{...args,p_confirm_duplicate:true}));
+  else{button.disabled=false;return;}
+ }
+ button.disabled=false;
+ if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button);return;}
+ if(data?.state!=='saved')return;
+ const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
+ notice.className='notice lesson-save-notice';notice.textContent='Stunde gespeichert. ';
+ const undo=document.createElement('button');undo.className='link';undo.textContent='Rückgängig';notice.append(undo);
+ row?.after(notice);
+ let allowed=true;
+ const timer=setTimeout(()=>{allowed=false;undo.remove();},10000);
+ undo.onclick=async()=>{if(!allowed)return;allowed=false;clearTimeout(timer);undo.disabled=true;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});notice.textContent=error?'Rückgängig fehlgeschlagen: '+error.message:'Stunde entfernt';};
+}
 const lessonMoney=x=>x.billing_mode==='monthly_flat'?0:(x.charge_override==='not_charged'?0:x.charge_override==='charged'?Number(x.rate):x.status==='cancelled_free'?0:Number(x.rate));
 async function loadLessonHistory(id){
  const target=$('lessonHistory');if(!target)return;
