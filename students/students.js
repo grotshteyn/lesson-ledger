@@ -5,6 +5,7 @@ export const STUDENT_STORIES = ['ST-1','ST-3','ST-4','ST-6','ST-6.5'];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const normalize = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').trim();
 export const money = value => Number(value || 0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+export const studentOverviewPrice = s => s.billing_mode === 'monthly_flat' ? 'monatlich' : `${Number(s.rate ?? s.price ?? 0).toLocaleString('de-DE',{maximumFractionDigits:2})} €`;
 export const studentPrice = s => s.billing_mode === 'monthly_flat' ? money(s.monthly_fee ?? s.price) + ' / Monat' : money(s.rate ?? s.price) + ' / Stunde';
 export const matchingStudents = (students,query) => students.filter(s=>!normalize(query)||normalize(s.student_name).includes(normalize(query))||normalize(s.nickname).includes(normalize(query)));
 export const basicsChanges = values => ({nickname:String(values.nickname??'').trim(),subject:String(values.subject??'').trim()});
@@ -49,7 +50,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     const rows=await Promise.all(['active','paused','ended'].map(status=>rpc('find_students',{p_query:search.trim(),p_status:status,p_at:today()}).then(items=>(items||[]).map(s=>({...s,status})))));
     if(!alive||request!==sequence)return;
     const grouped=groupStudents(matchingStudents(rows.flat(),search));
-    result.innerHTML=grouped.map(g=>`<section class="e2-group"><h2>${statusNames[g.status]} <span>(${g.items.length})</span></h2><div class="e2-student-list">${g.items.length?g.items.map(s=>`<button class="e2-student-row" data-student="${escape(s.student_id)}"><span class="e2-row-main"><strong>${escape(s.student_name)}</strong><small>${escape([s.subject,s.minutes ? `${s.minutes} Min.` : ''].filter(Boolean).join(' · '))}</small></span><span class="e2-row-price">${escape(studentPrice(s))}</span></button>`).join(''):'<p class="e2-muted">Keine Schüler</p>'}</div></section>`).join('');
+    result.innerHTML=grouped.map(g=>`<section class="e2-group"><h2>${statusNames[g.status]} <span>(${g.items.length})</span></h2><div class="e2-student-list">${g.items.length?g.items.map(s=>`<button class="e2-student-row" data-student="${escape(s.student_id)}"><span class="e2-row-main"><strong>${escape(s.student_name)}</strong><small>${escape([s.subject,s.minutes ? `${s.minutes} Min.` : ''].filter(Boolean).join(' · '))}</small></span><span class="e2-row-price">${escape(studentOverviewPrice(s))}</span></button>`).join(''):'<p class="e2-muted">Keine Schüler</p>'}</div></section>`).join('');
     result.querySelectorAll('[data-student]').forEach(b=>b.addEventListener('click',()=>detailPage(b.dataset.student)));
    }catch(e){if(alive&&request===sequence){result.textContent='Schüler konnten nicht geladen werden.';showError(e)}}
   }
