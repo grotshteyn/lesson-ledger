@@ -39,6 +39,15 @@ begin
   if v_ledger is null then raise exception 'not_found'; end if;
 
   select * into v_student from public.student_details_at(p_student_id,p_billing_month);
+  -- A student beginning mid-month has no first-of-month version. Use the
+  -- first effective version in that month without backdating earlier months.
+  if v_student.id is null then
+    select sv.* into v_student from public.student_versions sv
+      where sv.student_id=p_student_id
+        and sv.effective_from>=p_billing_month
+        and sv.effective_from<v_month_end
+      order by sv.effective_from,sv.created_at,sv.id limit 1;
+  end if;
   select * into v_settings from public.ledger_settings_at(v_ledger,v_issued_on);
   if v_student.id is null then
     v_errors := v_errors || '["student_details_missing"]'::jsonb;
