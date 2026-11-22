@@ -1,3 +1,4 @@
+import {germanBackendError} from '../frontend/backend-errors.js';
 // E3 isolated UI. The integrator mounts this inside the shell's content root.
 export const lessonWeekGroups = (rows) => {
   const monday = date => { const [y,m,day] = date.split('-').map(Number); const d = new Date(Date.UTC(y,m-1,day)); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
@@ -35,7 +36,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
   let disposed=false, view='list', students=[], names=new Map(), lessons=[], current=null, fixedStudent=null, draftKey=null, draftFingerprint=null, sheetReturn=null, revision=0, defaultsRevision=0;
   const el = id => root.querySelector('#'+id);
   const html = markup => {if(!disposed)root.innerHTML='<div class="ll-lessons">'+markup+'</div>';};
-  const alertError = error => {const n=el('ll-error');if(n)n.textContent=error?.message||String(error);};
+  const alertError = error => {const n=el('ll-error');if(n)n.textContent=germanBackendError(error);};
   const actions = () => root.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>dispatch(b.dataset.action));
   const subpage = value => onSubpageChange(Boolean(value));
   async function load(){
@@ -56,7 +57,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
       html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>Woche ab '+pretty(g.week)+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+' · '+statusLabel(x)+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
-    }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(e.message)+'</p>'+button('Erneut versuchen','reload'));actions();}}
+    }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(germanBackendError(e))+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
   async function openLesson(id,studentId){
     ++revision;view='detail';subpage(true);html('<p role="status">Stunde wird geladen …</p>');
@@ -138,7 +139,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();proceed();};
   }
   async function save(confirmInactive=false,confirmDuplicate=false){
-    const btn=root.querySelector('[data-action="save"]');if(btn?.disabled)return;if(btn)btn.disabled=true;
+    const btn=root.querySelector('[data-action="save"]');if(btn?.disabled && !confirmInactive && !confirmDuplicate)return;if(btn)btn.disabled=true;
     const date=el('ll-date').value,minutes=Number(el('ll-minutes').value),rate=Number(el('ll-rate').value),status=el('ll-status').value;
     if(!fixedStudent||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!['held','cancelled_billable'].includes(status)||!Number.isInteger(minutes)||minutes<5||minutes>240||!Number.isFinite(rate)||rate<0){alertError(Error('Bitte Schüler, Datum, Dauer (5–240) und einen Preis ab 0 € prüfen.'));if(btn)btn.disabled=false;return;}
     const fingerprint=lessonSaveFingerprint({studentId:fixedStudent,originalId:current?.id,date,status,minutes,rate});
@@ -151,11 +152,11 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       if(result?.state==='inactive'){
         const {overlay,close}=sheet('<h3>Inaktiver Schüler</h3><p>Der Schüler ist an diesem Datum nicht aktiv. Trotzdem speichern?</p>',button('Abbrechen','cancel')+button('Trotzdem speichern','confirm','ll-primary'));
         overlay.querySelector('[data-action="cancel"]').onclick=()=>{close();if(btn)btn.disabled=false;};
-        overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();save(true,confirmDuplicate);};return;
+        overlay.querySelector('[data-action="confirm"]').onclick=()=>{close();if(btn)btn.disabled=false;save(true,confirmDuplicate);};return;
       }
       if(result?.state==='duplicate'){
         const existing=lessons.find(x=>x.student_id===fixedStudent&&x.lesson_date===date&&x.id!==current?.id);
-        if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>save(confirmInactive,true));return;
+        if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>{if(btn)btn.disabled=false;save(confirmInactive,true);});return;
       }
       if(result?.state!=='saved')throw Error('Speichern wurde nicht bestätigt.');
       await load();
