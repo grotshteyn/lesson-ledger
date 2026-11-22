@@ -17,6 +17,11 @@ const locationNames={my_place:'Bei mir',student_home:'Beim Schüler',online:'Onl
 const dateLabel = value => value ? new Date(String(value).slice(0,10)+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'}) : '';
 const input = (key,label,value='',type='text',required=false) => `<label class="e2-field">${escape(label)}<input name="${key}" type="${type}" value="${escape(value)}" ${required?'required':''}></label>`;
 const select = (key,label,options,value) => `<label class="e2-field">${escape(label)}<select name="${key}">${options.map(([v,l])=>`<option value="${escape(v)}" ${String(value)===String(v)?'selected':''}>${escape(l)}</option>`).join('')}</select></label>`;
+const segmented = (key,label,options,value) => '<div class="e2-choice-field"><span class="e2-choice-label">'+escape(label)+'</span><div class="e2-segment" role="group" aria-label="'+escape(label)+'">'+options.map(([v,l])=>'<button type="button" data-choice="'+escape(key)+'" data-value="'+escape(v)+'" aria-pressed="'+(String(value)===String(v))+'">'+escape(l)+'</button>').join('')+'</div><input type="hidden" name="'+escape(key)+'" value="'+escape(value)+'"></div>';
+const lessonLength = (value=45) => segmented('length_choice','Dauer der Stunde',[['30','30'],['45','45'],['60','60'],['90','90'],['other','Andere']],String([30,45,60,90].includes(Number(value))?value:'other'))+'<div class="e2-other-length" '+([30,45,60,90].includes(Number(value))?'hidden':'')+'>'+input('minutes','Andere Dauer (Minuten)',value,'number',true)+'</div>'+( [30,45,60,90].includes(Number(value))?'<input type="hidden" name="minutes" value="'+escape(value)+'">':'');
+const billingChoice = value => segmented('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],value);
+const locationChoice = value => segmented('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],value||'');
+const effectiveChoice = date => segmented('effective_choice','Gültig ab',[['today','Heute'],['next','1. des nächsten Monats'],['other','Anderes Datum']],date===todayLocal()?'today':date===nextMonthStart(todayLocal())?'next':'other')+'<div class="e2-effective-date" '+(date===todayLocal()||date===nextMonthStart(todayLocal())?'hidden':'')+'>'+input('effective_from','Datum',date,'date',true)+'</div>'+(date===todayLocal()||date===nextMonthStart(todayLocal())?'<input type="hidden" name="effective_from" value="'+escape(date)+'">':'');
 const card = (heading,body,edit='') => `<section class="e2-card"><div class="e2-card-heading"><h2>${heading}</h2>${edit}</div>${body}</section>`;
 const detail = (label,value) => `<div class="e2-detail"><dt>${escape(label)}</dt><dd>${escape(value||'Nicht angegeben')}</dd></div>`;
 const fieldValue=(form,key)=>String(new FormData(form).get(key)||'').trim();
@@ -28,7 +33,35 @@ const nextMonthStart=date=>{const d=new Date(date+'T12:00:00');d.setMonth(d.getM
 export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{},onLessonOpen=()=>{},onSubpageChange=()=>{},today=todayLocal}){
  if(!root||!supabase)throw new Error('Schüleransicht benötigt ein Element und Supabase');
  let alive=true,sequence=0,search='',selected=null,view='lessons';
- const render=html=>{if(alive)root.innerHTML=`<div class="e2-screen">${html}</div>`};
+ const render=html=>{
+   if(!alive)return;
+   root.innerHTML=`<div class="e2-screen">${html}</div>`;
+   root.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{
+     const group=button.closest('.e2-choice-field'),key=button.dataset.choice,value=button.dataset.value;
+     group.querySelector('input[name="'+key+'"]').value=value;
+     group.querySelectorAll('[data-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+     if(key==='length_choice'){
+       const other=root.querySelector('.e2-other-length'),hidden=root.querySelector('input[type="hidden"][name="minutes"]');
+       if(other)other.hidden=value!=='other';
+       if(hidden){hidden.disabled=value==='other';if(value!=='other')hidden.value=value;}
+       if(value==='other'&&!other.querySelector('input[name="minutes"]')){other.innerHTML='<label class="e2-field">Andere Dauer (Minuten)<input name="minutes" type="number" min="5" max="240" required></label>';}
+       const otherInput=other?.querySelector('input[name="minutes"]');
+       if(otherInput)otherInput.disabled=value!=='other';
+     }
+     if(key==='billing_mode'){
+       const price=root.querySelector('[name="price"]');
+       const label=price?.closest('label');if(label)label.firstChild.textContent=value==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)';
+     }
+     if(key==='effective_choice'){
+       const date=root.querySelector('.e2-effective-date'),hidden=root.querySelector('input[type="hidden"][name="effective_from"]');
+       if(date)date.hidden=value!=='other';
+       const dateInput=date?.querySelector('input[name="effective_from"]');
+       if(dateInput)dateInput.disabled=value!=='other';
+       if(hidden){hidden.disabled=value==='other';if(value!=='other')hidden.value=value==='next'?nextMonthStart(today()):today();}
+     }
+   }));
+   root.querySelectorAll('.e2-other-length[hidden] input,.e2-effective-date[hidden] input').forEach(input=>input.disabled=true);
+ };
  const bind=(selector,callback)=>root.querySelector(selector)?.addEventListener('click',callback);
  const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data};
@@ -59,7 +92,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  function create(prefill=''){
    onSubpageChange(true);
   ++sequence;
-  render(`<header class="e2-heading">${backButton}<h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true)+input('start_date','Startdatum *',today(),'date',true))}${card('Stunden und Preis',input('minutes','Dauer in Minuten *',45,'number',true)+input('lessons_per_week','Stunden pro Woche *',1,'number',true)+select('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],'per_lesson')+input('price','Betrag in Euro *','','number',true)+select('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],''))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Schüler speichern')}</form>`);
+  render(`<header class="e2-heading">${backButton}<h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true)+input('start_date','Startdatum *',today(),'date',true))}${card('Stunden und Preis',lessonLength(45)+billingChoice('per_lesson')+input('price','Preis pro Stunde (€) *','','number',true)+locationChoice('')+input('lessons_per_week','Stunden pro Woche *',1,'number',true))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Schüler speichern')}</form>`);
   bind('[data-back]',list);bind('[data-cancel]',list);
   root.querySelector('[name="student_pays"]').addEventListener('change',e=>{const form=e.target.form;form.elements.payer_name.value=e.target.checked?form.elements.student_name.value:'';form.elements.payer_name.disabled=e.target.checked});
   root.querySelector('#e2-form').addEventListener('submit',async e=>{
@@ -122,11 +155,11 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   ++sequence;
   const address=v.payer_address||{};
   const basics=`<p class="e2-muted">Name: ${escape(v.student_name)} (nicht bearbeitbar)</p>`+input('nickname','Kurzname',v.nickname)+input('subject','Fach',v.subject,'text',true);
-  const pricing=input('minutes','Dauer (Minuten)',v.minutes,'number',true)+input('lessons_per_week','Stunden pro Woche',v.lessons_per_week,'number',true)+select('billing_mode','Abrechnung',[['per_lesson','Pro Stunde'],['monthly_flat','Monatspauschale']],v.billing_mode)+input('price','Betrag in Euro',v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate,'number',true)+select('location','Unterrichtsort',[['','Nicht angegeben'],...Object.entries(locationNames)],v.location);
+  const pricing=lessonLength(v.minutes)+billingChoice(v.billing_mode)+input('price',v.billing_mode==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)',v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate,'number',true)+locationChoice(v.location)+input('lessons_per_week','Stunden pro Woche',v.lessons_per_week,'number',true);
   const payer=input('payer_name','Name',v.payer_name,'text',true)+input('payer_email','E-Mail',v.payer_email,'email')+input('payer_street','Straße',address.street)+input('payer_postcode','PLZ',address.postcode)+input('payer_city','Ort',address.city);
   const labels={basics:'Grundlagen',pricing:'Stunden und Preis',payer:'Zahlungspflichtige Person'};
   const effective=v.billing_mode==='monthly_flat'&&section==='pricing'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
-  render(`<header class="e2-heading">${backButton}<h1>${labels[section]} bearbeiten</h1></header><form id="e2-edit">${card(labels[section],{basics,pricing,payer}[section]+input('effective_from','Gültig ab',effective,'date',true))}<p class="e2-muted">Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.</p><p role="alert" class="e2-error"></p>${footer()}</form>`);
+  render(`<header class="e2-heading">${backButton}<h1>${labels[section]} bearbeiten</h1></header><form id="e2-edit">${card(labels[section],{basics,pricing,payer}[section]+(section==='pricing'?effectiveChoice(effective):input('effective_from','Gültig ab',effective,'date',true)))}<p class="e2-muted">Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.</p><p role="alert" class="e2-error"></p>${footer()}</form>`);
   const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
   root.querySelector('#e2-edit').addEventListener('submit',async e=>{
    e.preventDefault();const form=e.currentTarget,at=fieldValue(form,'effective_from'),changes={};
