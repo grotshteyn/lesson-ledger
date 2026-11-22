@@ -139,7 +139,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       }
       if(result?.state==='duplicate'){
         const existing=lessons.find(x=>x.student_id===fixedStudent&&x.lesson_date===date&&x.id!==current?.id);
-        compare(existing||{lesson_date:date,minutes:0,status:'held',rate:0},{lesson_date:date,minutes,status,rate},()=>save(confirmInactive,true));return;
+        if(!existing){alertError(Error('Eine vorhandene Stunde wurde vom Server gemeldet, aber nicht geladen. Bitte Liste aktualisieren.'));return;}compare(existing,{lesson_date:date,minutes,status,rate},()=>save(confirmInactive,true));return;
       }
       if(result?.state!=='saved')throw Error('Speichern wurde nicht bestätigt.');
       await load();
