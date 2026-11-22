@@ -6,6 +6,7 @@ export const normalize = value => String(value ?? '').normalize('NFD').replace(/
 export const money = value => Number(value || 0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
 export const studentPrice = s => s.billing_mode === 'monthly_flat' ? money(s.monthly_fee ?? s.price) + ' / Monat' : money(s.rate ?? s.price) + ' / Stunde';
 export const matchingStudents = (students,query) => students.filter(s=>!normalize(query)||normalize(s.student_name).includes(normalize(query))||normalize(s.nickname).includes(normalize(query)));
+export const basicsChanges = values => ({nickname:String(values.nickname??'').trim(),subject:String(values.subject??'').trim()});
 export const duplicateNames = (students,name) => students.some(s=>normalize(s.student_name)===normalize(name));
 export const groupStudents = students => ['active','paused','ended'].map(status => ({status,items:students.filter(s=>s.status===status).sort((a,b)=>String(a.student_name).localeCompare(String(b.student_name),'de'))}));
 export const groupLessons = lessons => Object.entries(lessons.reduce((groups,lesson)=>{const key=String(lesson.lesson_date).slice(0,7);(groups[key] ||= []).push(lesson);return groups;},{})).sort(([a],[b])=>b.localeCompare(a)).map(([month,items])=>({month,items:items.sort((a,b)=>String(b.lesson_date).localeCompare(String(a.lesson_date)))}));
@@ -124,7 +125,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   root.querySelector('#e2-edit').addEventListener('submit',async e=>{
    e.preventDefault();const form=e.currentTarget,at=fieldValue(form,'effective_from'),changes={};
    if(!at)return showError('Bitte ein Gültigkeitsdatum angeben.');
-   if(section==='basics'){for(const k of ['nickname','subject'])changes[k]=fieldValue(form,k);if(!changes.subject)return showError('Fach ist erforderlich.')}
+   if(section==='basics'){Object.assign(changes,basicsChanges({nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject')}));if(!changes.subject)return showError('Fach ist erforderlich.')}
    if(section==='payer'){changes.payer_name=fieldValue(form,'payer_name');changes.payer_email=fieldValue(form,'payer_email');changes.payer_address={...address,street:fieldValue(form,'payer_street'),postcode:fieldValue(form,'payer_postcode'),city:fieldValue(form,'payer_city')};if(!changes.payer_name||!emailValid(changes.payer_email))return showError('Bitte Name und E-Mail prüfen.')}
    if(section==='pricing'){
     changes.minutes=number(form,'minutes');changes.lessons_per_week=number(form,'lessons_per_week');changes.location=fieldValue(form,'location');
