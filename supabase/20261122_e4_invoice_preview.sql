@@ -22,6 +22,7 @@ declare
   v_lesson record;
   v_billable boolean;
   v_has_flat boolean := false;
+  v_already_billed boolean := false;
 begin
   if (select auth.uid()) is null then
     raise exception 'unauthenticated';
@@ -67,7 +68,17 @@ begin
     end if;
   end if;
 
-  if v_student.id is not null and v_student.billing_mode='monthly_flat' then
+  select exists(select 1 from public.invoices i
+    where i.ledger_id=v_ledger and i.student_id=p_student_id
+      and i.billing_month=p_billing_month and i.kind='standard'
+      and not exists(select 1 from public.invoices c
+        where c.original_invoice_id=i.id and c.kind='cancellation'))
+    into v_already_billed;
+  if v_already_billed then
+    v_errors := v_errors || '["already_billed"]'::jsonb;
+  end if;
+
+  if not v_already_billed and v_student.id is not null and v_student.billing_mode='monthly_flat' then
     -- The monthly fee is billed for the whole month; a fully paused month is excluded.
     -- A cancelled original does not prevent ordinary re-invoicing.
     v_has_flat := not exists (
@@ -88,6 +99,7 @@ begin
     end if;
   end if;
 
+  if not v_already_billed then
   for v_lesson in
     select x.id,x.lesson_date,x.minutes,x.rate,x.billing_mode,x.status,
            x.invoice_id, x.student_id
@@ -120,7 +132,8 @@ begin
           else 'not_billable' end));
     end if;
   end loop;
-  if jsonb_array_length(v_lines)=0 then
+  end if;
+  if jsonb_array_length(v_lines)=0 and not v_already_billed then
     v_errors := v_errors || '["no_billable_items"]'::jsonb;
   end if;
   if p_billing_month>=date_trunc('month',v_issued_on)::date then
