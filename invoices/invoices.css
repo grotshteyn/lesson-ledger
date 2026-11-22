@@ -1,47 +1,72 @@
-.e4{padding:16px 16px 110px;max-width:720px;margin:auto;color:#222}.e4-demo{font-size:12px;padding:9px 12px;background:#f4f0e5;border:1px solid #dbc99e;border-radius:8px;margin-bottom:16px}.e4-month{margin:18px 0 24px}.e4-month h2,.e4-month h3{display:flex;justify-content:space-between;align-items:center;font-size:19px;margin:0 0 10px}.e4-month h2 span{font-size:16px}.e4-rows{border:1px solid #ddd;border-radius:10px;overflow:hidden}.e4-line{display:flex;align-items:center;border-bottom:1px solid #ffffffaa}.e4-line:last-child{border-bottom:0}.e4-line.ready,.e4-choice{background:#e7f1fb}.e4-line.missing_details{background:#fbefda}.e4-line.in_progress{background:#eee}.e4-line.issued{background:#e6f5e7}.e4-line.cancelled{background:#f4e8e8}.e4-line>button:first-child{background:none;border:0;color:inherit;text-align:left;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:17px 12px;width:100%;font-size:14px;cursor:pointer}.e4-line>button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.e4-line small{font-size:12px;font-weight:600}.e4-line>button:last-child:not(:first-child){background:transparent;border:0;padding:12px;cursor:pointer}.e4-foot{position:sticky;bottom:64px;background:#f8f7f2;padding:12px 0;display:flex;gap:10px;margin-top:20px}.e4-foot button{flex:1;min-height:48px}.e4 button{cursor:pointer}.e4 button:disabled{cursor:not-allowed;opacity:.5}.e4-warning{background:#fbefda;padding:12px;border-radius:8px;color:#81500d}.e4-success{background:#e6f5e7;padding:12px}.e4-ready{background:#e7f1fb;padding:12px}.e4-subhead h2{margin:0}.e4-subhead p{margin:4px 0 12px;color:#666}.e4-card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin:12px 0}.e4-card h3{margin:0 0 12px}.e4-card p{margin:6px 0}.e4-lines>div{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid #eee}.e4-lines span:last-child{font-size:12px;color:#777}.e4-total{display:flex;justify-content:space-between;padding:14px 0}.e4-choice{border:0;border-bottom:1px solid #fff;width:100%;display:flex;justify-content:space-between;padding:18px;font-size:15px}.e4-choice.chosen{background:#222;color:white}.e4-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.e4-actions button:first-child{grid-column:span 2}.e4 label{display:block;margin:14px 0}.e4 input,.e4 select{display:block;width:100%;padding:12px;margin-top:6px;border:1px solid #aaa;border-radius:8px}.e4 button:focus-visible{outline:3px solid #2362a1;outline-offset:2px}@media(min-width:650px){.e4{padding:24px 28px 120px}.e4-line>button:first-child{font-size:16px}}
-/* Adapted from the supplied HTML wireframes: neutral canvas, flat rows,
-   amber missing-detail strips, dark selected rows and a fixed action footer. */
-.e4{background:#f4f4f2;font-family:Inter,system-ui,sans-serif;min-height:100%;padding:16px 20px 108px}
-.e4-month{margin:0 0 16px}
-.e4-month h2,.e4-month h3{font-weight:700;font-size:16px;line-height:1.35;padding:10px 0;margin:0}
-.e4-rows{border:0;border-radius:0;display:flex;flex-direction:column;gap:4px}
-.e4-line{min-height:54px;border:0;border-radius:0}
-.e4-line>button:first-child{grid-template-columns:minmax(0,1fr) 105px 70px;min-height:54px;padding:10px 12px}
-.e4-line strong,.e4-choice strong{font-size:15px;text-align:right;white-space:nowrap}
-.e4-line small{color:#555}
-.e4-line.issued{background:#e4f0e5}
-.e4-line.missing_details{background:#f9eeda}
-.e4-line.in_progress{background:#e8e8e5}
-.e4-foot{position:sticky;bottom:0;margin:20px -20px -108px;padding:12px 20px 24px;background:#fff;border-top:1px solid #d6d6d2;z-index:2}
-.e4-foot button{height:48px;border-radius:10px;border:1.5px solid #222;background:#fff;color:#222;font:600 16px Inter,sans-serif}
-.e4-foot button:first-child:not(:last-child){background:#222;color:#fff;font-weight:700}
-.e4-foot button:disabled{background:#d6d6d2;color:#555;border:0}
-.e4-card{border:0;border-radius:0;background:transparent;padding:0;margin:16px 0 22px}
-.e4-card h3,.e4-section-title{font-weight:700;font-size:17px;padding:8px 0;margin:0 0 8px;border-bottom:1px solid #d6d6d2}
-.e4-lesson{display:grid!important;grid-template-columns:52px minmax(0,1fr) auto;gap:8px;align-items:center}
-.e4-date{color:#555;font-size:13px}
+/* E4: measurements and components transcribed from the supplied 10-screen HTML/PDF.
+   Shares the E3 shell, row-card geometry, typography and bottom navigation. */
+.ll-app .ll-content:has(.e4){padding:0 20px 96px}
+.e4{color:#222;font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.45;padding:12px 0 110px;max-width:none;margin:0;background:transparent}
+.e4 *{box-sizing:border-box}
+.e4-demo{font-size:12px;line-height:1.35;padding:8px 10px;background:#fff8e7;border:1px solid #e8d5a6;border-radius:8px;margin:0 0 14px}
+.e4-month{margin:0 0 18px}
+.e4-month>h2,.e4-month>h3{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px;font-size:17px;line-height:24px;font-weight:700}
+.e4-month>h2 span{font-size:15px;font-weight:500;white-space:nowrap}
+.e4-rows{background:#fff;border:1px solid #d6d6d2;border-radius:10px;overflow:hidden}
+.e4-line{display:flex;align-items:stretch;min-height:56px;border-bottom:1px solid #e0e0dc}
+.e4-line:last-child{border-bottom:0}
+.e4-line.ready,.e4-choice{background:#e7f2fd}
+.e4-line.missing_details{background:#fbeed9}
+.e4-line.in_progress{background:#efefec}
+.e4-line.issued{background:#e6f3e5}
+.e4-line.cancelled{background:#eee6e6}
+.e4-line>button:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;flex:1;min-width:0;width:100%;border:0;background:transparent;padding:12px 10px;text-align:left;color:#222;font:inherit;cursor:pointer}
+.e4-line>button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:500}
+.e4-line.ready>button span{font-weight:700}
+.e4-line>button small{font-size:12px;font-weight:600;color:#315170;white-space:nowrap}
+.e4-line.missing_details small{color:#98540b}
+.e4-line.issued small{color:#3d6943}
+.e4-line.in_progress small{color:#666}
+.e4-line>button strong{font-size:14px;font-weight:500;white-space:nowrap}
+.e4-line>button:last-child:not(:first-child){width:36px;min-width:36px;padding:0 6px;border:0;background:transparent;color:#222;font-size:20px;cursor:pointer}
+.e4-foot{position:fixed;z-index:9;left:50%;transform:translateX(-50%);bottom:calc(91px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 40px),280px);display:flex;flex-direction:column;gap:9px;pointer-events:none}
+.e4-foot button{pointer-events:auto;min-height:56px;border:0;border-radius:28px;background:#222;color:#fff;font:700 17px Inter,system-ui,sans-serif;padding:12px 20px;box-shadow:0 4px 14px #0003}
+.e4-foot button:disabled{background:#999;color:#fff;opacity:.6;box-shadow:none}
+.e4-foot button+button{min-height:44px;border:1px solid #999;background:#fff;color:#222;border-radius:9px;box-shadow:none;font-size:15px}
+.e4-subhead h2,.e4>h2{font-size:21px;line-height:1.25;margin:6px 0 8px;font-weight:700}
+.e4-subhead p,.e4>p{margin:4px 0 16px}
+.e4-warning,.e4-ready,.e4-success{padding:11px 12px;margin:12px 0;border-radius:9px;font-size:14px}
+.e4-warning{background:#fbeed9;color:#80500f}.e4-ready{background:#e7f2fd}.e4-success{background:#e6f3e5}
+.e4-card{padding:0;margin:18px 0 22px;border:0;background:transparent}
+.e4-card h3,.e4-section-title{font-size:17px;font-weight:700;margin:0 0 10px}
+.e4-card p{margin:5px 0}
+.e4-card a,.e4-card button{font-size:14px}
+.e4-lines{border-bottom:1px solid #d6d6d2}
+.e4-lesson{display:grid;grid-template-columns:50px minmax(0,1fr) auto;align-items:start;gap:8px;padding:10px 0;border-bottom:1px solid #e6e6e2}
+.e4-lesson:last-child{border-bottom:0}
+.e4-date{font-size:13px;color:#555;white-space:nowrap}
 .e4-lesson strong{font-size:14px;font-weight:500;white-space:nowrap}
-.e4-excluded{font-size:13px;color:#555;margin-top:16px;padding:12px;background:#e9e9e6}
-.e4-warning{border-radius:0;background:#f9eeda;color:#8a4b00;font-weight:600}
-.e4-ready{background:#e6f0fb}.e4-success{background:#e4f0e5}
-.e4-choice{display:grid;grid-template-columns:minmax(0,1fr) 75px;align-items:center;text-align:left;min-height:54px;padding:12px 14px;background:#e6f0fb}
-.e4-choice.chosen{background:#222;color:#fff}
-.e4 label{font-size:13px;font-weight:600;color:#555}
-.e4 input,.e4 select{height:44px;box-sizing:border-box;border:1.5px solid #9a9a96;border-radius:8px;background:#fff}
+.e4-total{display:flex;justify-content:space-between;padding:13px 0;font-weight:700}
+.e4-card small{font-size:13px;color:#555}
+.e4-excluded{margin:16px 0;padding:10px 12px;background:#efefec;border-radius:8px;font-size:13px;color:#555}
+.e4-excluded p{margin:6px 0}
+.e4-actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.e4-actions button{flex:1 1 auto;min-height:44px;border:1px solid #aaa;border-radius:9px;background:#fff;font:600 14px Inter,sans-serif}
+.e4-actions button:first-child{flex-basis:100%;background:#222;color:#fff;border-color:#222}
+.e4-choice{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:56px;border:0;border-bottom:1px solid #d6d6d2;padding:12px 14px;text-align:left;font:15px Inter,sans-serif}
+.e4-choice:last-child{border-bottom:0}
+.e4-choice.chosen{background:#222;color:#fff;font-weight:700}
+.e4-choice strong{font-size:15px;white-space:nowrap}
+.e4-selection-count{margin:12px 0;text-align:center;font-size:14px;color:#555}
+.e4-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:12px 14px;min-height:56px}
+.e4-result>span{font-size:12px;grid-column:1;color:#555}
+.e4-result>b{grid-column:2;grid-row:1/3;text-align:right}
+.e4-result-ok{background:#e6f3e5}.e4-result-failed{background:#fbeed9}
+.e4-cancellation{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:16px}
+.e4-cancellation strong{display:block;font-size:22px;margin:10px 0}
+.e4 label{display:block;font-size:13px;font-weight:600;color:#555;margin:14px 0}
+.e4 input:not([type=radio]),.e4 select{display:block;width:100%;height:44px;margin-top:6px;padding:10px 12px;border:1.5px solid #9a9a96;border-radius:8px;background:#fff;font:16px Inter,sans-serif}
 .e4 input.e4-required{border-color:#c77700;background:#fff9ed}
-.e4-vat{border:1px solid #d6d6d2;padding:0;margin:12px 0}
-.e4-vat legend{padding:8px 0;font-weight:700}
-.e4-vat label{display:flex;align-items:center;gap:10px;min-height:54px;padding:8px 14px;margin:0;border-bottom:1px solid #e6e6e2;font-size:14px;color:#222}
-.e4-vat input{width:20px;height:20px;flex:none;margin:0}
-@media(min-width:650px){.e4{padding:24px 28px 120px}.e4-foot{margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px}}
-
-.e4-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:14px 12px;align-items:center}
-.e4-result>strong{font-size:15px}.e4-result>span{font-size:12px;grid-column:1;color:#555}
-.e4-result>b{grid-column:2;grid-row:1/3;text-align:right;font-size:15px}
-.e4-result-ok{background:#e4f0e5}.e4-result-failed{background:#f9eeda}
-.e4-cancellation{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px}
-.e4-cancellation strong{font-size:24px}.e4-cancellation p{margin:0;line-height:1.5}
-.e4-card{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:16px;margin:12px 0}
-.e4-card h3{border:0;padding:0;margin:0 0 10px}
-.e4-card a{color:#17518c;font-size:14px;font-weight:600}
-.e4-lesson{padding:7px 0!important}
+.e4-vat{margin:16px 0;border:1px solid #d6d6d2;border-radius:9px;padding:0;overflow:hidden}
+.e4-vat legend{font-size:13px;font-weight:700}
+.e4-vat label{display:flex;gap:10px;align-items:center;min-height:54px;margin:0;padding:10px 12px;border-bottom:1px solid #e6e6e2;font-size:14px;color:#222}
+.e4-vat label:last-child{border:0}
+.e4-vat input{width:20px;height:20px;margin:0;flex:none}
+.e4 button{cursor:pointer}
+.e4 button:focus-visible,.e4 input:focus-visible{outline:3px solid #555;outline-offset:2px}
+@media(max-width:360px){.e4-line>button:first-child{gap:5px;padding:10px 8px}.e4-line>button span{font-size:13px}.e4-line>button small{font-size:11px}.e4-line>button strong{font-size:13px}}
