@@ -278,8 +278,7 @@ async function studentPage(id){
   ['subject','Fach',v.subject],
   ['minutes','Unterrichtsdauer',v.minutes+' Minuten'],
   ['lessons_per_week','Stunden pro Woche',String(v.lessons_per_week)],
-  ['billing_mode','Abrechnungsart',v.billing_mode==='monthly_flat'?'Monatspauschale':'Pro Stunde'],
-  ['price','Preis',moneyLabel(v)],
+  ['billing_mode','Kosten und Abrechnung',moneyLabel(v)],
   ['payer_name','Zahlende Person',v.payer_name],
   ['payer_email','E-Mail der zahlenden Person',v.payer_email],
   ['payer_street','Straße und Hausnummer',v.payer_address?.street],
@@ -302,16 +301,15 @@ async function studentPage(id){
  if(status.data==='removed')$('removeStudent').hidden=true;
 }
 const editStudentButton=(key,value)=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="'+(value?'Bearbeiten':'Hinzufügen')+'">'+(value?'Bearbeiten':'Hinzufügen')+'</button>';
-function studentChangeForm(id,v,initialKey='price'){
+function studentChangeForm(id,v,initialKey='billing_mode'){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
  const a=v.payer_address||{};
  const changeFields=[
-  ['price','Preis',money,'number'],
   ['subject','Fach',v.subject],
   ['nickname','Kurzname',v.nickname||''],
   ['minutes','Unterrichtsdauer (Minuten)',v.minutes,'number'],
   ['lessons_per_week','Stunden pro Woche',v.lessons_per_week,'number'],
-  ['billing_mode','Abrechnung',v.billing_mode],
+  ['billing_mode','Kosten und Abrechnung',v.billing_mode],
   ['payer_name','Name der zahlenden Person',v.payer_name],
   ['payer_email','E-Mail der zahlenden Person',v.payer_email||'','email'],
   ['payer_street','Straße der zahlenden Person',a.street||''],
@@ -319,30 +317,29 @@ function studentChangeForm(id,v,initialKey='price'){
   ['payer_city','Ort der zahlenden Person',a.city||''],
   ['location','Unterrichtsort',v.location||'']
  ];
- const editControl=([k,label,val,type])=>k==='billing_mode'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label>':k==='location'?'<label class="field" data-edit="'+k+'">Neu<select id="'+k+'"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></label>':'<div data-edit="'+k+'">'+field(k,'Neu',val,type||'text')+'</div>';
+ const editControl=([k,label,val,type])=>k==='billing_mode'?'<div class="billing-editor" data-edit="'+k+'"><label class="field">Abrechnungsart<select id="'+k+'"><option value="per_lesson">Pro Stunde</option><option value="monthly_flat">Monatspauschale</option></select></label><label class="field">Betrag (€)<input id="newBillingPrice" type="number" min="0.01" step="0.01" value="'+escapeHTML(String(money))+'"></label></div>':k==='location'?'<div data-edit="'+k+'"><select id="'+k+'" aria-label="'+escapeHTML(label)+'"><option value="">Nicht angegeben</option><option value="my_place">Bei mir</option><option value="student_home">Beim Schüler</option><option value="online">Online</option></select></div>':'<div data-edit="'+k+'"><input id="'+k+'" aria-label="'+escapeHTML(label)+'" type="'+(type||'text')+'" value="'+escapeHTML(String(val??''))+'"></div>';
+
  frame('<div class="sheet-overlay"><section class="sheet" role="dialog" aria-modal="true" aria-labelledby="changeTitle"><div class="row"><h1 id="changeTitle">Ändern '+escapeHTML(v.student_name)+'</h1>'+button('×','backChange','secondary')+'</div>'+
  '<label class="field" hidden>Was ändern?<select id="changeType">'+changeFields.map(([k,label])=>'<option value="'+k+'">'+escapeHTML(label)+'</option>').join('')+'</select></label>'+
  '<div class="change-current"><div><span class="muted">Bisher</span><div class="notice" id="oldValue">'+escapeHTML(String(money))+' €</div></div><div><span class="muted">Neu</span><div id="editFields">'+changeFields.map(editControl).join('')+'</div></div></div>'+
- '<div id="newModePrice" hidden>'+field('newBillingPrice','Neuer Preis (€)',money,'number')+'</div>'+field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
+ field('effective_from','Gültig ab',v.effective_from>today()?v.effective_from:v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthFirst():today(),'date')+
  '<p class="muted">Bereits abgerechnete Stunden und ausgestellte Rechnungen bleiben unverändert. Monatspauschalen und Pausen beginnen am Monatsersten.</p>'+
  '<p id="error" class="error" role="alert"></p>'+button('Änderung speichern','saveChange')+'</section></div>','change-screen');
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
  $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
- const show=()=>{const [key,label,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('changeTitle').textContent=label+' bearbeiten';$('oldValue').textContent=String(old??'Nicht angegeben')+(key==='price'?' €':'');};
+ const show=()=>{const [key,label,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('changeTitle').textContent=label+' bearbeiten';$('oldValue').textContent=key==='billing_mode'?(money+' € '+(v.billing_mode==='monthly_flat'?'pro Monat':'pro Stunde')):(old==null||old===''?'Nicht angegeben':String(old));};
  $('changeType').onchange=show;show();
  $('backChange').onclick=()=>studentPage(id);
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
   if(!g('effective_from'))return err('Bitte ein Gültigkeitsdatum wählen.');
   if(key==='billing_mode'&&!(Number(g('newBillingPrice'))>0))return err('Bitte einen Preis über 0 eingeben.');
-  if(key==='price'&&!(Number(g('price'))>0))return err('Bitte einen Preis über 0 eingeben.');
   if((key==='minutes'||key==='lessons_per_week')&&!(Number(g(key))>0))return err('Bitte einen Wert über 0 eingeben.');
   if(['subject','payer_name'].includes(key)&&!g(key))return err('Dieses Feld ist erforderlich.');
   if(key==='payer_email'&&g(key)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g(key)))return err('Ungültige E-Mail-Adresse.');
   const changes={};
-  if(key==='price')changes.price=g('price');
-  else if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newBillingPrice');}
+  if(key==='billing_mode'){changes.billing_mode=g('billing_mode');changes.price=g('newBillingPrice');}
   else if(['minutes','lessons_per_week'].includes(key))changes[key]=Number(g(key));
   else if(['payer_street','payer_postcode','payer_city'].includes(key))changes.payer_address={...a,[{payer_street:'street',payer_postcode:'postcode',payer_city:'city'}[key]]:g(key)};
   else changes[key]=g(key);
