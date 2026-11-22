@@ -47,3 +47,21 @@
 .e2-error{color:#a52b1e;min-height:1.3em}
 .e2-screen button:focus-visible,.e2-screen input:focus-visible,.e2-screen select:focus-visible{outline:3px solid #707070;outline-offset:2px}
 @media(max-width:380px){.e2-screen{padding-left:14px;padding-right:14px}.e2-card{padding:13px}.e2-row-price{font-size:13px}.e2-filters{gap:4px}.e2-filters button{padding:7px 4px;font-size:13px}.e2-student-row{padding:12px}}
+
+/* E3 Students overview: measurements transcribed from the supplied HTML wireframe.
+   Scoped to the list route so student details and editing retain existing behavior. */
+.e2-screen:has(#e2-search){max-width:none;padding:16px 0 110px;color:#222;font-family:Inter,system-ui,sans-serif}
+.e2-screen:has(#e2-search) .e2-search{display:flex;flex-direction:column;gap:6px;margin:0 0 16px;font-size:13px;color:#555}
+.e2-screen:has(#e2-search) .e2-search input{height:44px;min-height:44px;margin:0;padding:0 12px;border:1.5px solid #9a9a96;border-radius:8px;font:15px Inter,system-ui,sans-serif;background:#fff}
+.e2-screen:has(#e2-search) .e2-group{margin:0 0 12px}
+.e2-screen:has(#e2-search) .e2-group h2{font-size:13px;font-weight:600;line-height:18px;color:#555;margin:4px 0 12px}
+.e2-screen:has(#e2-search) .e2-group h2 span{font-weight:600;color:inherit}
+.e2-screen:has(#e2-search) .e2-student-list{background:#fff;border:1px solid #d6d6d2;border-radius:10px;overflow:hidden}
+.e2-screen:has(#e2-search) .e2-student-row{display:flex;align-items:center;justify-content:space-between;min-height:56px;width:100%;margin:0;padding:6px 14px;border:0;border-bottom:1px solid #e6e6e2;border-radius:0;background:#fff;text-align:left;gap:12px}
+.e2-screen:has(#e2-search) .e2-student-row:last-child{border-bottom:0}
+.e2-screen:has(#e2-search) .e2-row-main strong{font-size:15px;line-height:20px;font-weight:400}
+.e2-screen:has(#e2-search) .e2-row-main small{font-size:12px;line-height:16px;margin-top:2px;color:#555}
+.e2-screen:has(#e2-search) .e2-row-price{font-size:15px;line-height:20px;font-weight:400;white-space:nowrap}
+.e2-screen:has(#e2-search) .e2-floating{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));z-index:9;margin:0;pointer-events:none}
+.e2-screen:has(#e2-search) .e2-floating button{height:56px;min-height:56px;border:0;border-radius:28px;padding:0 24px;background:#222;color:#fff;font-size:15px;font-weight:600;white-space:nowrap;box-shadow:0 3px 12px #0002;pointer-events:auto}
+.e2-screen:has(#e2-search) .e2-student-list>.e2-muted{padding:12px 14px;margin:0;font-size:13px}
