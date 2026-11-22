@@ -384,7 +384,7 @@ async function lessonDetails(lessonId,studentId){
  $('backLesson').onclick=()=>studentPage(studentId);
  const remove=async(reason)=>{if(x.invoice_id)return err({message:'Bereits abgerechnet. Bitte Rechnung korrigieren.'});if(!confirm('Stunde stornieren? Der Verlauf bleibt erhalten.'))return;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:lessonId,p_reason:reason,p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
  $('removeLesson').onclick=()=>remove('remove');
- $('editLesson').onclick=async()=>{if(x.invoice_id)return err({message:'Bereits abgerechnet.'});if(!confirm('Alte Stunde stornieren und korrigierte Stunde neu erfassen?'))return;const {error}=await supabase.rpc('void_lesson',{p_lesson_id:lessonId,p_reason:'edit',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);logLessonSheet(studentId,x);};
+ $('editLesson').onclick=()=>{if(x.invoice_id)return err({message:'Bereits abgerechnet.'});logLessonSheet(studentId,x);};
 }
 async function logLessonSheet(studentId,original=null){
  const {data,error}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:original?.lesson_date||today()});
@@ -406,13 +406,14 @@ async function logLessonSheet(studentId,original=null){
   $('saveLesson').disabled=true;
   const status=$('lessonStatus').value;
   const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonFree').checked?'not_charged':null,p_idempotency_key:key};
-  let {data,error}=await supabase.rpc('log_lesson',params);
+  const rpc=original?'replace_lesson':'log_lesson';if(original)params.p_old_lesson_id=original.id;
+  let {data,error}=await supabase.rpc(rpc,params);
   if(!error&&data?.state==='duplicate'){
-   if(confirm('An diesem Datum existiert bereits eine Stunde. Zweite Stunde speichern?')){params.p_confirm_duplicate=true;({data,error}=await supabase.rpc('log_lesson',params));}
+   if(confirm('An diesem Datum existiert bereits eine Stunde. Zweite Stunde speichern?')){params.p_confirm_duplicate=true;({data,error}=await supabase.rpc(rpc,params));}
    else{$('saveLesson').disabled=false;return;}
   }
   if(error){$('saveLesson').disabled=false;return err(error);}
-  frame('<div class="card"><h2>Stunde gespeichert</h2><p>'+escapeHTML(params.p_lesson_date)+' · '+params.p_minutes+' Min.</p>'+button('Rückgängig','undoLesson','secondary')+button('Fertig','doneLesson')+'<p id="error" class="error"></p></div>');
+  frame('<div class="card"><h2>'+(original?'Stunde geändert':'Stunde gespeichert')+'</h2><p>'+escapeHTML(params.p_lesson_date)+' · '+params.p_minutes+' Min.</p>'+button('Rückgängig','undoLesson','secondary')+button('Fertig','doneLesson')+'<p id="error" class="error"></p></div>');
   $('doneLesson').onclick=()=>studentPage(studentId);
   $('undoLesson').onclick=async()=>{const {error}=await supabase.rpc('void_lesson',{p_lesson_id:data.id,p_reason:'undo',p_idempotency_key:crypto.randomUUID()});if(error)return err(error);studentPage(studentId);};
  };
