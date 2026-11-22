@@ -272,9 +272,22 @@ async function studentPage(id){
  const locationLabel={my_place:'Bei mir',student_home:'Beim Schüler',online:'Online'}[v.location]||'Nicht angegeben';
  const moneyLabel=x=>x.billing_mode==='monthly_flat'?x.monthly_fee+' € pro Monat':x.rate+' € pro Stunde';
  frame('<div class="student-page-heading"><div class="row"><button id="backStudents" class="secondary" aria-label="Zurück zu Schülern">←</button><div style="flex:1"><h1>'+escapeHTML(v.student_name)+'</h1><p class="muted">'+statusLabel+' seit '+niceDate(startDate)+'</p></div></div></div>'+
- '<section class="card"><h2>Details</h2><dl class="detail-grid"><dt>Fach</dt><dd>'+escapeHTML(v.subject)+', '+escapeHTML(v.minutes)+' Min., '+escapeHTML(v.lessons_per_week)+'× pro Woche '+editStudentButton('subject')+'</dd>'+
- '<dt>Preis</dt><dd>'+escapeHTML(moneyLabel(v))+' '+editStudentButton('price')+'</dd><dt>Zahlende Person</dt><dd>'+escapeHTML(v.payer_name)+' '+editStudentButton('payer_name')+'</dd>'+
- '<dt>Ort</dt><dd>'+escapeHTML(locationLabel)+' '+editStudentButton('location')+'</dd><dt>Stornierung</dt><dd>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</dd></dl>'+
+ '<section class="card student-details-card"><h2>Schülerangaben</h2>'+
+ [
+  ['nickname','Kurzname',v.nickname],
+  ['subject','Fach',v.subject],
+  ['minutes','Unterrichtsdauer',v.minutes+' Minuten'],
+  ['lessons_per_week','Stunden pro Woche',String(v.lessons_per_week)],
+  ['billing_mode','Abrechnungsart',v.billing_mode==='monthly_flat'?'Monatspauschale':'Pro Stunde'],
+  ['price','Preis',moneyLabel(v)],
+  ['payer_name','Zahlende Person',v.payer_name],
+  ['payer_email','E-Mail der zahlenden Person',v.payer_email],
+  ['payer_street','Straße und Hausnummer',v.payer_address?.street],
+  ['payer_postcode','Postleitzahl',v.payer_address?.postcode],
+  ['payer_city','Ort der zahlenden Person',v.payer_address?.city],
+  ['location','Unterrichtsort',v.location?locationLabel:''],
+ ].map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value||'Nicht angegeben')+'</div></div>'+editStudentButton(key,value)+'</div>').join('')+
+ '<div class="settings-row"><div><div class="muted">Stornoregel</div><div>Bis 24 Stunden vorher kostenlos, danach kostenpflichtig</div></div></div>'+
  (pending.length||pendingEvents.length?'<div class="scheduled-note">'+pending.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(moneyLabel(x))+'</div>').join('')+pendingEvents.map(x=>'<div>Ab '+niceDate(x.effective_from)+': '+escapeHTML(x.event_type)+'</div>').join('')+'</div>':'')+'</section>'+
  '<div class="actions">'+button('Status ändern','statusStudent','secondary')+'</div>'+
  '<section class="card"><h2>Verlauf</h2>'+
@@ -288,12 +301,12 @@ async function studentPage(id){
  $('removeStudent').onclick=async()=>{if(!confirm('Nur entfernen, wenn noch keine Stunde erfasst wurde. Der Datensatz bleibt zur Nachvollziehbarkeit erhalten. Fortfahren?'))return;const earliest=(history.data||[]).reduce((d,x)=>!d||x.effective_from<d?x.effective_from:d,null);const {error}=await supabase.rpc('set_student_status',{p_student_id:id,p_event:'remove',p_effective_from:earliest,p_pause_until:null});if(error)return alert(error.message);studentsPage();};
  if(status.data==='removed')$('removeStudent').hidden=true;
 }
-const editStudentButton=key=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="Bearbeiten">Bearbeiten</button>';
+const editStudentButton=(key,value)=>'<button type="button" class="link" data-direct-edit="'+key+'" aria-label="'+(value?'Bearbeiten':'Hinzufügen')+'">'+(value?'Bearbeiten':'Hinzufügen')+'</button>';
 function studentChangeForm(id,v,initialKey='price'){
  const money=v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate;
  const a=v.payer_address||{};
  const changeFields=[
-  ['price','Preis pro Stunde',money,'number'],
+  ['price','Preis',money,'number'],
   ['subject','Fach',v.subject],
   ['nickname','Kurzname',v.nickname||''],
   ['minutes','Unterrichtsdauer (Minuten)',v.minutes,'number'],
@@ -316,7 +329,7 @@ function studentChangeForm(id,v,initialKey='price'){
  $('billing_mode').value=v.billing_mode;$('location').value=v.location||'';
  $('changeType').value=changeFields.some(x=>x[0]===initialKey)?initialKey:'price';
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
- const show=()=>{const [key,,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('oldValue').textContent=String(old)+(key==='price'?' €':'');};
+ const show=()=>{const [key,label,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('newModePrice').hidden=key!=='billing_mode';$('changeTitle').textContent=label+' bearbeiten';$('oldValue').textContent=String(old??'Nicht angegeben')+(key==='price'?' €':'');};
  $('changeType').onchange=show;show();
  $('backChange').onclick=()=>studentPage(id);
  $('saveChange').onclick=async()=>{
