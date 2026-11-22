@@ -106,3 +106,22 @@ body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
 .ll-settings{flex-shrink:0}
 @media(min-width:681px){.ll-app{width:100%;max-width:680px;margin-inline:auto}}
 @media(max-width:380px){.ll-tabs{padding-inline:4px}.ll-tab{font-size:12px}}
+
+
+/* E3 wireframe pass: shared navigation and content geometry on all three tabs.
+   Reference: 12-page Lesson Ledger E3 HTML/PDF, 390 x 844. */
+.ll-app .ll-header{min-height:77px;padding:20px 20px 12px;border-bottom-color:#d6d6d2}
+.ll-app .ll-header h1{font-size:22px;line-height:1.2;font-weight:700;letter-spacing:normal}
+.ll-app .ll-settings{width:44px;height:44px;min-width:44px;min-height:44px;border:1.5px solid #9a9a96;border-radius:8px;background:#fff;font-size:22px}
+.ll-app .ll-content{padding:0 20px 96px}
+.ll-app .ll-tabs{display:flex;align-items:stretch;gap:0;padding:0 0 16px;background:#fff;border-top:1px solid #d6d6d2}
+.ll-app .ll-tab{flex:1;min-height:56px;gap:0;padding:0;border:0;border-top:3px solid transparent;border-radius:0;font-size:13px;font-weight:500;color:#555}
+.ll-app .ll-tab[aria-current="page"]{border-top-color:#222;color:#222;font-weight:700}
+.ll-app .ll-tab span:first-child{display:none}
+.ll-app .ll-floating-action{bottom:92px;width:72vw;max-width:280.8px;height:56px;min-height:56px;font-size:17px;box-shadow:0 4px 14px #0004}
+.ll-app .ll-content:has(.ll-invoices-empty){padding-bottom:0}
+.ll-app .ll-invoices-empty{min-height:calc(100dvh - 150px);padding:24px 12px}
+.ll-app .ll-invoices-message{max-width:300px}
+.ll-app .ll-invoices-message h2{font-size:18px;font-weight:700}
+.ll-app .ll-invoices-message p{font-size:14px;line-height:1.5}
+@media(max-width:380px){.ll-app .ll-header{padding:20px 20px 12px}.ll-app .ll-content{padding:0 20px 96px}.ll-app .ll-tab{font-size:13px}}
