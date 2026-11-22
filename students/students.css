@@ -212,3 +212,7 @@
 @media(max-width:360px){
   .ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{font-size:12px}
 }
+
+/* Student detail has one exit (back arrow); keep room for the lesson action. */
+.ll-app .e2-screen:has(.e2-tabs.e2-single-select){padding-bottom:calc(130px + env(safe-area-inset-bottom,0px))}
+.ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-lesson-actions{margin-bottom:16px}
