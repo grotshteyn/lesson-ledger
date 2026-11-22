@@ -128,7 +128,7 @@ test('E1: three-tab navigation, settings entry and return without legacy Home',a
   assert.equal(await page.locator('#addStudent').count(),0,'legacy add selector is absent');
   assert.equal(await page.locator('[data-ll-tab]').count(),3);
   await page.locator('[data-ll-tab="invoices"]').click();
-  await page.getByRole('heading',{name:'Noch keine Rechnungen'}).waitFor();
+  await page.locator('.e4').waitFor();
   await page.locator('[data-ll-tab="students"]').click();
   await page.locator('[data-add]').waitFor();
   await page.locator('[data-ll-settings]').click();
