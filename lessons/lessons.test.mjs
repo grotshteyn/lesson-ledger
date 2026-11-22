@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('./lessons.js',import.meta.url),'utf8');
-const {lessonWeekGroups,lessonCalendarDays,lessonSaveFingerprint}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {lessonWeekGroups,lessonCalendarDays,lessonSaveFingerprint}=await import('./lessons.js');
 
 test('LE-7: groups are Monday-first and newest first, without mutating input',()=>{
   const input=[{lesson_date:'2026-11-15'},{lesson_date:'2026-11-16'},{lesson_date:'2026-11-22'},{lesson_date:'2026-11-09'}];
