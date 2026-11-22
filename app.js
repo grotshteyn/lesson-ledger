@@ -397,16 +397,16 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
  const args={p_student_id:studentId,p_lesson_date:today(),p_idempotency_key:key};
  let {data,error}=await supabase.rpc('log_lesson',args);
  if(!error&&data?.state==='inactive'){
-  if(confirm('Schülerstatus an diesem Datum: '+data.student_status+'. Trotzdem speichern?'))({data,error}=await supabase.rpc('log_lesson',{...args,p_confirm_inactive:true}));
+  if(confirm('Schülerstatus an diesem Datum: '+data.student_status+'. Trotzdem speichern?')){args.p_confirm_inactive=true;({data,error}=await supabase.rpc('log_lesson',args));}
   else{button.disabled=false;return;}
  }
  if(!error&&data?.state==='duplicate'){
-  if(confirm('Für heute ist bereits eine Stunde erfasst. Eine zweite speichern?'))({data,error}=await supabase.rpc('log_lesson',{...args,p_confirm_duplicate:true}));
+  if(confirm('Für heute ist bereits eine Stunde erfasst. Eine zweite speichern?')){args.p_confirm_duplicate=true;({data,error}=await supabase.rpc('log_lesson',args));}
   else{button.disabled=false;return;}
  }
  button.disabled=false;
  if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
- if(data?.state!=='saved')return;
+ if(data?.state!=='saved'){alert('Stunde nicht gespeichert. Bitte die Angaben prüfen.');return;}
  const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
  notice.className='notice lesson-save-notice';
  const name=row?.querySelector('strong')?.textContent||'Schüler';
