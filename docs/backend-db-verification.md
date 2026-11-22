@@ -88,3 +88,26 @@ Proposed, **not created**: ephemeral development branch `lesson-ledger-e3-backen
 Read-only security advisors returned 7 warnings for externally callable `SECURITY DEFINER` RPCs (`change_student`, `change_student_with_repricing`, `create_student`, `log_lesson`, `replace_lesson`, `set_student_status`, `void_lesson`) and 1 warning that leaked-password protection is disabled. The definer warnings require per-function authorization review, not indiscriminate removal of required RPC access. Reference: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
 
 **User authorization remains limited to read-only cost/configuration inspection. Creation and charges require separate explicit approval.**
+
+## Authorized live development regression execution (22 Nov 2026)
+
+**Authorization change:** Project owner explicitly confirmed the connected `lesson-ledger` environment contains synthetic test data only and authorized E3 migration and transactional regression tests in this existing environment. No new Supabase branch was created and no additional branch compute charge was incurred.
+
+**Pre-change identity and baseline:** `list_projects` confirmed project `zcszskoegwgcjgqsfmfx`, name `lesson-ledger`, region `eu-central-1`, healthy PostgreSQL 17. `list_migrations` returned 15 recorded E1/E2 migrations, no E3 migration. Captured legacy `log_lesson`, `replace_lesson`, `void_lesson` definitions, all 16 lessons constraints, 12 RLS policies, and RLS flags for 8 public tables in `docs/baselines/lesson-ledger-pre-e3-schema.json`. This is a schema baseline, not a full data backup.
+
+**Migration applied via Supabase `apply_migration`:**
+- Name: `e3_compatible_lesson_rpcs_v2_verified`
+- SQL: exact `supabase/20261122_e3_compatible_lesson_rpcs.sql` from `agent/backend-db-verification` including PR #31 replay guard.
+- Result: `{"success":true}`.
+- Read-only post-check: both `log_lesson_v2` and `replace_lesson_v2` exist; `authenticated` has EXECUTE; `anon` does not; `lesson_paid_rate` is `rate >= 0`; `lessons_rate_check` remains `rate >= 0`. All three legacy lesson RPCs remain present and authenticated-callable.
+
+**SQL regression execution via Supabase `execute_sql` on the authorized existing project:**
+1. Exact contents of `tests/e3-backend-contract.sql` from this branch, including 400-day future lesson, same-key replay, changed-date and changed-status rejection, duplicate confirmation, zero rate, replacement history and cross-tenant isolation. **Result: SQL executed without error**, connector returned the script's `set_config` result; no failing exception. Fixture transaction ends in ROLLBACK.
+2. Exact contents of `tests/tenant-isolation.sql`. **Result: SQL executed without error**; transaction ends in ROLLBACK.
+3. Additional inline transaction for synthetic invoiced lesson: create synthetic user/ledger/student/lesson, mark `invoice_id` with a synthetic UUID using admin role, assert `replace_lesson_v2` rejects it with `Invoiced lesson is locked` and `void_lesson` rejects invoice-linked removal. **Result: SQL executed without error**, transaction ends in ROLLBACK. The current schema has no invoices table or invoice_id foreign key; the fixture uses the existing nullable invoice_id field. No invoice issuance workflow was tested.
+4. Verification query for fixture cleanup returned **0** matching synthetic test users and **0** matching test lesson idempotency keys.
+5. Multi-statement execution sanity check: `begin; select 1; do $$ begin raise exception 'EXPECTED_SENTINEL_MULTI_STATEMENT'; end $$; rollback;` produced the **expected exception**, confirming statements following a SELECT execute. This intentionally failing diagnostic is not an application test failure.
+
+**Security advisory check after migration:** `get_advisors(type='security')` reported 9 authenticated-callable SECURITY DEFINER function warnings (previously 7, plus the two intended v2 RPCs) and 1 leaked-password-protection warning. Warnings require deliberate auth/ownership review; no auth configuration was changed. https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+
+**Outstanding:** E4 invoice issuance integration not available; exact invoice FK workflow cannot be tested. Test runner output is limited to SQL success/error and the last SELECT result, not per-assertion TAP output. Node/browser acceptance is integrator-owned and still not executed here. Integration branch does not yet contain PR #31; integrator must reconcile it through issue #33. Documentation `docs/backend-e3-contract.md` on integration incorrectly describes a 365-day v2 horizon; the installed v2 has no such guard and 400-day test executed successfully. No merge to main, production data reset, or unrelated infrastructure change.
