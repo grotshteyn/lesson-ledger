@@ -72,7 +72,7 @@ try{
  assert.equal(await page.locator('#e2-edit [name="billing_mode"]').inputValue(),'monthly_flat');
  await page.locator('[data-choice="billing_mode"][data-value="per_lesson"]').click();
  await page.locator('[data-choice="length_choice"][data-value="60"]').click();
- assert.equal(await page.locator('#e2-edit [name="minutes"]').inputValue(),'60');
+ assert.equal(await page.locator('#e2-edit input[type="hidden"][name="minutes"]').inputValue(),'60');
  await page.locator('[data-choice="location"][data-value="online"]').click();
  assert.equal(await page.locator('#e2-edit [name="location"]').inputValue(),'online');
  await page.locator('[data-choice="effective_choice"][data-value="next"]').click();
