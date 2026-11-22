@@ -6,10 +6,11 @@ const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
 const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const bucket = "invoice-pdfs";
 
-const safe = (x: unknown) => String(x ?? "").normalize("NFKD")
-  .replace(/[\u0300-\u036f]/g, "")
-  .replace(/ß/g, "ss").replace(/ẞ/g, "SS")
-  .replace(/[^\x20-\x7E]/g, "?");
+// Helvetica's WinAnsi encoding supports German umlauts, ß and the euro sign.
+// Replace only characters outside the font's repertoire, not German text.
+const safe = (x: unknown) => String(x ?? "")
+  .replace(/[\\u0000-\\u001F\\u007F]/g, " ")
+  .replace(/[^\\x20-\\x7E\\u00A0-\\u00FF\\u20AC]/g, "?");
 const amount = (x: unknown) => {
   const n = Number(x);
   if (!Number.isFinite(n)) throw new Error("invalid_amount");
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
   write("Rechnungsnummer: " + invoice.invoice_number, { bold: true });
   write("Rechnungsdatum: " + fmtDate(invoice.issued_on));
   write("Leistungsmonat: " + fmtDate(invoice.billing_month));
-  write("Faellig am: " + fmtDate(invoice.due_on));
+  write("Fällig am: " + fmtDate(invoice.due_on));
   if (invoice.kind === "cancellation") {
     write("Storno zur Rechnung: " + (snapshot.original_invoice_number ?? snapshot.original_invoice_id ?? ""));
   }
@@ -107,9 +108,9 @@ Deno.serve(async (req) => {
   write("Umsatzsteuer: " + amount(invoice.vat_amount), { bold: true });
   write("Gesamtbetrag: " + amount(invoice.gross_amount), { size: 13, bold: true, step: 28 });
   if (invoice.vat_mode === "small_business") {
-    write("Keine Umsatzsteuer gemaess Paragraph 19 UStG.");
+    write("Keine Umsatzsteuer gemäß § 19 UStG.");
   } else if (invoice.vat_mode === "exempt_teaching") {
-    write("Umsatzsteuerfrei nach Paragraph 4 Nr. 21 UStG.");
+    write("Umsatzsteuerfrei nach § 4 Nr. 21 UStG.");
   } else {
     write("Umsatzsteuer 19 % ist im Gesamtbetrag enthalten.");
   }
