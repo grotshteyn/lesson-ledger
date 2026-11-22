@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   native-node-and-browser-smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +24,7 @@ jobs:
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/lesson-ledger-http.log 2>&1 &
           echo $! > /tmp/lesson-ledger-http.pid
+          node --test tests/e2-browser.test.mjs
           node tests/browser-smoke.mjs
       - name: Upload screenshots and evidence
         if: always()
