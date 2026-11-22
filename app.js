@@ -158,7 +158,7 @@ function disposeModule(){if(activeModule){const old=activeModule;activeModule=nu
 function renderTab(tab,content='',actionLabel=''){
  disposeModule();activeTab=tab;
  frame(shellMarkup({tab,content:'<div id="ll-module-root">'+content+'</div>',actionLabel}),'tab-screen');
- bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();else if(tab==='invoices')activeModule?.create?.();}});
+ bindShell(root,{navigate:routeTab,settings:()=>{if(tab==='invoices')activeModule?.settings?.();else{disposeModule();settingsPage();}},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();else if(tab==='invoices')activeModule?.create?.();}});
 }
 function routeTab(tab,options={}){
 
