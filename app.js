@@ -498,6 +498,11 @@ async function logLessonSheet(studentId,original=null){
  $('saveLesson').onclick=async()=>{
   $('saveLesson').disabled=true;
   const status=$('lessonStatus').value;
+  const date=$('lessonDate').value,minutes=Number($('lessonMinutes').value);
+  if(!date){$('saveLesson').disabled=false;return err({message:'Bitte ein Datum auswählen.'});}
+  if(status==='held'&&date>today()){$('saveLesson').disabled=false;return err({message:'Nur Absagen dürfen in der Zukunft liegen.'});}
+  if(!Number.isInteger(minutes)||minutes<5||minutes>240){$('saveLesson').disabled=false;return err({message:'Bitte eine ganze Dauer zwischen 5 und 240 Minuten eingeben.'});}
+  if(!flat&&!(Number($('lessonRate').value)>0)){$('saveLesson').disabled=false;return err({message:'Der Preis muss größer als 0 € sein. Bitte stattdessen „Nicht berechnen“ wählen.'});}
   const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonOverride').value||null,p_idempotency_key:key};
   const rpc=original?'replace_lesson':'log_lesson';if(original){delete params.p_student_id;params.p_old_lesson_id=original.id;}
   let {data,error}=await supabase.rpc(rpc,params);
