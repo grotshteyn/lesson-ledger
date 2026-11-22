@@ -45,3 +45,21 @@ test('ST-3: unknown statuses do not leak into defined groups',()=>{
 test('ST-6.5: empty lesson history produces no month groups',()=>{
  assert.deepEqual(groupLessons([]),[]);
 });
+
+test('ST-3: all three groups remain visible after a search',()=>{
+ const groups=groupStudents(matchingStudents([{student_name:'Anna',status:'active'},{student_name:'Anton',status:'paused'},{student_name:'Anja',status:'ended'}],'an'));
+ assert.deepEqual(groups.map(g=>g.status),['active','paused','ended']);
+ assert.deepEqual(groups.map(g=>g.items.length),[1,1,1]);
+});
+test('ST-3: no filter UI is present in Students list',()=>{
+ assert.doesNotMatch(source,/data-filter|Statusfilter|filter==='all'/);
+});
+test('ST-4: Basics edits do not send unsupported student_name',()=>{
+ assert.doesNotMatch(source,/changes\.student_name|\['student_name','nickname','subject'\]/);
+ assert.match(source,/nicht bearbeitbar/);
+});
+test('ST-4: pricing uses versioned RPC without repricing existing lessons',()=>{
+ assert.match(source,/change_student_with_repricing/);
+ assert.match(source,/p_reprice:false/);
+ assert.match(source,/p_idempotency_key:crypto\.randomUUID\(\)/);
+});
