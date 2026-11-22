@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../students/students.js',import.meta.url),'utf8');
-const {normalize,studentPrice,groupStudents,groupLessons,STUDENT_STORIES}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const {normalize,studentPrice,groupStudents,groupLessons,matchingStudents,duplicateNames,STUDENT_STORIES}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 
 test('ST-3: name and nickname search normalization handles accents and case',()=>{
  assert.equal(normalize('  JÖRG Müller  '),'jorg muller');
@@ -27,4 +27,21 @@ test('ST-6.5: student lessons group newest month first and date descending',()=>
 });
 test('ST-1/ST-4/ST-6: story IDs are declared for traceability',()=>{
  for(const id of ['ST-1','ST-3','ST-4','ST-6','ST-6.5'])assert.ok(STUDENT_STORIES.includes(id));
+});
+
+test('ST-3: local filtering matches nickname and names, including diacritics',()=>{
+ const rows=[{student_name:'Jörg',nickname:'Jo'},{student_name:'Clara',nickname:'Maus'}];
+ assert.deepEqual(matchingStudents(rows,'JORG').map(s=>s.student_name),['Jörg']);
+ assert.deepEqual(matchingStudents(rows,'maus').map(s=>s.student_name),['Clara']);
+ assert.equal(matchingStudents(rows,'unbekannt').length,0);
+});
+test('ST-1: duplicate detection normalizes case and accents across statuses',()=>{
+ assert.equal(duplicateNames([{student_name:'Émile',status:'ended'}],'emile'),true);
+ assert.equal(duplicateNames([{student_name:'Anna',status:'paused'}],'Berta'),false);
+});
+test('ST-3: unknown statuses do not leak into defined groups',()=>{
+ assert.equal(groupStudents([{student_name:'X',status:'pending'}]).reduce((n,g)=>n+g.items.length,0),0);
+});
+test('ST-6.5: empty lesson history produces no month groups',()=>{
+ assert.deepEqual(groupLessons([]),[]);
 });
