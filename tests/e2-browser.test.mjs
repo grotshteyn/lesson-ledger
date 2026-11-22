@@ -27,7 +27,7 @@ export function createClient(){return {
    const term=(args.p_query||'').toLowerCase();
    return {data:state.students.map(s=>({...current(s.id),student_id:s.id,status:status(s.id)})).filter(v=>v.student_name&&v.status===args.p_status&&(v.student_name.toLowerCase().includes(term)||(v.nickname||'').toLowerCase().includes(term))),error:null};
   }
-  if(name==='change_student'){
+  if(name==='change_student'||name==='change_student_with_repricing'){
    const old=current(args.p_student_id),c=args.p_changes;
    state.versions.push({...old,...c,id:'version-'+(++state.seq),effective_from:args.p_effective_from,created_at:new Date(Date.now()+state.seq*1000).toISOString(),rate:(c.billing_mode||old.billing_mode)==='per_lesson'?Number(c.price??old.rate):null,monthly_fee:(c.billing_mode||old.billing_mode)==='monthly_flat'?Number(c.price??old.monthly_fee):null});
    return {data:'version-'+state.seq,error:null};
@@ -53,10 +53,11 @@ test('E2 browser smoke: add, edit, pause and search',async()=>{
   await page.locator('#price').fill('35');
   await page.locator('#payer_name').fill('Parent Test');
   await page.locator('#saveStudent').click();
-  await page.locator('[data-direct-edit="price"]').waitFor();
+  await page.locator('#toggleStudentView').click();
+  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
   assert.match(await page.locator('main').innerText(),/Anna Test/);
-  await page.locator('[data-direct-edit="price"]').click();
-  await page.locator('#price').fill('38');
+  await page.locator('[data-direct-edit="billing_mode"]').click();
+  await page.locator('#newBillingPrice').fill('38');
   await page.locator('#saveChange').click();
   await page.locator('#statusStudent').waitFor();
   assert.match(await page.locator('main').innerText(),/38 € pro Stunde/);
@@ -85,7 +86,7 @@ test('E2 mobile viewport: create student without horizontal overflow',async()=>{
   await page.locator('#price').fill('45');
   await page.locator('#studentPays').check();
   await page.locator('#saveStudent').click();
-  await page.locator('[data-direct-edit="price"]').waitFor();
+  await page.locator('[data-direct-edit="billing_mode"]').waitFor();
   const size=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
   assert.ok(size.width<=size.viewport+1,'Horizontal overflow: '+JSON.stringify(size));
  }finally{await browser.close()}
