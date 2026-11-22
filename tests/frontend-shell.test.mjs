@@ -20,3 +20,22 @@ test('floating action is optional and unknown tabs fail closed',()=>{
  assert.throws(()=>shellMarkup({tab:'home'}),/Unknown shell tab/);
  assert.equal(SHELL_EVENTS.navigate,'lesson-ledger:navigate');
 });
+
+// Source-level regression checks for the shell-owned invoices route and CSS.
+test('IN-1 uses centered semantic empty state without a generic card',async()=>{
+ const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
+ const css=await readFile(new URL('../style.css',import.meta.url),'utf8');
+ assert.match(app,/renderTab\('invoices','<section class="ll-invoices-empty" role="status"/);
+ assert.doesNotMatch(app,/renderTab\('invoices','<section class="card ll-empty"/);
+ assert.match(app,/Noch keine Rechnungen/);
+ assert.match(css,/\.ll-invoices-empty\{[^}]*align-items:center;justify-content:center/);
+ assert.match(css,/\.ll-app:has\(\.ll-invoices-empty\)>\.ll-content\{[^}]*flex:1/);
+});
+test('responsive navigation retains equal tabs, focus and safe area',async()=>{
+ const css=await readFile(new URL('../style.css',import.meta.url),'utf8');
+ assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+ assert.match(css,/\.ll-tab:focus-visible/);
+ assert.match(css,/safe-area-inset-bottom/);
+ assert.match(css,/@media\(max-width:380px\)/);
+ assert.match(css,/\.ll-tab\{[^}]*overflow-wrap:anywhere/);
+});
