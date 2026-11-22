@@ -370,6 +370,10 @@ function studentStatusForm(id,v,current){
 async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.disabled=true;
  const args={p_student_id:studentId,p_lesson_date:today(),p_idempotency_key:key};
  let {data,error}=await supabase.rpc('log_lesson',args);
+ if(!error&&data?.state==='inactive'){
+  if(confirm('Schülerstatus an diesem Datum: '+data.student_status+'. Trotzdem speichern?'))({data,error}=await supabase.rpc('log_lesson',{...args,p_confirm_inactive:true}));
+  else{button.disabled=false;return;}
+ }
  if(!error&&data?.state==='duplicate'){
   if(confirm('Für heute ist bereits eine Stunde erfasst. Eine zweite speichern?'))({data,error}=await supabase.rpc('log_lesson',{...args,p_confirm_duplicate:true}));
   else{button.disabled=false;return;}
@@ -455,6 +459,10 @@ async function logLessonSheet(studentId,original=null){
   const params={p_student_id:studentId,p_lesson_date:$('lessonDate').value,p_status:status,p_minutes:Number($('lessonMinutes').value),p_rate:flat?null:Number($('lessonRate').value),p_cancelled_by:status==='cancelled'?$('cancelBy').value:null,p_cancelled_in_time:status==='cancelled'&&$('cancelBy').value==='student'?$('cancelInTime').value==='true':null,p_charge_override:flat?null:$('lessonOverride').value||null,p_idempotency_key:key};
   const rpc=original?'replace_lesson':'log_lesson';if(original){delete params.p_student_id;params.p_old_lesson_id=original.id;}
   let {data,error}=await supabase.rpc(rpc,params);
+  if(!error&&data?.state==='inactive'){
+   if(confirm('Schülerstatus an diesem Datum: '+data.student_status+'. Trotzdem speichern?')){params.p_confirm_inactive=true;({data,error}=await supabase.rpc(rpc,params));}
+   else{$('saveLesson').disabled=false;return;}
+  }
   if(!error&&data?.state==='duplicate'){
    if(confirm('An diesem Datum existiert bereits eine Stunde. Zweite Stunde speichern?')){params.p_confirm_duplicate=true;({data,error}=await supabase.rpc(rpc,params));}
    else{$('saveLesson').disabled=false;return;}
