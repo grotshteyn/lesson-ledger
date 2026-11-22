@@ -330,11 +330,13 @@ function studentChangeForm(id,v,initialKey='billing_mode'){
  const selected=()=>changeFields.find(x=>x[0]===$('changeType').value);
  const show=()=>{const [key,label,old]=selected();document.querySelectorAll('[data-edit]').forEach(el=>el.hidden=el.dataset.edit!==key);$('changeTitle').textContent=label+' bearbeiten';$('oldValue').textContent=key==='billing_mode'?(money+' € '+(v.billing_mode==='monthly_flat'?'pro Monat':'pro Stunde')):(old==null||old===''?'Nicht angegeben':String(old));};
  $('changeType').onchange=show;show();
+ $('billing_mode').onchange=()=>{if($('billing_mode').value==='monthly_flat'&&$('effective_from').value.slice(-2)!=='01')$('effective_from').value=nextMonthFirst();};
  $('backChange').onclick=()=>studentPage(id);
  $('saveChange').onclick=async()=>{
   const g=k=>$(k).value.trim(),key=$('changeType').value;
   if(!g('effective_from'))return err('Bitte ein Gültigkeitsdatum wählen.');
   if(key==='billing_mode'&&!(Number(g('newBillingPrice'))>0))return err('Bitte einen Preis über 0 eingeben.');
+  if(key==='billing_mode'&&(v.billing_mode==='monthly_flat'||g('billing_mode')==='monthly_flat')&&g('effective_from').slice(-2)!=='01'&&(g('billing_mode')!==v.billing_mode||Number(g('newBillingPrice'))!==Number(money)))return err('Änderungen an Monatspauschalen müssen am Monatsersten beginnen.');
   if((key==='minutes'||key==='lessons_per_week')&&!(Number(g(key))>0))return err('Bitte einen Wert über 0 eingeben.');
   if(['subject','payer_name'].includes(key)&&!g(key))return err('Dieses Feld ist erforderlich.');
   if(key==='payer_email'&&g(key)&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g(key)))return err('Ungültige E-Mail-Adresse.');
