@@ -391,8 +391,10 @@ async function loadLessonHistory(id){
  const [a,b]=await Promise.all([supabase.from('lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(100),supabase.from('lesson_voids').select('lesson_id').limit(500)]);
  if(a.error||b.error){target.textContent=(a.error||b.error).message;return;}
  const voided=new Set((b.data||[]).map(x=>x.lesson_id));
- const lessons=(a.data||[]).filter(x=>!voided.has(x.id));
- target.innerHTML=lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+'</span></span><span>'+lessonMoney(x)+' €</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
+ const from=new Date();from.setDate(1);from.setMonth(from.getMonth()-1);
+ const cutoff=[from.getFullYear(),String(from.getMonth()+1).padStart(2,'0'),'01'].join('-');
+ const lessons=(a.data||[]).filter(x=>!voided.has(x.id)&&x.lesson_date>=cutoff);
+ target.innerHTML=(lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+'</span></span><span>'+lessonMoney(x)+' €</span></button>').join(''):'<p class="muted">Noch keine Stunden erfasst.</p>';
  target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,id));
 }
 async function lessonDetails(lessonId,studentId){
