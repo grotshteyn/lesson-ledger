@@ -53,6 +53,23 @@ begin
  v_second:=public.log_lesson(v_student,current_date,'no_show',null,null,null,null,null,true,gen_random_uuid(),'web');
  if not exists(select 1 from public.lessons where id=(v_second->>'id')::uuid and status='cancelled_free' and no_show)
  then raise exception 'No-show with no-show billing off must be free'; end if;
+ -- A lesson invoiced after opening the UI must reject void and edit.
+ execute 'set local role postgres';
+ update public.lessons set invoice_id=gen_random_uuid() where id=(v_edit->>'id')::uuid;
+ execute 'set local role authenticated';
+ v_rejected:=false;
+ begin
+  perform public.void_lesson((v_edit->>'id')::uuid,'remove',gen_random_uuid(),'web');
+ exception when others then v_rejected:=true; end;
+ if not v_rejected then raise exception 'Invoiced lesson could be voided'; end if;
+ v_rejected:=false;
+ begin
+  perform public.replace_lesson((v_edit->>'id')::uuid,current_date,'held',45,null,null,null,null,true,gen_random_uuid());
+ exception when others then v_rejected:=true; end;
+ if not v_rejected then raise exception 'Invoiced lesson could be edited'; end if;
+ execute 'set local role postgres';
+ update public.lessons set invoice_id=null where id=(v_edit->>'id')::uuid;
+ execute 'set local role authenticated';
  v_void:=public.void_lesson((v_edit->>'id')::uuid,'undo',gen_random_uuid(),'web');
  if v_void is null then raise exception 'Undo failed'; end if;
 end $test$;
