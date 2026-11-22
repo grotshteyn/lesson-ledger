@@ -424,17 +424,17 @@ async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.d
 const lessonMoney=x=>x.billing_mode==='monthly_flat'?0:(x.charge_override==='not_charged'?0:x.charge_override==='charged'?Number(x.rate):x.status==='cancelled_free'?0:Number(x.rate));
 async function loadLessonHistory(id){
  const target=$('lessonHistory');if(!target)return;
- const [a,b]=await Promise.all([supabase.from('lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(100),supabase.from('lesson_voids').select('lesson_id').limit(500)]);
- if(a.error||b.error){target.textContent=(a.error||b.error).message;return;}
+ const [a,b,all]=await Promise.all([supabase.from('active_lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(100),supabase.from('lesson_voids').select('lesson_id').limit(500),supabase.from('lessons').select('*').eq('student_id',id).order('lesson_date',{ascending:false}).limit(100)]);
+ if(a.error||b.error||all.error){target.textContent=(a.error||b.error||all.error).message;return;}
  const voided=new Set((b.data||[]).map(x=>x.lesson_id));
  const from=new Date();from.setDate(1);from.setMonth(from.getMonth()-1);
  const cutoff=[from.getFullYear(),String(from.getMonth()+1).padStart(2,'0'),'01'].join('-');
- const lessons=(a.data||[]).filter(x=>!voided.has(x.id)&&x.lesson_date>=cutoff);
+ const lessons=(a.data||[]).filter(x=>x.lesson_date>=cutoff);
  target.innerHTML=(lessons.length?lessons.map(x=>'<button class="student-item" data-lesson="'+escapeHTML(x.id)+'"><span><strong>'+escapeHTML(x.lesson_date)+'</strong><span>'+escapeHTML(x.no_show?'Nicht erschienen':x.status==='held'?'Gehalten':x.status==='cancelled_billable'?'Spät abgesagt':'Rechtzeitig abgesagt')+' · '+x.minutes+' Min.'+(x.charge_override?' · '+(x.charge_override==='charged'?'Berechnen':'Nicht berechnen'):'')+'</span></span><span>'+lessonMoney(x).toLocaleString('de-DE',{style:'currency',currency:'EUR'})+'</span></button>').join(''):'<p class="muted">Keine Stunden im aktuellen oder vorherigen Monat.</p>')+
  '<button class="link" id="toggleLessonHistory">Verlauf einschließlich entfernter Stunden anzeigen</button><div id="voidedLessonHistory" hidden></div>';
  $('toggleLessonHistory').onclick=()=>{
   const el=$('voidedLessonHistory');el.hidden=!el.hidden;
-  if(!el.hidden)el.innerHTML=(a.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+(voided.has(x.id)?' · Entfernt':'')+'</div>').join('')||'Kein Verlauf';
+  if(!el.hidden)el.innerHTML=(all.data||[]).map(x=>'<div class="history-entry">'+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+(voided.has(x.id)?' · Entfernt':'')+'</div>').join('')||'Kein Verlauf';
  };
  target.querySelectorAll('[data-lesson]').forEach(b=>b.onclick=()=>lessonDetails(b.dataset.lesson,id));
 }
@@ -465,7 +465,7 @@ async function logLessonSheet(studentId,original=null){
  $('lessonYesterday').onclick=()=>{$('lessonDate').value=yesterday();$('lessonDate').dispatchEvent(new Event('change'));};
  const recentSince=new Date(Date.now()-13*86400000).toISOString().slice(0,10);
  const refreshRecent=async()=>{
-  const [a,b]=await Promise.all([supabase.from('lessons').select('id,lesson_date,minutes,status,rate').eq('student_id',studentId).gte('lesson_date',recentSince).order('lesson_date',{ascending:false}).limit(50),supabase.from('lesson_voids').select('lesson_id')]);
+  const [a,b]=await Promise.all([supabase.from('active_lessons').select('id,lesson_date,minutes,status,rate').eq('student_id',studentId).gte('lesson_date',recentSince).order('lesson_date',{ascending:false}).limit(50),supabase.from('lesson_voids').select('lesson_id')]);
   const el=$('recentLessons');if(!el)return;
   if(a.error||b.error){el.textContent=(a.error||b.error).message;return;}
   const voided=new Set((b.data||[]).map(x=>x.lesson_id));
