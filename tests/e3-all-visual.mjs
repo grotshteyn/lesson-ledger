@@ -110,6 +110,7 @@ try{
  await page.locator('[data-pick]').first().click();
  await page.locator('#ll-date').evaluate((el,value)=>{el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}))},day(-5));
  await page.locator('[data-action="save"]').click();
+ console.log('Duplicate test:',JSON.stringify(await page.evaluate(()=>({date:document.querySelector('#ll-date')?.value,student:document.querySelector('#ll-selection')?.textContent,error:document.querySelector('#ll-error')?.textContent,overlay:!!document.querySelector('.ll-compare'),calls:globalThis.__rpcCalls?.slice(-3)}))));
  await capture('10-duplicate-confirmation','.ll-compare');
  await page.locator('.ll-sheet [data-action="cancel"]').click();
  await page.locator('[data-action="list"]').first().click();
