@@ -27,7 +27,7 @@ begin
   'gross_amount',to_char(v.gross_amount,'FM999999999990.00'),
   'vat_mode',v.vat_mode,'snapshot',v.snapshot,'lines',v_lines,
   'status',case when v_cancel is not null then 'cancelled' else 'issued' end,
-  'cancellation_invoice_id',v_cancel,'pdf_status','pending');
+  'cancellation_invoice_id',v_cancel,'pdf_status','on_demand');
 end;
 $$;
 revoke all on function public.get_invoice(uuid) from public,anon;
