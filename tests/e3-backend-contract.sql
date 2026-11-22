@@ -17,6 +17,7 @@ declare
  key1 uuid:='20000000-0000-4000-8000-000000000001';
  key2 uuid:='20000000-0000-4000-8000-000000000002';
  key3 uuid:='20000000-0000-4000-8000-000000000003';
+ key4 uuid:='20000000-0000-4000-8000-000000000004';
 begin
  a:=public.create_student(jsonb_build_object('student_name','Backend Test A',
    'subject','Math','payer_name','Payer A','billing_mode','per_lesson',
@@ -45,6 +46,18 @@ begin
  exception when others then
   if sqlerrm='Mismatched idempotency key was accepted' then raise; end if;
  end;
+ -- Future lessons more than one year ahead must be accepted.
+ y:=public.log_lesson_v2(a,current_date+400,'held',60,0,false,key4,false,'web');
+ if y->>'state'<>'saved' then raise exception 'Date beyond 365 days rejected: %',y; end if;
+ -- A key reused with changed status on the same date must fail explicitly.
+ begin
+  perform public.log_lesson_v2(a,future_date,'cancelled_billable',60,0,true,key1,false,'web');
+  raise exception 'Changed-status idempotency key was accepted';
+ exception when others then
+  if sqlerrm='Changed-status idempotency key was accepted' then raise; end if;
+  if sqlerrm not like '%Idempotency key reused with different lesson%'
+  then raise exception 'Wrong changed-status idempotency error: %',sqlerrm; end if;
+ end;
  y:=public.log_lesson_v2(a,future_date,'cancelled_billable',60,0,false,key2,false,'web');
  if y->>'state'<>'duplicate' or y->>'existing_id'<>x->>'id'
  then raise exception 'Duplicate confirmation missing: %',y; end if;
@@ -52,6 +65,16 @@ begin
  if y->>'state'<>'saved' then raise exception 'Explicit duplicate not saved: %',y; end if;
  z:=public.replace_lesson_v2((x->>'id')::uuid,future_date+1,'held',60,0,false,key3,false);
  if z->>'state'<>'saved' then raise exception 'Replacement failed: %',z; end if;
+ -- A replacement replay must reject a changed payload, not return the saved row.
+ begin
+  perform public.replace_lesson_v2((x->>'id')::uuid,future_date+2,
+    'held',60,0,false,key3,false);
+  raise exception 'Changed replacement idempotency key was accepted';
+ exception when others then
+  if sqlerrm='Changed replacement idempotency key was accepted' then raise; end if;
+  if sqlerrm not like '%Idempotency key reused with different lesson%'
+  then raise exception 'Wrong replacement idempotency error: %',sqlerrm; end if;
+ end;
  if not exists(select 1 from public.lesson_voids where lesson_id=(x->>'id')::uuid
    and replacement_id=(z->>'id')::uuid)
  then raise exception 'Replacement history missing'; end if;
