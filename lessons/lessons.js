@@ -181,11 +181,12 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     if(current?.invoice_id)return;
     const {overlay,close}=sheet('<h3>Stunde entfernen?</h3><p>Die Änderung bleibt im Verlauf nachvollziehbar.</p>',button('Abbrechen','cancel')+button('Entfernen','confirm','ll-primary'));
     overlay.querySelector('[data-action="cancel"]').onclick=close;
-    overlay.querySelector('[data-action="confirm"]').onclick=async()=>{close();try{unwrap(await supabase.rpc('void_lesson',{p_lesson_id:current.id,p_reason:'remove',p_idempotency_key:crypto.randomUUID()}));await load();}catch(e){alertError(e);}};
+    overlay.querySelector('[data-action="confirm"]').onclick=async()=>{close();try{unwrap(await supabase.rpc('void_lesson',{p_lesson_id:current.id,p_reason:'remove',p_idempotency_key:crypto.randomUUID()}));if(initialStudentId)onBack();else await load();}catch(e){alertError(e);}};
   }
   function dispatch(action){
     if(action==='new')createLesson();
-    else if(action==='reload'||action==='list')load();
+    else if(action==='reload')load();
+    else if(action==='list'){if(initialStudentId)onBack();else load();}
     else if(action==='edit')createLesson(current.student_id,current);
     else if(action==='remove')remove();
     else if(action==='calendar')calendar();
