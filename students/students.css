@@ -212,3 +212,28 @@
 @media(max-width:360px){
   .ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{font-size:12px}
 }
+
+
+/* Readability pass: larger labels, rows, details and single-selects. */
+.ll-app .e2-screen{font-size:16px;line-height:1.5}
+.ll-app .e2-screen:has(#e2-search) .e2-search,
+.ll-app .e2-screen:has(#e2-search) .e2-group h2,
+.ll-app .e2-screen .e2-choice-label,
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-field{font-size:15px}
+.ll-app .e2-screen:has(#e2-search) .e2-search input{font-size:16px}
+.ll-app .e2-screen:has(#e2-search) .e2-row-main strong,
+.ll-app .e2-screen:has(#e2-search) .e2-row-price,
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main strong,
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-price{font-size:16px}
+.ll-app .e2-screen:has(#e2-search) .e2-row-main small,
+.ll-app .e2-screen:not(:has(#e2-search)) .e2-row-main small{font-size:14px;line-height:1.35}
+.ll-app .e2-screen .e2-tabs.e2-single-select button,
+.ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button,
+.ll-app .e2-choice-field:has([data-choice="billing_mode"]) .e2-segment button{font-size:15px}
+.ll-app .e2-screen .e2-segment button{font-size:14px}
+.ll-app .e2-screen .e2-card-heading h2{font-size:17px}
+.ll-app .e2-screen .e2-actions button{font-size:15px}
+@media(max-width:360px){
+  .ll-app .e2-choice-field:has([data-choice="location"]) .e2-segment button{font-size:14px}
+  .ll-app .e2-screen .e2-actions button{font-size:14px}
+}
