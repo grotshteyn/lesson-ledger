@@ -22,7 +22,7 @@ The SQL file `supabase/20261122_e3_compatible_lesson_rpcs.sql` introduces:
 - `log_lesson_v2(p_student_id uuid,p_lesson_date date,p_status text default 'held',p_minutes integer default null,p_rate numeric default null,p_confirm_duplicate boolean default false,p_idempotency_key uuid default null,p_confirm_inactive boolean default false,p_channel text default 'web') -> jsonb`.
 - `replace_lesson_v2(p_old_lesson_id uuid,p_lesson_date date,p_status text,p_minutes integer,p_rate numeric,p_confirm_duplicate boolean,p_idempotency_key uuid,p_confirm_inactive boolean default false) -> jsonb`.
 
-Only `held` and `cancelled_billable` are accepted. A rate of **0** is valid; a negative rate is not. Monthly-flat lessons always snapshot rate 0 and reject a nonzero per-lesson override. Future dates through current date + 365 days are accepted, matching the old upper bound. No existing record is repriced when a student's defaults change. The edit API requires explicit persisted minutes and rate, so changing date does not silently refill them from student defaults.
+Only `held` and `cancelled_billable` are accepted. A rate of **0** is valid; a negative rate is not. Monthly-flat lessons always snapshot rate 0 and reject a nonzero per-lesson override. The v2 lesson RPCs have no arbitrary 365-day future-date limit. The legacy log_lesson RPC retains its old date restrictions. A transactional v2 regression test successfully saved a held lesson 400 days in the future. No existing record is repriced when a student's defaults change. The edit API requires explicit persisted minutes and rate, so changing date does not silently refill them from student defaults.
 
 Both RPCs require a UUID idempotency key and a signed-in tenant owner. Results: `{state:'saved',id,replayed}`, `{state:'duplicate',existing_id}`, `{state:'inactive',student_status}`. Retry with the same key only for the **same intended operation**. For duplicate/inactive prompts, retry with the same key and confirmation flag set. Use a new UUID for a new user action.
 
@@ -52,7 +52,7 @@ Both RPCs require a UUID idempotency key and a signed-in tenant owner. Results: 
 
 - SQL is **not executed** against any database in this branch. The rollback-only test script is provided but not run. Database-level runtime verification and migration ordering remain integration gates.
 - Existing E3 routines are present in the live database but not in recorded migrations; recreate a reproducible baseline before promoting the new SQL.
-- Confirm exact E3 wireframe/story details and business semantics with product owner, especially whether zero-price student defaults are intended and whether future-date horizon exceeds 365 days.
+- Confirm exact E3 wireframe/story details and business semantics with product owner, especially whether zero-price student defaults are intended and any future product-level date horizon if one is later specified.
 - Invoiced-lock and historical price cases require an additional disposable-db fixture with invoice schema; existing RPC source confirms the lock but the new test does not simulate invoice issuance.
 - `active_lessons` view permissions and RLS behavior should be verified under each authenticated user in a development database.
 - UI screenshots are not applicable to this backend-only PR.

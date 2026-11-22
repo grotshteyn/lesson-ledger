@@ -104,7 +104,15 @@ begin
  if v_new_id is not null then
   if exists(select 1 from public.lesson_voids z
    where z.lesson_id=p_old_lesson_id and z.replacement_id=v_new_id)
-  then return jsonb_build_object('state','saved','id',v_new_id,'replayed',true); end if;
+  then
+   -- Replaying a replacement must match the persisted replacement payload.
+   if not exists(select 1 from public.lessons x where x.id=v_new_id
+      and x.lesson_date=p_lesson_date and x.status=p_status
+      and x.minutes=p_minutes and x.rate=p_rate) then
+    raise exception 'Idempotency key reused with different lesson';
+   end if;
+   return jsonb_build_object('state','saved','id',v_new_id,'replayed',true);
+  end if;
   raise exception 'Idempotency key reused';
  end if;
  if v_old.invoice_id is not null then raise exception 'Invoiced lesson is locked'; end if;
