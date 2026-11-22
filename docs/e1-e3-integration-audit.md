@@ -1,57 +1,57 @@
-# E1–E3 integration audit (2026-11-22)
+# E1–E3 integration status (22 November 2026)
 
-Status: **BLOCKED / not accepted**. This is an audit, not a claim of integrated frontend or successful browser/DB tests. No main merge or deployment.
+**Status: SOURCE INTEGRATED, ACCEPTANCE BLOCKED.** No merge to main, no production migration, no production data changes.
 
-## Reviewed inputs
-- docs/parallel-agents.md; docs/frontend-redesign.md
-- Draft PRs #26 shell, #27 students, #28 lessons, #30 backend, and integration draft #20.
-- Branch comparisons: all four are ahead of common base 90c8610, with no overlapping changed filenames.
-- Read-only live Supabase pg_proc inspection of lesson-ledger project.
+## Committed on integration branch
+- Imported feature code and tests from draft PRs #26 (shell), #27 (Students), #28 (Lessons), #30 (backend).
+- `app.js` mounts Students and Lessons into `frontend/shell.js` tabs, routes Students' lesson-create and lesson-open callbacks into Lessons, and hides tabs/header on subpages.
+- `index.html` loads both module CSS files; shared CSS adds subpage visibility and bottom scrolling inset.
+- Students exposes `create` and `open` callbacks and hides main navigation on subpages.
+- Lessons calls `log_lesson_v2` / `replace_lesson_v2` and handles a scalar `student_details_at` RPC result.
+- Proposed additive SQL migration includes a necessary nonnegative `lesson_paid_rate` adjustment for zero-euro per-lesson entries.
+- README and visual comparison document updated.
 
-## Contract verification
-- Existing `change_student_with_repricing(p_student_id uuid,p_effective_from date,p_changes jsonb,p_reprice boolean,p_idempotency_key uuid)` matches Students' five named parameters.
-- Students supplies `p_changes:{...other,price,billing_mode}`, `p_reprice:false`. Existing function delegates to `change_student` and only enters lesson replacement loop if `p_reprice` is true. Thus the requested update preserves historical lesson snapshots, subject to confirming `change_student` validates the individual fields and effective date.
-- Existing `log_lesson` and `replace_lesson` use legacy cancellation arguments. Proposed `log_lesson_v2` and `replace_lesson_v2` are absent from connected database at audit time.
-- Lessons UI currently calls legacy RPC names with v2-style status and zero rate. **Blocking mismatch**. Switch module to v2 only after migration is applied to an isolated test database and validated.
-- V2 contract promises `saved/duplicate/inactive`, UUID idempotency, historical rate snapshots, future dates through +365 days, zero rate, invoiced locks and append-only edits. These are documented but not runtime-verified.
-
-## Integration wiring
-- Shell `renderTab` currently mounts legacy `allLessonsPage` and `studentsPage`, and its create action sends Lessons to Students. Neither isolated agent module is mounted.
-- Required: mount Students and Lessons under tab content, call `destroy()` on route change, route Students' lesson callbacks to Lessons' `createLesson(studentId)` / `openLesson(lessonId,studentId)`, and hide tab bar on subpages. Preserve settings and invoices placeholder.
-- Existing settings labels include English `E-Mail for payers` and `Regular Umsatzsteuer 19%`; German UI gate fails.
-- Ensure CSS load order and verify global selectors at mobile and wide widths. No browser evidence yet.
+## Live schema inspection (READ ONLY)
+- `change_student_with_repricing(uuid,date,jsonb,boolean,uuid)` matches Students' named argument payload. With `p_reprice=false`, no historical lessons are replaced; `change_student` inserts effective-dated versions.
+- Current `lessons` constraints permit `cancelled_billable` and nonnegative `rate`, but `lesson_paid_rate` still requires per-lesson `rate>0`. Migration corrects this in source only.
+- `log_lesson_v2` and `replace_lesson_v2` are not installed in connected production database.
+- Source inspection of backend migration: ownership checks use ledger owner, edit checks invoice_id, replacements void prior rows, duplicate search excludes voids, and idempotency keys are checked. **None of these are runtime-tested**.
 
 ## Test report
-| Check | Result |
-|---|---|
-| Branch diffs and changed-file overlap | PASS: no overlapping paths |
-| Pricing RPC signature | PASS: five parameters match |
-| Pricing history non-repricing code path | PASS by SQL source inspection for p_reprice=false; runtime not tested |
-| V2 lesson RPC availability | FAIL: absent in connected database |
-| Agent unit tests | NOT RUN in this integration session; PR authors report isolated syntax/assertion checks |
-| Browser E2E, 360px/wide, keyboard, safe-area | NOT RUN |
-| Disposable DB migration, cross-tenant RLS, invoice locks, duplicate/idempotency | NOT RUN |
-| Full German copy | FAIL: English settings strings identified |
+| Check | Executed? | Result |
+|---|---|---|
+| GitHub branch file imports/updates | Yes | Committed |
+| Live RPC signature and constraint queries | Yes, read only | Pricing signature matches; zero-rate constraint mismatch identified |
+| Node tests (frontend-shell, students, lessons) | No | NOT RUN: source not available in local runner and GitHub clone failed (DNS resolution) |
+| Browser screenshots/E2E | No | NOT RUN: no authenticated browser runner |
+| Disposable Supabase migration/RLS/tenant tests | No | NOT RUN: no designated disposable project or migration approval |
+| German localization sweep | Partial source review | NOT ACCEPTED: legacy strings and backend errors need translation |
+| Wireframe parity | Source review against supplied screenshots | NOT ACCEPTED: no rendered browser screenshots |
 
-## Missing automated tests
-- Browser route transitions and subpage tab hiding, fixed-student creation and return navigation.
-- Effective-date price changes with prior lessons and future lesson defaults; no historical mutation.
-- Zero-price, future held, cancelled_billable, duplicate/inactive confirmation, edit-date preserving price/minutes, invoice read-only and void.
-- Authenticated cross-tenant reads and writes; view security_invoker/RLS, idempotent retries.
-- Responsive visual regression at 360px and wide screen; keyboard, safe area, long names, offline and error recovery.
+## Story coverage (implemented means code exists, not accepted)
+| Story | Implemented source | Tested | Remaining |
+|---|---|---|---|
+| ON-9 | Shared three-tab navigation and settings | No | Responsive/browser acceptance |
+| IN-1 | Invoices placeholder | No | Centered layout parity |
+| ST-1 / ST-4 | Student creation and section editing | No | Browser form and validation tests |
+| ST-3 | Search/status filtering | No | Wireframe shows grouped sections, current filters differ |
+| ST-6 / ST-6.5 | Detail tabs, history and lesson list | No | Route-return and invoiced marker verification |
+| LE-1 / LE-3 / LE-3.4 | New lesson and date selection | No | V2 RPC deployed in disposable test DB, future date checks |
+| LE-4 | Duplicate sheet | No | Idempotent retries and confirmation |
+| LE-5 | Cancellation and zero-price | No | Migration + DB and browser tests |
+| LE-6 | Edit, void, history, invoiced locks | No | History continuity and invoice protections |
+| LE-7 | Lessons tab grouping | No | Month heading/layout parity |
 
-## Story coverage (implementation status, not acceptance)
-ON-9 / IN-1: shell isolated implementation; integration pending.
-ST-1, ST-3, ST-4, ST-6, ST-6.5: Students isolated implementation; integration and DB/browser verification pending.
-LE-1, LE-3, LE-3.4, LE-4, LE-5, LE-6, LE-7: Lessons isolated implementation; v2 backend and browser verification pending.
+## P0 blockers
+1. Proposed E3 RPCs are not installed. **The integrated lesson save/edit cannot function against the current production database.** Do not deploy without approval; test migration in a disposable database.
+2. Tenant isolation, invoiced locks, append-only history and idempotent retries are not tested against the new RPCs.
+3. End-to-end frontend integration has not been executed in a browser. Routing and data flow require acceptance verification.
 
-## Required next steps
-1. Preserve all feature draft PRs and integration PR #20 as drafts.
-2. Reconcile the shared shell routing and mount lifecycle on the integration branch only.
-3. Verify student change fields and effective-date validation against actual `change_student` SQL.
-4. Test additive backend migration on disposable database; switch Lessons to v2 contract; never deploy automatically.
-5. Run Node tests and authenticated browser/Supabase integration tests; fix failures.
-6. Request original wireframe images and complete side-by-side comparison.
-7. Update README and PR #20 only after the implementation and tests are demonstrably complete.
+## P1/P2 blockers
+- German UI localization incomplete (legacy English copy and raw server errors).
+- Original wireframes now supplied in conversation, but screenshot-to-browser visual parity is pending. Known deviations documented separately.
+- Node tests have not been executed.
+- Old legacy screens remain in `app.js`; cleanup and translation coverage needed.
 
-No claim of release readiness is made.
+## No deployment
+Only GitHub branch commits were made. `main`, production database schema, production data and deployed frontend remain unchanged.
