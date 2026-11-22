@@ -100,3 +100,40 @@
  .ll-app:has(.ll-tabs.ll-hidden) .e4-foot{padding-left:14px;padding-right:14px;gap:8px}
  .ll-app:has(.ll-tabs.ll-hidden) .e4-foot button{font-size:13px}
 }
+
+/* Invoice draft/issued detail: restore the source HTML's white section cards,
+   full-width status band and anchored two-button footer. */
+.ll-app .ll-content:has(.e4-detail){padding:0 0 0}
+.e4:has(.e4-detail){padding:0 0 calc(115px + env(safe-area-inset-bottom,0px))}
+.e4:has(.e4-detail)>.e4-demo{margin:12px 20px}
+.e4-detail{background:#f4f4f2;min-height:100dvh;padding:0 20px 20px}
+.e4-detail .e4-subhead{background:#fff;margin:0 -20px;padding:20px 20px 16px;border-bottom:1px solid #d6d6d2}
+.e4-detail .e4-subhead h2{font-size:23px;line-height:1.25;margin:0 0 5px}
+.e4-detail .e4-subhead p{color:#555;font-size:16px;margin:0}
+.e4-detail>.e4-warning,.e4-detail>.e4-ready,.e4-detail>.e4-success{margin:0 -20px 16px;padding:12px 20px;border-radius:0;font-size:14px;font-weight:700}
+.e4-detail .e4-card{background:#fff;border:1px solid #d6d6d2;border-radius:10px;padding:16px;margin:14px 0}
+.e4-detail .e4-card-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px}
+.e4-detail .e4-card h3{font-size:18px;line-height:24px;margin:0}
+.e4-detail .e4-card p{font-size:15px;line-height:1.45;margin:6px 0}
+.e4-detail .e4-card .e4-muted{color:#666}
+.e4-detail .e4-card-heading a{font-size:13px;color:#222;text-decoration:underline;font-weight:600;text-align:right}
+.e4-inline-warning{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 0;padding:10px 12px;background:#fbeed9;border-radius:8px;color:#87510c;font-size:14px}
+.e4-inline-warning strong{font-weight:700}
+.e4-inline-warning button{flex:none;min-height:38px;padding:5px 12px;border:1.5px solid #222;border-radius:8px;background:#fff;color:#222;font:700 14px Inter,sans-serif}
+.e4-detail .e4-lesson{grid-template-columns:50px minmax(0,1fr) auto;gap:8px;padding:12px 0;align-items:start}
+.e4-detail .e4-lesson span:nth-child(2){font-size:14px;line-height:1.35}
+.e4-detail .e4-lesson strong{font-size:14px;font-weight:500}
+.e4-detail .e4-total{border-top:1px solid #d6d6d2;font-size:17px;margin-top:2px;padding:12px 0 5px}
+.e4-detail .e4-vat-note{font-size:13px!important;color:#555;margin:0!important}
+.e4-detail .e4-excluded{border-radius:8px}
+.e4-detail .e4-foot{position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,680px);max-width:680px;display:flex;flex-direction:row;gap:10px;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #d6d6d2;z-index:11;pointer-events:auto}
+.e4-detail .e4-foot button{flex:1 1 0;min-width:0;min-height:48px;height:auto;padding:10px 8px;border:2px solid #242424;border-radius:10px;background:#fff;color:#242424;box-shadow:none;font:700 15px/1.25 Inter,sans-serif}
+.e4-detail .e4-foot button:last-child{background:#242424;color:#fff}
+.e4-detail .e4-foot button:disabled{background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1}
+@media(max-width:360px){.e4-detail{padding-left:16px;padding-right:16px}.e4-detail .e4-subhead{margin-inline:-16px;padding-inline:16px}.e4-detail>.e4-warning,.e4-detail>.e4-ready,.e4-detail>.e4-success{margin-inline:-16px;padding-inline:16px}}
+
+/* Win over the generic subpage footer without affecting batch dialogs. */
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot{background:#fff;border-top:1px solid #d6d6d2}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:first-child{background:#fff;color:#242424;border-color:#242424}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:last-child{background:#242424;color:#fff;border-color:#242424}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot button:last-child:disabled{background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1}
