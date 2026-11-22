@@ -39,8 +39,8 @@ This module intentionally does not edit `app.js`, `style.css`, `index.html`, sha
 
 ## Checks
 - JavaScript syntax parsed successfully with the V8 Function parser.
-- Six focused checks passed: normalization, grouped statuses, price formatting, lesson chronology, story mapping, exported mount function.
-- Added `tests/students.test.mjs` with five Node test cases. **Node test runner was not executed in the GitHub-connected environment.**
+- Previous handoff reported six focused checks; these have not been independently rerun in this continuation.
+- `tests/students.test.mjs` now contains nine Node test cases (five existing and four new). **Node test runner was not executed:** a local clone attempt failed because github.com DNS resolution was unavailable. No passing test claim is made for these changes.
 - Not run: authenticated Supabase integration tests, 360px and desktop screenshots, keyboard/safe-area browser testing, network/offline and invoiced-record regression tests. These remain acceptance gates for the integrator.
 
 ## Risks and follow-up
@@ -53,3 +53,40 @@ This module intentionally does not edit `app.js`, `style.css`, `index.html`, sha
 
 ## Files
 `students/students.js`, `students/students.css`, `tests/students.test.mjs`, `docs/students-handoff.md`.
+
+## Continuation audit (22 Nov 2026)
+
+### Verified from source/contracts
+- Reviewed `docs/parallel-agents.md`, `docs/frontend-redesign.md`, issue #22 discussion, Shell #21 handoff and Backend #24 contract (`docs/backend-e3-contract.md`).
+- Backend confirms `find_students(text,text,date)`, `student_details_at(uuid,date)`, `student_status_at(uuid,date)`, `create_student(jsonb)`, and `set_student_status(uuid,text,date,date)`. The client uses the documented parameter names for these calls. `find_students` exposes name, nickname, subject, billing mode, rate, monthly fee and status. `create_student` requires price > 0.
+- **Unverified/likely blocker:** `change_student` and `change_student_with_repricing` are used for section edits but are absent from the Backend #24 published RPC inventory. Do not accept editing until Backend confirms existence, exact JSON payload semantics, effective-date behavior and invoice protection. Do not substitute direct writes without contract agreement.
+- Shell exports `shellMarkup` and `bindShell` with navigation keys `lessons/students/invoices`; integrator must mount this module into shell content, suppress main tabs on student subpages and avoid double floating create buttons.
+- Lessons agent must implement `onLessonCreate(studentId)` with fixed student and `onLessonOpen(lessonId,studentId)` with a valid lesson ID; check `active_lessons` column names (especially `id`, `minutes`, `rate`, `invoice_id`) against the deployed view.
+
+### Changes in this continuation
+- Added client-side name/nickname filtering after server search and explicit duplicate-name checks across active, paused and ended groups.
+- Made list search failures visible in the results region and guarded stale error responses; handled object or array response shape for student details.
+- Added four regression test cases for accent/nickname search, inactive duplicate names, unexpected statuses and empty lesson history.
+
+### Acceptance status and gaps
+- **Source inspection performed:** German headings, grouped list, search, three-card create form, three independent edit forms, effective-date input, status form and month-grouped lesson history.
+- **Not verified against original images:** pixel/layout fidelity, 360px/desktop screenshots, keyboard/safe-area, fixed action bar, wrapping and absence of tab bar on detail screens. Original screenshots are not in the available repository materials.
+- **Not executed:** Node test suite (GitHub clone DNS failure), authenticated browser interactions, SQL/RLS/invoice-lock tests, offline/error simulations, production/development RPC calls. Do not interpret static coverage as runtime validation.
+- **Outstanding:** validate/edit RPCs; confirm student price-effective-date and version history semantics; test list/search behavior against Supabase, including whether server search returns all intended nickname matches; verify lesson read-model fields, status labels and billed amounts; resolve shell and Lessons callbacks through #21/#23. Zero-priced student defaults need product/backend decision; no change to backend or production data made.
+- **No merge/deployment/production write performed.**
+
+## Reviewer follow-up: ST-3 and pricing RPC (22 Nov 2026)
+
+- The **written approved design contract** in `docs/frontend-redesign.md` specifies three simultaneously displayed groups: Aktiv, Pausiert, Beendet. Removed extra status-filter buttons and filter state, retaining search and all three sections (including empty sections). The original image wireframe was not available, so pixel-level comparison remains blocked.
+- Added four regression cases: all groups remain after search; no status-filter markup; no unsupported student name update; price update RPC includes `p_reprice:false` and UUID idempotency.
+- **Executed:** exact fetched `students/students.js` and all **13** fetched test case bodies in a V8 JavaScript harness using equivalent assertions: **13 passed, 0 failed**. This was **not** `node --test`, and does not constitute a Node test-runner pass. The first harness attempt passed 10/13 and failed 3 because the harness omitted the `source` variable; corrected harness rerun passed 13/13. The previous `git ls-remote` attempt failed DNS resolution of github.com. Native Node suite remains blocked by inability to obtain the repository through the container.
+- **Read-only live function-definition verification:** Supabase `public.change_student(p_student_id uuid,p_effective_from date,p_changes jsonb) -> uuid` and `public.change_student_with_repricing(p_student_id uuid,p_effective_from date,p_changes jsonb,p_reprice boolean,p_idempotency_key uuid) -> jsonb` both exist. The latter invokes `change_student` transactionally, and with `p_reprice:false` creates a version without repricing lessons. Current pricing payload `{minutes,lessons_per_week,location,billing_mode,price}` is supported; `price` must be >0. A UUID idempotency key is required and supplied.
+- **Confirmed mismatch corrected:** `change_student` rejects any `student_name` key. Basics editor now displays the name as non-editable and sends only `nickname` and `subject`. This remains a **ST-4 feature gap** if student-name editing is a requirement; backend/product coordination needed before restoring it.
+- No production data modified. Database queries were read-only metadata introspection. No merge or deployment. Browser screenshot, authenticated mutation/RLS, invoice locks and native Node suite remain unexecuted.
+
+## Basics payload hardening (22 Nov 2026)
+
+- Follow-up commit `da09ad223c8fe6a7f50f6e4538a39533d08af257`: Basics editor already displayed student name as read-only; now uses exported `basicsChanges(values)` as a strict allowlist, returning only trimmed `nickname` and `subject`. No `student_name` or unrelated field can enter the Basics `change_student` payload through the helper. Create-student flow continues accepting student name as required by `create_student`.
+- Test commit `e54d33949b8cbec8f53eee7ad773d3fd726233fd`: two additional regression tests exercise the actual allowlist with malicious/extra fields and assert the edit form uses it while showing the name read-only. Total: **15** test cases.
+- **Available execution:** all 15 fetched test case bodies evaluated against the fetched branch source using a V8 harness with equivalent assertions: **15 passed, 0 failed**. This is not the native `node --test` runner. Native runner and browser integration remain unexecuted because repository checkout was unavailable in the container (github.com DNS failure in previous attempt).
+- Backend unchanged. No merge, deploy, or production data write.
