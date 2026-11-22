@@ -20,7 +20,7 @@ declare
 begin
  if (select auth.uid()) is null then raise exception 'Authentication required'; end if;
  if p_idempotency_key is null then raise exception 'Idempotency key required'; end if;
- if p_student_id is null or p_lesson_date is null or p_lesson_date > current_date + 365
+ if p_student_id is null or p_lesson_date is null
  then raise exception 'Invalid lesson date or student'; end if;
  if p_status is null or p_status not in ('held','cancelled_billable')
  then raise exception 'Invalid status'; end if;
@@ -34,6 +34,13 @@ begin
  select id into v_id from public.lessons
  where ledger_id=v_ledger and idempotency_key=p_idempotency_key;
  if v_id is not null then
+  -- A retry key must not silently refer to a different lesson or payload.
+  if not exists (select 1 from public.lessons x where x.id=v_id
+     and x.student_id=p_student_id and x.lesson_date=p_lesson_date
+     and x.status=p_status and (p_minutes is null or x.minutes=p_minutes)
+     and (p_rate is null or x.rate=p_rate)) then
+    raise exception 'Idempotency key reused with different lesson';
+  end if;
   return jsonb_build_object('state','saved','id',v_id,'replayed',true);
  end if;
  select * into v_version from public.student_details_at(p_student_id,p_lesson_date);
@@ -103,7 +110,7 @@ begin
  if v_old.invoice_id is not null then raise exception 'Invoiced lesson is locked'; end if;
  if exists(select 1 from public.lesson_voids where lesson_id=v_old.id)
  then raise exception 'Lesson already voided'; end if;
- if p_lesson_date is null or p_lesson_date>current_date+365 then raise exception 'Invalid lesson date'; end if;
+ if p_lesson_date is null then raise exception 'Invalid lesson date'; end if;
  if not coalesce(p_confirm_inactive,false) and
     (not exists(select 1 from public.student_versions v where v.student_id=v_old.student_id and v.effective_from<=p_lesson_date)
     or public.student_status_at(v_old.student_id,p_lesson_date) is distinct from 'active')
