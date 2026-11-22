@@ -1,5 +1,10 @@
 -- E3 additive RPCs. Review and apply on a disposable development database only.
 -- Legacy log_lesson/replace_lesson are deliberately unchanged.
+-- Existing lesson_paid_rate CHECK forbids zero-priced per-lesson records.
+-- E3 permits goodwill (0 EUR) while retaining the nonnegative lessons_rate_check.
+alter table public.lessons drop constraint if exists lesson_paid_rate;
+alter table public.lessons add constraint lesson_paid_rate
+ check (billing_mode <> 'per_lesson' or rate >= 0);
 -- All records are append-only except the existing replacement-link metadata.
 create or replace function public.log_lesson_v2(
  p_student_id uuid, p_lesson_date date, p_status text default 'held',
