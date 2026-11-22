@@ -468,9 +468,11 @@ async function logLessonSheet(studentId,original=null){
   if(a.error||b.error){el.textContent=(a.error||b.error).message;return;}
   const voided=new Set((b.data||[]).map(x=>x.lesson_id));
   const active=(a.data||[]).filter(x=>!voided.has(x.id));
-  el.innerHTML=active.length?active.map(x=>'<div class="history-entry" data-recent-date="'+escapeHTML(x.lesson_date)+'">'+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+' · '+x.rate+' €</div>').join(''):'Keine Stunden in den letzten 14 Tagen.';
   const date=$('lessonDate')?.value;
-  el.querySelectorAll('[data-recent-date]').forEach(x=>x.classList.toggle('lesson-duplicate',x.dataset.recentDate===date));
+  const draftRow={lesson_date:date,minutes:Number($('lessonMinutes').value)||0,status:$('lessonStatus').value,rate:flat?0:Number($('lessonRate').value)||0,isDraft:true};
+  const rows=[...active,draftRow].filter(x=>x.lesson_date).sort((a,b)=>b.lesson_date.localeCompare(a.lesson_date)||Number(!!b.isDraft)-Number(!!a.isDraft));
+  el.innerHTML=rows.map(x=>'<div class="history-entry'+(x.isDraft?' lesson-draft':'')+'" data-recent-date="'+escapeHTML(x.lesson_date)+'">'+(x.isDraft?'Neu: ':'')+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+' · '+x.rate+' €</div>').join('');
+  el.querySelectorAll('[data-recent-date]').forEach(x=>x.classList.toggle('lesson-duplicate',!x.classList.contains('lesson-draft')&&x.dataset.recentDate===date));
  };
  $('lessonDate').addEventListener('change',async()=>{
   const date=$('lessonDate').value;
@@ -491,7 +493,7 @@ async function logLessonSheet(studentId,original=null){
   const billable=override==='charged'||(override!=='not_charged'&&(status==='held'||(status==='no_show'&&v.no_show_billable!==false)||(status==='cancelled'&&$('cancelBy').value==='student'&&$('cancelInTime').value==='false')));
   preview.textContent=flat?'Monatspauschale: keine zusätzliche Berechnung':billable?'Voraussichtlich berechnet: '+(Number($('lessonRate').value)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'}):'Voraussichtlich nicht berechnet';
  };
- $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;$('cancelInTime').onchange=refresh;if($('lessonOverride'))$('lessonOverride').onchange=refresh;if($('lessonRate'))$('lessonRate').oninput=refresh;refresh();
+ $('lessonStatus').onchange=()=>{refresh();refreshRecent();};$('lessonMinutes').oninput=refreshRecent;if($('lessonRate'))$('lessonRate').oninput=()=>{refresh();refreshRecent();};$('cancelBy').onchange=refresh;$('cancelInTime').onchange=refresh;if($('lessonOverride'))$('lessonOverride').onchange=refresh;if($('lessonRate'))$('lessonRate').oninput=refresh;refresh();
  let key=crypto.randomUUID();
  $('saveLesson').onclick=async()=>{
   $('saveLesson').disabled=true;
