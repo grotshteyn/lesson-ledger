@@ -37,6 +37,7 @@ export const lessonReplacementHistory = (rows, lessonId) => {
   return rows.filter(row=>related.has(row.id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
 };
 export const lessonSaveFingerprint = (payload) => JSON.stringify([payload.studentId,payload.originalId||null,payload.date,payload.status,payload.minutes,payload.rate]);
+const shortDay = date => {const d=new Date(date+'T12:00:00');return ['So','Mo','Di','Mi','Do','Fr','Sa'][d.getDay()]+' '+d.getDate()};
 const isoToday = () => {const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const control = (label,id,type='text',value='',extra='') => '<label class="ll-field">'+esc(label)+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
 const button = (text,action,kind='') => '<button type="button" class="ll-btn '+kind+'" data-action="'+action+'">'+esc(text)+'</button>';
@@ -70,7 +71,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       const monthLessons=lessons.filter(x=>x.lesson_date.slice(0,7)===currentMonth);
       const groups=lessonWeekGroups(monthLessons);
       const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
-      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>'+(g.week===lessonWeekGroups([{lesson_date:today()}])[0]?.week?'Diese Woche':'Woche ab '+pretty(g.week))+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+(x.status==='held'?'':' · '+statusLabel(x))+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
+      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>'+(g.week===lessonWeekGroups([{lesson_date:today()}])[0]?.week?'Diese Woche':'Woche ab '+pretty(g.week))+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+pretty(x.lesson_date)+'</strong><small>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+(x.status==='held'?'':' · Spät abgesagt')+'</small></span><b>'+euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0)+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
     }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(germanBackendError(e))+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
