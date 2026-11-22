@@ -367,8 +367,7 @@ function studentStatusForm(id,v,current){
 }
 
 
-async function quickLogLesson(studentId,button){
- const key=crypto.randomUUID();button.disabled=true;
+async function quickLogLesson(studentId,button,key=crypto.randomUUID()){button.disabled=true;
  const args={p_student_id:studentId,p_lesson_date:today(),p_idempotency_key:key};
  let {data,error}=await supabase.rpc('log_lesson',args);
  if(!error&&data?.state==='duplicate'){
@@ -376,7 +375,7 @@ async function quickLogLesson(studentId,button){
   else{button.disabled=false;return;}
  }
  button.disabled=false;
- if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button);return;}
+ if(error){const retry=confirm('Nicht gespeichert: '+error.message+'. Erneut versuchen?');if(retry)return quickLogLesson(studentId,button,key);return;}
  if(data?.state!=='saved')return;
  const row=button.closest('.lesson-student-row'),notice=document.createElement('div');
  notice.className='notice lesson-save-notice';notice.textContent='Stunde gespeichert. ';
@@ -415,8 +414,30 @@ async function logLessonSheet(studentId,original=null){
  (flat?'':'<div id="lessonPriceField">'+field('lessonRate','Preis (€)',original?.rate||v.rate,'number')+'</div>')+
  '<div id="lessonCancellation" hidden><label class="field">Wer hat abgesagt?<select id="cancelBy"><option value="student">Schüler</option><option value="teacher">Ich</option></select></label><label class="field" id="cancelTimingField">Mindestens 24 Stunden vorher?<select id="cancelInTime"><option value="false">Nein</option><option value="true">Ja</option></select></label></div>'+
  (flat?'':'<label class="choice" id="lessonOverrideRow"><input type="checkbox" id="lessonFree"> Diesmal nicht berechnen</label>')+
+ '<section class="lesson-recent"><h2>Letzte 14 Tage</h2><div id="recentLessons" class="muted">Wird geladen …</div></section>'+ 
  '<p id="error" class="error"></p>'+button('Speichern','saveLesson')+'</section></div>','change-screen');
  $('closeLog').onclick=()=>studentPage(studentId);
+ const recentSince=new Date(Date.now()-13*86400000).toISOString().slice(0,10);
+ const refreshRecent=async()=>{
+  const [a,b]=await Promise.all([supabase.from('lessons').select('id,lesson_date,minutes,status,rate').eq('student_id',studentId).gte('lesson_date',recentSince).order('lesson_date',{ascending:false}).limit(50),supabase.from('lesson_voids').select('lesson_id')]);
+  const el=$('recentLessons');if(!el)return;
+  if(a.error||b.error){el.textContent=(a.error||b.error).message;return;}
+  const voided=new Set((b.data||[]).map(x=>x.lesson_id));
+  const active=(a.data||[]).filter(x=>!voided.has(x.id));
+  el.innerHTML=active.length?active.map(x=>'<div class="history-entry" data-recent-date="'+escapeHTML(x.lesson_date)+'">'+escapeHTML(x.lesson_date)+' · '+x.minutes+' Min. · '+escapeHTML(x.status)+' · '+x.rate+' €</div>').join(''):'Keine Stunden in den letzten 14 Tagen.';
+  const date=$('lessonDate')?.value;
+  el.querySelectorAll('[data-recent-date]').forEach(x=>x.classList.toggle('lesson-duplicate',x.dataset.recentDate===date));
+ };
+ $('lessonDate').addEventListener('change',async()=>{
+  const date=$('lessonDate').value;
+  if(!original){
+   const {data}=await supabase.rpc('student_details_at',{p_student_id:studentId,p_at:date});
+   if(data?.length){$('lessonMinutes').value=data[0].minutes;if(!flat)$('lessonRate').value=data[0].rate;}
+  }
+  refreshRecent();
+ });
+ refreshRecent();
+
  if(original){$('lessonStatus').value=original.no_show?'no_show':original.status==='held'?'held':'cancelled';if($('lessonFree'))$('lessonFree').checked=original.charge_override==='not_charged';}
  const refresh=()=>{$('lessonCancellation').hidden=$('lessonStatus').value!=='cancelled';$('cancelTimingField').hidden=$('cancelBy').value!=='student';};
  $('lessonStatus').onchange=refresh;$('cancelBy').onchange=refresh;refresh();
