@@ -178,3 +178,16 @@ body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
 }
 .ll-app .settings-screen .ll-unified-actions{margin:18px 0 0}
 .ll-app .e4 .e4-detail .e4-foot:has(>button:nth-child(2)){position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,680px);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px))}
+
+
+/* Read-only subviews use one completion action; editing retains two. */
+.ll-app .ll-unified-actions-single,
+.ll-app .e2-screen .e2-actions-single{display:flex;justify-content:stretch}
+.ll-app .ll-unified-actions-single>button,
+.ll-app .e2-screen .e2-actions-single>button{flex:1 1 auto;width:100%;background:#242424;color:#fff}
+.ll-app .e4 .e4-foot:has(>button:only-child):not(:has(button[disabled])){display:flex}
+.ll-app .e4 .e4-detail .e4-foot:has(>button:only-child){position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,680px);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:#fff;z-index:11}
+.ll-app .e4 .e4-detail .e4-foot>button:only-child{width:100%;min-height:48px;border:2px solid #242424;border-radius:10px;background:#242424;color:#fff;box-shadow:none;font:700 15px/1.25 Inter,system-ui,sans-serif}
+/* Keep the prominent overview CTA floating above the bottom tab bar. */
+.ll-app>.ll-floating-action{position:fixed;z-index:11;bottom:92px}
+.ll-app:has(>.ll-floating-action) .ll-content .ll-unified-actions{z-index:8}
