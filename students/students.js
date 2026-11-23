@@ -79,7 +79,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data};
  const backButton='<button type="button" class="e2-back" data-back aria-label="Zurück">‹</button>';
- const footer=(save='Speichern')=>`<div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button></div>`;
+ const footer=(save='Fertig')=>`<div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button></div>`;
  const loading=()=>render('<p role="status">Wird geladen …</p>');
  async function list(){
    onSubpageChange(false);
@@ -105,7 +105,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  function create(prefill=''){
    onSubpageChange(true);
   ++sequence;
-  render(`<header class="e2-heading"><h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true))}${card('Stunden und Preis',lessonLength(45)+billingChoice('per_lesson')+input('price','Preis pro Stunde (€) *','','number',true)+locationChoice('')+input('lessons_per_week','Stunden pro Woche *',1,'number',true)+input('start_date','Erste Stunde ab *',today(),'date',true))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Schüler speichern')}</form>`);
+  render(`<header class="e2-heading"><h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true))}${card('Stunden und Preis',lessonLength(45)+billingChoice('per_lesson')+input('price','Preis pro Stunde (€) *','','number',true)+locationChoice('')+input('lessons_per_week','Stunden pro Woche *',1,'number',true)+input('start_date','Erste Stunde ab *',today(),'date',true))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Fertig')}</form>`);
   bind('[data-back]',list);bind('[data-cancel]',list);
   root.querySelector('[name="student_pays"]').addEventListener('change',e=>{const form=e.target.form;form.elements.payer_name.value=e.target.checked?form.elements.student_name.value:'';form.elements.payer_name.disabled=e.target.checked});
   root.querySelector('#e2-form').addEventListener('submit',async e=>{
@@ -138,15 +138,15 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    const v=(Array.isArray(current)?current[0]:current)||versions.data?.[0];if(!v)throw new Error('Schüler nicht gefunden.');
    const isDetails=tab==='details',payer=v.payer_address||{};
    const editButton=section=>`<button class="e2-edit" data-edit="${section}">Bearbeiten</button>`;
-   render(`<header class="e2-heading">${backButton}<div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs e2-single-select" role="group" aria-label="Schüleransicht"><button type="button" data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button type="button" data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
+   render(`<header class="e2-heading"><div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs e2-single-select" role="group" aria-label="Schüleransicht"><button type="button" data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button type="button" data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
     card('Grundlagen',`<dl>${detail('Name',v.student_name)}${detail('Kurzname',v.nickname)}${detail('Fach',v.subject)}${detail('Beginn',dateLabel(v.start_date))}</dl>`,editButton('basics'))+
     card('Stunden und Preis',`<dl>${detail('Dauer',v.minutes+' Minuten')}${detail('Stunden pro Woche',v.lessons_per_week)}${detail('Preis',studentPrice(v))}${detail('Unterrichtsort',locationNames[v.location])}</dl>`,editButton('pricing'))+
     card('Zahlungspflichtige Person',`<dl>${detail('Name',v.payer_name)}${detail('E-Mail',v.payer_email)}${detail('Straße',payer.street)}${detail('PLZ',payer.postcode)}${detail('Ort',payer.city)}</dl>`,editButton('payer'))+
     card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p><button class="e2-secondary" data-status>Status ändern</button>`)+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
     `<div class="e2-lesson-actions"><button class="e2-primary" data-new-lesson>+ Stunde erfassen</button></div><div id="e2-lessons" aria-live="polite">Stunden werden geladen …</div>`}
-    <p role="alert" class="e2-error"></p>`);
-   bind('[data-back]',list);
+    <p role="alert" class="e2-error"></p><div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button type="button" class="e2-primary" data-done>Fertig</button></div>`);
+   bind('[data-cancel]',list);bind('[data-done]',list);
    root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>detailPage(id,b.dataset.tab)));
    root.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editSection(id,v,b.dataset.edit)));
    bind('[data-status]',()=>editStatus(id,v,status));
@@ -200,7 +200,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  function editStatus(id,v,current){
    onSubpageChange(true);
   ++sequence;const effective=v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
-  render(`<header class="e2-heading">${backButton}<h1>Status ändern</h1></header><form id="e2-status">${card('Status',select('event','Aktion',[['pause','Pausieren'],['restart','Wieder starten'],['end','Beenden']],current==='paused'||current==='ended'?'restart':'pause')+input('effective_from','Gültig ab',effective,'date',true)+input('pause_until','Pause bis (optional)','','date'))}<p class="e2-muted">Bei Monatspauschalen beginnen Statusänderungen am Monatsersten.</p><p role="alert" class="e2-error"></p>${footer('Status speichern')}</form>`);
+  render(`<header class="e2-heading"><h1>Status ändern</h1></header><form id="e2-status">${card('Status',select('event','Aktion',[['pause','Pausieren'],['restart','Wieder starten'],['end','Beenden']],current==='paused'||current==='ended'?'restart':'pause')+input('effective_from','Gültig ab',effective,'date',true)+input('pause_until','Pause bis (optional)','','date'))}<p class="e2-muted">Bei Monatspauschalen beginnen Statusänderungen am Monatsersten.</p><p role="alert" class="e2-error"></p>${footer('Fertig')}</form>`);
   const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
   const form=root.querySelector('#e2-status');
   const update=()=>{form.elements.pause_until.closest('label').hidden=form.elements.event.value!=='pause'};form.elements.event.addEventListener('change',update);update();
