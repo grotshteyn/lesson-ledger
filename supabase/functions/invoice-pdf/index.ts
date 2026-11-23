@@ -87,9 +87,19 @@ async function handleRequest(req: Request): Promise<Response> {
       .lte("effective_from", invoice.billing_month)
       .order("effective_from", { ascending: false }).limit(1).maybeSingle();
     lessonSubject = String(studentVersion?.subject ?? "").trim();
+    if (!lessonSubject) {
+      // Some students were first recorded after an older billing month.
+      // Fall back to the earliest recorded subject instead of leaving generic text.
+      const { data: firstVersion } = await client.from("student_versions")
+        .select("subject").eq("student_id", invoice.student_id)
+        .order("effective_from", { ascending: true })
+        .order("created_at", { ascending: true })
+        .limit(1).maybeSingle();
+      lessonSubject = String(firstVersion?.subject ?? "").trim();
+    }
   }
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v2.pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v3.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
