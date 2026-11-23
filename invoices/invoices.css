@@ -155,3 +155,15 @@
 
 /* Keep the issued-invoice PDF action readable and finger-friendly on mobile. */
 .e4-line>button.e4-row-pdf:last-child{width:auto;min-width:76px;padding:0 10px;border-left:1px solid #c8ddc8;font-size:13px;font-weight:700;white-space:nowrap}
+
+/* Shared two-line overview card scale. */
+.e4-rows{background:transparent;border:0;border-radius:0;overflow:visible;display:grid;gap:8px}
+.e4-line{min-height:72px;border:1px solid #d6d6d2!important;border-radius:12px;overflow:hidden}
+.e4-line>button:first-child{display:flex;flex-direction:column;justify-content:center;align-items:stretch;gap:5px;padding:14px 16px;min-width:0}
+.e4-line-top,.e4-line-bottom{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-width:0}
+.e4-line>button .e4-student-name{font-size:16px;font-weight:600;min-width:0}
+.e4-line>button .e4-line-top strong{font-size:16px;font-weight:600;flex-shrink:0}
+.e4-line>button .e4-line-meta{font-size:14px;font-weight:400;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.e4-line>button .e4-line-bottom small{font-size:13px;font-weight:500;flex-shrink:0}
+.e4-line>button.e4-row-pdf:last-child{min-width:76px;width:auto;padding:0 10px;border-left:1px solid #c8ddc8;font-size:13px;font-weight:700;white-space:nowrap}
+@media(max-width:360px){.e4-line>button:first-child{padding:12px 10px}.e4-line>button .e4-student-name,.e4-line>button .e4-line-top strong{font-size:16px}.e4-line>button .e4-line-meta{font-size:13px}}
