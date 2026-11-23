@@ -1,7 +1,7 @@
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js';
 import {mountLessons} from './lessons/lessons.js';
-import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js';
+import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=invoice-detail-77';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
