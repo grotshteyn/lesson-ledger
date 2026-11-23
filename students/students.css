@@ -307,3 +307,26 @@
  background:#242424;color:#fff;font-size:16px;font-weight:700;
 }
 .ll-app .e2-screen .e2-detail-footer{display:flex;flex-direction:column}
+
+
+/* Payer and student editors: keep both actions inside narrow mobile viewports. */
+.ll-app .e2-screen:has(#e2-edit){
+ width:100%;max-width:580px;min-width:0;
+ padding-left:max(14px,env(safe-area-inset-left,0px));
+ padding-right:max(14px,env(safe-area-inset-right,0px));
+}
+.ll-app .e2-screen #e2-edit,
+.ll-app .e2-screen #e2-edit .e2-actions{
+ width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+}
+.ll-app .e2-screen #e2-edit .e2-actions{
+ left:auto;right:auto;transform:none;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:10px;overflow:visible;
+}
+.ll-app .e2-screen #e2-edit .e2-actions>button{
+ display:block;position:static;min-width:0;max-width:100%;
+ padding:10px 5px;white-space:nowrap;
+ overflow:visible;text-overflow:clip;
+ font-size:clamp(13px,3.8vw,15px);
+}
