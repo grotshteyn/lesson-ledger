@@ -1,4 +1,5 @@
 import {germanBackendError} from '../frontend/backend-errors.js';
+import {actionBar} from '../frontend/action-bar.js';
 // E3 isolated UI. The integrator mounts this inside the shell's content root.
 export const lessonWeekGroups = (rows) => {
   const monday = date => { const [y,m,day] = date.split('-').map(Number); const d = new Date(Date.UTC(y,m-1,day)); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
@@ -115,7 +116,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       (original?'<section class="ll-history-section"><h3>Verlauf</h3><div id="ll-edit-history" role="status">Verlauf wird geladen …</div></section>':'')+
       (original&&!original.invoice_id?'<div class="ll-remove-row">'+button('Stunde entfernen','remove')+'</div>':'')+
       (original?.invoice_id?'<p class="ll-muted" role="status">Diese Stunde ist bereits abgerechnet. Rechnung korrigieren, um Änderungen vorzunehmen.</p>':'')+
-      '<p id="ll-error" role="alert"></p><div class="ll-actions ll-form-actions">'+button('Abbrechen','list')+(original?.invoice_id?button('Fertig','list','ll-primary'):button('Fertig','save','ll-primary'))+'</div>');
+      '<p id="ll-error" role="alert"></p>'+actionBar(button('Abbrechen','list')+(original?.invoice_id?button('Fertig','list','ll-primary'):button('Fertig','save','ll-primary')),{context:'lesson-edit'}));
     const dateInput=el('ll-date');
     const updateDate=(choice,openCalendar=false)=>{
       root.querySelectorAll('.ll-quick button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.action===choice)));
