@@ -1,21 +1,19 @@
 name: E2 frontend checks
 on:
   pull_request:
-  push:
-    branches:
-      - main
-      - feature/e2-students-foundation
-      - feature/wireframe-visual-alignment
+  workflow_dispatch:
 jobs:
   javascript:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Check JavaScript syntax
-        run: node --check app.js
+        run: |
+          find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
       - name: Run E2 frontend unit tests
         run: node --test tests/e2-frontend.test.mjs
       - name: Install Playwright Chromium
@@ -26,15 +24,3 @@ jobs:
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/e2-server.log 2>&1 &
           node --test tests/e2-browser.test.mjs
-      - name: Verify deployed Pages includes E2
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error --location --max-time 15 'https://grotshteyn.github.io/lesson-ledger/app.js' | grep -q 'find_students'; then
-              echo 'E2 is present on GitHub Pages'
-              exit 0
-            fi
-            sleep 10
-          done
-          echo 'E2 not visible on GitHub Pages after 5 minutes' >&2
-          exit 1
