@@ -78,10 +78,10 @@ export function fixtureInvoiceAdapter(){
 }
 export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoiceAdapter()}){
  let rows=[],view='list',current=null,selected=new Set(),notice='',result=[],disposed=false,busy=false;
- const status={ready:'Bereit',missing_details:'Angaben fehlen',in_progress:'In Bearbeitung',issued:'Ausgestellt',cancelled:'Storniert'};
+ const status={ready:'Bereit',missing_details:'Angaben fehlen',in_progress:'Geplant',issued:'Ausgestellt',cancelled:'Storniert'};
  const button=(label,action,extra='')=>'<button type="button" data-e4="'+action+'" '+extra+'>'+esc(label)+'</button>';
  const card=(title,body,action='')=>'<section class="e4-card"><div class="e4-card-heading"><h3>'+title+'</h3>'+action+'</div>'+body+'</section>';
- const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span class="e4-student-name">'+esc(r.student||'Schülername nicht verfügbar')+'</span><small>'+(r.status==='issued'?'✓ ':'')+esc(r.number||status[r.status]||r.status)+'</small><strong>'+eur(r.totalCents)+'</strong></button>'+(r.status==='issued'&&adapter.mode==='live'?button('PDF ↓','pdf-'+r.id,'class="e4-row-pdf" aria-label="PDF für '+esc(r.student||r.number||'Rechnung')+' herunterladen"'):'')+'</div>';
+ const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span class="e4-line-top"><span class="e4-student-name">'+esc(r.student||'Schülername nicht verfügbar')+'</span><strong>'+eur(r.totalCents)+'</strong></span><span class="e4-line-bottom"><span class="e4-line-meta">'+esc((r.number?r.number+' · ':'')+monthLabel(r.billingMonth))+'</span><small>'+esc(status[r.status]||r.status)+'</small></span></button>'+(r.status==='issued'&&adapter.mode==='live'?button('PDF ↓','pdf-'+r.id,'class="e4-row-pdf" aria-label="PDF für '+esc(r.student||r.number||'Rechnung')+' herunterladen"'):'')+'</div>';
  const groups=items=>groupInvoices(items).map(g=>'<section class="e4-month"><h2>'+esc(monthLabel(g.month))+' <span>'+eur(g.totalCents)+'</span></h2><div class="e4-rows">'+g.items.map(line).join('')+'</div></section>').join('');
  const foot=html=>'<div class="e4-foot">'+html+'</div>';
  const warning=msg=>'<p class="e4-warning" role="status">'+esc(msg)+'</p>';
