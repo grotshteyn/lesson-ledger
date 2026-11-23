@@ -77,8 +77,19 @@ async function handleRequest(req: Request): Promise<Response> {
     .select("line_number,description,lesson_date,quantity,gross_amount,net_amount,vat_amount")
     .eq("invoice_id", invoiceId).order("line_number");
   if (linesError) return error("lines_lookup_failed", 500);
+  // Resolve the billed student's subject for generic lesson labels.
+  // Prefer immutable invoice snapshot values, then the version valid in the billing month.
+  const snap = invoice.snapshot ?? {};
+  let lessonSubject = String(snap.subject ?? snap.student?.subject ?? snap.student_subject ?? "").trim();
+  if (!lessonSubject && invoice.student_id) {
+    const { data: studentVersion } = await client.from("student_versions")
+      .select("subject").eq("student_id", invoice.student_id)
+      .lte("effective_from", invoice.billing_month)
+      .order("effective_from", { ascending: false }).limit(1).maybeSingle();
+    lessonSubject = String(studentVersion?.subject ?? "").trim();
+  }
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + "-sample-layout-v1.pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v2.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
@@ -194,7 +205,11 @@ async function handleRequest(req: Request): Promise<Response> {
   tableHeader();
   for (const item of lines ?? []) {
     const date = item.lesson_date ? fmtDate(item.lesson_date) : "";
-    const description = wrap(item.description, R - (L + 86) - 95, 9.5);
+    const rawDescription = String(item.description ?? "");
+    const displayDescription = lessonSubject
+      ? rawDescription.replace(/Unterrichtsstunde/gi, lessonSubject)
+      : rawDescription;
+    const description = wrap(displayDescription, R - (L + 86) - 95, 9.5);
     const rowHeight = Math.max(1, description.length) * 14 + 10;
     ensure(rowHeight);
     if (date) put(date, L, y, 9.5);
