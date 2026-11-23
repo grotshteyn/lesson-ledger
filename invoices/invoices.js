@@ -1,3 +1,4 @@
+import {actionBar} from '../frontend/action-bar.js';
 // E4 invoice UI. All fixture amounts are display-only backend-shaped values.
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
 export const E4_STORIES = ['IN-1','IN-2','IN-4','IN-5'];
@@ -83,10 +84,10 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const card=(title,body,action='')=>'<section class="e4-card"><div class="e4-card-heading"><h3>'+title+'</h3>'+action+'</div>'+body+'</section>';
  const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span class="e4-line-top"><span class="e4-student-name">'+esc(r.student||'Schülername nicht verfügbar')+'</span><strong>'+eur(r.totalCents)+'</strong></span><span class="e4-line-bottom"><span class="e4-line-meta">'+esc((r.number?r.number+' · ':'')+monthLabel(r.billingMonth))+'</span><small>'+esc(status[r.status]||r.status)+'</small></span></button>'+(r.status==='issued'&&adapter.mode==='live'?button('PDF ↓','pdf-'+r.id,'class="e4-row-pdf" aria-label="PDF für '+esc(r.student||r.number||'Rechnung')+' herunterladen"'):'')+'</div>';
  const groups=items=>groupInvoices(items).map(g=>'<section class="e4-month"><h2>'+esc(monthLabel(g.month))+' <span>'+eur(g.totalCents)+'</span></h2><div class="e4-rows">'+g.items.map(line).join('')+'</div></section>').join('');
- const foot=html=>'<div class="e4-foot">'+html+'</div>';
+ const foot=(html,placement='bottom')=>placement==='floating'?'<div class="e4-foot">'+html+'</div>':actionBar(html,{placement,count:(html.match(/<button\\b/g)||[]).length===1?1:2,context:'invoice'});
  const warning=msg=>'<p class="e4-warning" role="status">'+esc(msg)+'</p>';
  const show=(html,sub=false)=>{if(disposed)return;onSubpageChange(sub);root.innerHTML='<div class="e4">'+(adapter.mode==='fixture'?'<div class="e4-demo">Vorschau mit Beispieldaten · keine echten Rechnungen</div>':'')+(notice?warning(notice):'')+html+'</div>';};
- const home=()=>{view='list';current=null;show((rows.length?groups(rows):'<p class="e4-empty">Noch keine abrechenbaren Rechnungen für abgeschlossene Monate.</p>')+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch')):foot('<button disabled>Rechnungen ausstellen</button>')));};
+ const home=()=>{view='list';current=null;show((rows.length?groups(rows):'<p class="e4-empty">Noch keine abrechenbaren Rechnungen für abgeschlossene Monate.</p>')+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch'),'floating'):foot('<button disabled>Rechnungen ausstellen</button>','floating')));};
  const refresh=async()=>{rows=await adapter.list();if(!disposed)home();};
  const downloadPdf=async id=>{try{const url=await adapter.pdf(id);const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.click();}catch(e){notice='PDF konnte nicht geladen werden: '+(e.message||'Unbekannter Fehler');await details(id);}};
  const issueLive=async(items)=>{if(busy||!items.length)return;
