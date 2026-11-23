@@ -23,7 +23,7 @@
 .ll-app .ll-action-bar>button:disabled{background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1}
 .ll-app .ll-action-bar:has(>button:only-child)>button{background:#242424;color:#fff}
 .ll-app .ll-action-bar>button:focus-visible{outline:3px solid #707070;outline-offset:2px}
-.ll-app .e4-detail>.ll-action-bar{background:#fff}
+.ll-app .e4-detail>.ll-action-bar{background:#f4f4f3}
 .ll-app .e4-detail{min-width:0;max-width:100%}
 .ll-app .e4:has(.e4-detail){min-width:0;max-width:100%}
 .ll-app .e2-screen,.ll-app .ll-lessons{min-width:0}
