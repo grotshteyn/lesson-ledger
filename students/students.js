@@ -145,8 +145,8 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p><button class="e2-secondary" data-status>Status ändern</button>`)+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
     `<div class="e2-lesson-actions"><button class="e2-primary" data-new-lesson>+ Stunde erfassen</button></div><div id="e2-lessons" aria-live="polite">Stunden werden geladen …</div>`}
-    <p role="alert" class="e2-error"></p><div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button type="button" class="e2-primary" data-done>Fertig</button></div>`);
-   bind('[data-cancel]',list);bind('[data-done]',list);
+    <p role="alert" class="e2-error"></p><div class="e2-actions e2-actions-single"><button type="button" class="e2-primary" data-done>Fertig</button></div>`);
+   bind('[data-done]',list);
    root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>detailPage(id,b.dataset.tab)));
    root.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editSection(id,v,b.dataset.edit)));
    bind('[data-status]',()=>editStatus(id,v,status));
