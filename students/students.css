@@ -263,3 +263,16 @@
 .ll-app .e2-screen:has(#e2-search) .e2-row-main strong{font-size:16px;font-weight:600;line-height:1.35}
 .ll-app .e2-screen:has(#e2-search) .e2-row-main small{font-size:14px;font-weight:400;line-height:1.35;margin-top:5px}
 .ll-app .e2-screen:has(#e2-search) .e2-row-price{font-size:16px;font-weight:600}
+
+
+/* Student subview: the create-lesson CTA belongs above the history, not over the Done footer. */
+.ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-lesson-actions{
+ position:static;left:auto;bottom:auto;transform:none;
+ width:100%;max-width:none;margin:16px 0;z-index:auto;
+}
+.ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-lesson-actions button{
+ width:100%;min-height:52px;border-radius:12px;
+}
+.ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-actions-single{
+ position:sticky;bottom:0;z-index:12;
+}
