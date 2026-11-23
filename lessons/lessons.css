@@ -196,3 +196,10 @@
 .ll-app .ll-lessons:has(#ll-date) .ll-quick.ll-segment button{font-size:14px}
 .ll-app .ll-lessons:has(#ll-date) .ll-student-card h3,
 .ll-app .ll-lessons:has(#ll-date) .ll-form-card h3{font-size:17px}
+
+/* Shared two-line overview card scale. */
+.ll-app .ll-lessons .ll-groups .ll-card:has(.ll-list-row){background:transparent;border:0;display:grid;gap:8px;overflow:visible}
+.ll-app .ll-lessons .ll-list-row{min-height:72px;padding:14px 16px;border:1px solid #d6d6d2;border-radius:12px;background:#fff;align-items:center;gap:12px}
+.ll-app .ll-lessons .ll-list-row strong{font-size:16px;font-weight:600;line-height:1.35}
+.ll-app .ll-lessons .ll-list-row small{font-size:14px;line-height:1.35;margin-top:5px}
+.ll-app .ll-lessons .ll-list-row b{font-size:16px;font-weight:600;white-space:nowrap}
