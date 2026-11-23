@@ -1,3 +1,4 @@
+import {sectionForm,saveBillingSection} from './frontend/settings-sections.js?v=1';
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js';
 import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
@@ -158,7 +159,7 @@ function disposeModule(){if(activeModule){const old=activeModule;activeModule=nu
 function renderTab(tab,content='',actionLabel=''){
  disposeModule();activeTab=tab;
  frame(shellMarkup({tab,content:'<div id="ll-module-root">'+content+'</div>',actionLabel}),'tab-screen');
- bindShell(root,{navigate:routeTab,settings:()=>{if(tab==='invoices')activeModule?.settings?.();else{disposeModule();settingsPage();}},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();else if(tab==='invoices')activeModule?.create?.();}});
+ bindShell(root,{navigate:routeTab,settings:()=>{disposeModule();settingsPage();},create:()=>{if(tab==='students')activeModule?.create?.();else if(tab==='lessons')activeModule?.createLesson?.();else if(tab==='invoices')activeModule?.create?.();}});
 }
 function routeTab(tab,options={}){
 
@@ -209,31 +210,21 @@ async function allLessonsPage(){
  }catch(error){if($('allLessonsList'))$('allLessonsList').textContent='Stunden konnten nicht geladen werden.';}
 }
 
-function settingsPage(onlyKeys=null){
- if(Array.isArray(onlyKeys)&&onlyKeys.length)return settingsEditPage(onlyKeys);
- const s=settings,a=s.teacher_address||{},rows=[
- ['teacher_name','Name auf Rechnungen',s.teacher_name||'Nicht angegeben'],
- ['teacher_address','Postanschrift',[a.street,a.postcode,a.city].filter(Boolean).join(', ')||'Nicht angegeben'],
- ['teacher_email','E-Mail-Adresse für Zahlende',s.teacher_email||'Nicht angegeben'],
- ['phone','Telefon (optional)',s.phone||'Nicht angegeben'],
- ['tax_number','Steuernummer',s.tax_number||'Nicht angegeben'],
- ['vat_mode','Umsatzsteuer',({small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Reguläre Umsatzsteuer 19 %',unsure:'Unsicher'})[s.vat_mode]||'Nicht angegeben'],
- ['iban','Bankverbindung',s.iban||'Nicht angegeben'],
- ['payment_days','Zahlungsfrist',(s.payment_days||14)+' Tage'],
- ['cancellation_rule','Stornoregel','Bis 24 Stunden vorher kostenlos, danach kostenpflichtig'],
- ['invoice_language','Rechnungssprache','Deutsch']
- ];
- frame('<div class="row"><h1 style="flex:1">Einstellungen</h1></div>'+
- '<section class="card"><h2>Rechnungsangaben</h2>'+rows.map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value)+'</div></div><button class="link" data-setting="'+key+'">'+(value==='Nicht angegeben'?'Hinzufügen':'Bearbeiten')+'</button></div>').join('')+'</section>'+
- '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPassword','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section><div class="ll-unified-actions ll-unified-actions-single"><button id="settingsDone" class="primary" type="button">Fertig</button></div>','settings-screen');
- $('settingsDone').onclick=home;
- $('setPassword').onclick=()=>{recoveryMode=true;choosePassword();};
- document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>settingsEditPage(b.dataset.setting==='teacher_address'?['street','postcode','city','country']:b.dataset.setting==='invoice_language'||b.dataset.setting==='cancellation_rule'?null:[b.dataset.setting]));
- $('changeLoginLink').onclick=()=>settingsEditPage(['effective_from']);
- $('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};
- $('signoutAll').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login()};
+function settingsPage(){
+ const account='<section class="ll-setting-section"><h2>Konto</h2><div class="ll-setting-account"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><label class="ll-setting-field"><span>Neue Anmelde-E-Mail (optional)</span><input id="ll-account-email" type="email" value="'+escapeHTML(user.email)+'"></label><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-change-email">E-Mail ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-password">Passwort ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
+ frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1><button type="button" id="ll-settings-close" aria-label="Zurück">Schließen</button></header>'+account+sectionForm('contact',settings)+sectionForm('payment',settings)+'</div>','settings-screen');
+ $('ll-settings-close').onclick=()=>routeTab(activeTab);
+ $('ll-password').onclick=()=>{recoveryMode=true;choosePassword();};
+ $('ll-logout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login();};
+ $('ll-logout-all').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login();};
+ $('ll-change-email').onclick=async()=>{const email=$('ll-account-email').value.trim(),status=$('ll-account-status');if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){status.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});status.textContent=error?error.message:'Bitte bestätige die neue E-Mail-Adresse.';};
+ document.querySelectorAll('.ll-setting-section[data-section]').forEach(form=>form.onsubmit=async e=>{
+  e.preventDefault();const error=form.querySelector('.ll-setting-error'),save=form.querySelector('[type=submit]');error.textContent='';save.disabled=true;
+  try{settings=await saveBillingSection(supabase,ledger,form.dataset.section,form,settings);save.textContent='Gespeichert';setTimeout(()=>{if(save.isConnected)save.textContent='Speichern';},1800);}
+  catch(ex){error.textContent=ex.message||'Speichern fehlgeschlagen.';}
+  finally{save.disabled=false;}
+ });
 }
-function settingsEditPage(onlyKeys=null){const s=settings;const missingOnly=Array.isArray(onlyKeys)&&onlyKeys.length>0;frame('<div class="row"><h1>'+(missingOnly?'Fehlende Angaben':'Einstellungen')+'</h1></div><p class="muted">Änderungen werden als neue Version gespeichert. Bereits ausgestellte Rechnungen bleiben unverändert.</p><div class="card">'+field('teacher_name','Rechnungsname',s.teacher_name)+field('street','Straße',s.teacher_address?.street)+field('postcode','PLZ',s.teacher_address?.postcode)+field('city','Ort',s.teacher_address?.city)+field('country','Land',s.teacher_address?.country||'Deutschland')+field('teacher_email','Kontakt-E-Mail',s.teacher_email)+field('tax_number','Steuernummer',s.tax_number)+ '<label class="field">Umsatzsteuer<select id="vat_mode">'+[['small_business','Kleinunternehmer'],['exempt_teaching','Steuerfreier Unterricht'],['regular_19','Regulär 19 %'],['unsure','Unsicher']].map(([v,t])=>'<option value="'+v+'" '+(s.vat_mode===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+field('iban','IBAN',s.iban)+field('bank_name','Bankname',s.bank_name)+field('payment_days','Zahlungsfrist (Tage)',s.payment_days,'number')+field('phone','Telefon (optional)',s.phone)+field('effective_from','Gültig ab',today(),'date')+'<p class="muted small">Umsatzsteueränderungen gelten nur für Rechnungen ab diesem Datum. Im Zweifel Steuerberatung fragen.</p>'+'<p id="error" class="error"></p>'+'</div><div class="card"><p>Angemeldet als '+escapeHTML(user.email)+'</p>'+field('login_email','Anmelde-E-Mail ändern',user.email,'email')+button('Neue Anmelde-E-Mail bestätigen','changeLogin','secondary')+'<p id="loginStatus" class="muted small"></p>'+button('Abmelden','signout','secondary')+' '+button('Überall abmelden','signoutAll','secondary')+'</div><div class="ll-unified-actions"><button type="button" id="home" class="secondary">Abbrechen</button>'+button('Fertig','save','primary')+'</div>','settings-screen');if(missingOnly){const keys=new Set([...onlyKeys,'effective_from']);document.querySelectorAll('.card:first-of-type .field').forEach(el=>{const input=el.querySelector('input,select');if(input&&!keys.has(input.id))el.hidden=true});} $('home').onclick=()=>settingsPage();$('changeLogin').onclick=async()=>{const email=$('login_email').value.trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $('loginStatus').textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});$('loginStatus').textContent=error?error.message:'Bitte bestätige die neue Adresse per E-Mail. Die Kontakt-E-Mail bleibt unverändert.'};$('signout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login()};$('signoutAll').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login()};$('save').onclick=async()=>{const a={street:$('street').value.trim(),postcode:$('postcode').value.trim(),city:$('city').value.trim(),country:$('country').value.trim()||'Deutschland'};const v=$('iban').value.trim();if(!$('teacher_name').value.trim()||!a.street||!/^[0-9]{5}$/.test(a.postcode)||!a.city)return err('Bitte Name und vollständige Anschrift eingeben.');if(v&&!ibanValid(v))return err('Die IBAN ist ungültig.');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($('teacher_email').value.trim()))return err('Die Kontakt-E-Mail ist ungültig.');const data={ledger_id:ledger,teacher_address:a,effective_from:$('effective_from').value};for(const k of ['teacher_name','teacher_email','tax_number','vat_mode','iban','bank_name','payment_days','phone'])data[k]=$(k).value.trim();data.iban=data.iban.replace(/\s/g,'').toUpperCase();data.payment_days=Number(data.payment_days);if(!Number.isInteger(data.payment_days)||data.payment_days<1||data.payment_days>365)return err('Die Zahlungsfrist muss 1 bis 365 Tage betragen.');data.cancellation_rule='24h';if(!data.effective_from)return err('Bitte ein Gültigkeitsdatum wählen.');if(data.effective_from<today())return err('Bitte heute oder ein zukünftiges Datum wählen.');if(data.vat_mode!==s.vat_mode&&data.effective_from<today())return err('Eine rückwirkende Umsatzsteueränderung ist nicht erlaubt.');const {error}=await supabase.from('billing_settings_versions').insert(data);if(error)return err(error);alert(data.effective_from>today()?'Änderung gespeichert. Sie wird am gewählten Datum wirksam.':'Änderungen gespeichert.');await load()}}
 
 const normalizeStudentText=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('de').trim();
 function editDistance(a,b){const prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let diagonal=prev[0];prev[0]=i;for(let j=1;j<=b.length;j++){const above=prev[j];prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(a[i-1]===b[j-1]?0:1));diagonal=above;}}return prev[b.length]}
