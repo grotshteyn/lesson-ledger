@@ -225,8 +225,8 @@ function settingsPage(onlyKeys=null){
  ];
  frame('<div class="row"><h1 style="flex:1">Einstellungen</h1></div>'+
  '<section class="card"><h2>Rechnungsangaben</h2>'+rows.map(([key,label,value])=>'<div class="settings-row"><div><div class="muted">'+escapeHTML(label)+'</div><div>'+escapeHTML(value)+'</div></div><button class="link" data-setting="'+key+'">'+(value==='Nicht angegeben'?'Hinzufügen':'Bearbeiten')+'</button></div>').join('')+'</section>'+
- '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPassword','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section><div class="ll-unified-actions"><button id="settingsCancel" class="secondary" type="button">Abbrechen</button><button id="settingsDone" class="primary" type="button">Fertig</button></div>','settings-screen');
- $('settingsCancel').onclick=home;$('settingsDone').onclick=home;
+ '<section class="card"><h2>Anmeldung</h2><div class="settings-row"><div><div class="muted">Anmelde-E-Mail</div>'+escapeHTML(user.email)+'</div><button class="link" id="changeLoginLink">Ändern</button></div>'+button('Passwort festlegen oder ändern','setPassword','secondary')+button('Abmelden','signout','secondary')+'<div style="text-align:center">'+button('Überall abmelden','signoutAll','secondary')+'</div></section><div class="ll-unified-actions ll-unified-actions-single"><button id="settingsDone" class="primary" type="button">Fertig</button></div>','settings-screen');
+ $('settingsDone').onclick=home;
  $('setPassword').onclick=()=>{recoveryMode=true;choosePassword();};
  document.querySelectorAll('[data-setting]').forEach(b=>b.onclick=()=>settingsEditPage(b.dataset.setting==='teacher_address'?['street','postcode','city','country']:b.dataset.setting==='invoice_language'||b.dataset.setting==='cancellation_rule'?null:[b.dataset.setting]));
  $('changeLoginLink').onclick=()=>settingsEditPage(['effective_from']);
