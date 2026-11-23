@@ -276,3 +276,22 @@
 .ll-app .e2-screen:has(.e2-tabs.e2-single-select) .e2-actions-single{
  position:sticky;bottom:0;z-index:12;
 }
+
+
+/* Student details: one sticky footer stacks the large create CTA above Done. */
+.ll-app .e2-screen .e2-detail-footer{
+ position:sticky;bottom:0;z-index:15;
+ display:flex;flex-direction:column;gap:12px;
+ background:#f4f4f3;padding:12px 0 calc(16px + env(safe-area-inset-bottom,0px));
+}
+.ll-app .e2-screen .e2-detail-footer .e2-lesson-actions{
+ position:static;inset:auto;left:auto;bottom:auto;transform:none;
+ display:block;width:100%;max-width:none;margin:0;z-index:auto;
+}
+.ll-app .e2-screen .e2-detail-footer .e2-lesson-actions button{
+ width:100%;min-height:56px;border-radius:28px;
+ background:#242424;color:#fff;font-size:17px;
+}
+.ll-app .e2-screen .e2-detail-footer>button[data-done]{
+ width:100%;min-height:48px;border-radius:10px;
+}
