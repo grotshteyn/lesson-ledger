@@ -61,18 +61,42 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     html('<h2>Stunden</h2><p role="status">Stunden werden geladen …</p>');
     try {
       const [a,b]=await Promise.all([
-        supabase.from('active_lessons').select('*').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(500),
+        supabase.from('active_lessons').select('*').order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(1000),
         supabase.from('student_versions').select('student_id,student_name,nickname,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false})
       ]);
       lessons=unwrap(a)||[]; const versions=unwrap(b)||[];
       names=new Map();students=[];
       for(const s of versions)if(!names.has(s.student_id)){names.set(s.student_id,s.student_name);students.push(s);}
       if(disposed||token!==revision)return;
-      const currentMonth=today().slice(0,7);
-      const monthLessons=lessons.filter(x=>x.lesson_date.slice(0,7)===currentMonth);
-      const groups=lessonWeekGroups(monthLessons);
-      const monthHeading=new Date(currentMonth+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
-      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups"><h3>'+esc(monthHeading)+'</h3>'+(groups.length?groups.map(g=>'<section><h3>'+(g.week===lessonWeekGroups([{lesson_date:today()}])[0]?.week?'Diese Woche':'Woche ab '+pretty(g.week))+'</h3><div class="ll-card">'+g.items.map(x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+'</strong><small>'+esc(pretty(x.lesson_date))+' · '+esc(x.minutes)+' Min.</small></span><b>'+(x.billing_mode==='monthly_flat'?'monatlich':euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0))+'</b></button>').join('')+'</div></section>').join(''):'<p class="ll-card">Noch keine Stunden erfasst.</p>')+'</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
+      const todayDate=today();
+      const weekStart=date=>{
+        const [year,month,day]=date.split('-').map(Number);
+        const d=new Date(Date.UTC(year,month-1,day));
+        d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);
+        return d.toISOString().slice(0,10);
+      };
+      const thisWeek=weekStart(todayDate);
+      const lastWeekDate=new Date(thisWeek+'T00:00:00Z');
+      lastWeekDate.setUTCDate(lastWeekDate.getUTCDate()-7);
+      const lastWeek=lastWeekDate.toISOString().slice(0,10);
+      const sorted=[...lessons].sort((a,b)=>b.lesson_date.localeCompare(a.lesson_date)||String(b.created_at||'').localeCompare(String(a.created_at||'')));
+      const sections=new Map();
+      for(const lesson of sorted){
+        const week=weekStart(lesson.lesson_date);
+        const key=week===thisWeek?'this-week':week===lastWeek?'last-week':'month:'+lesson.lesson_date.slice(0,7);
+        if(!sections.has(key)){
+          const label=key==='this-week'?'Diese Woche':key==='last-week'?'Letzte Woche':
+            new Date(lesson.lesson_date.slice(0,7)+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+          sections.set(key,{label,items:[],latestDate:lesson.lesson_date});
+        }
+        sections.get(key).items.push(lesson);
+      }
+      const groups=[...sections.values()].sort((a,b)=>b.latestDate.localeCompare(a.latestDate));
+      const row=x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+'</strong><small>'+esc(pretty(x.lesson_date))+' · '+esc(x.minutes)+' Min.</small></span><b>'+(x.billing_mode==='monthly_flat'?'monatlich':euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0))+'</b></button>';
+      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups">'+
+        (groups.length?groups.map(g=>'<section><h3>'+esc(g.label)+'</h3><div class="ll-card">'+g.items.map(row).join('')+'</div></section>').join(''):
+        '<p class="ll-card">Noch keine Stunden erfasst.</p>')+
+        '</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
       actions();root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openLesson(b.dataset.open,b.dataset.student));
     }catch(e){if(token===revision){html('<h2>Stunden</h2><p role="alert">'+esc(germanBackendError(e))+'</p>'+button('Erneut versuchen','reload'));actions();}}
   }
