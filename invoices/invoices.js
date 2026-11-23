@@ -1,4 +1,4 @@
-import {sectionForm,parseSection} from '../frontend/settings-sections.js?v=1';
+import {sectionForm,parseSection} from '../frontend/settings-sections.js?v=2';
 import {actionBar} from '../frontend/action-bar.js';
 // E4 invoice UI. All fixture amounts are display-only backend-shaped values.
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
