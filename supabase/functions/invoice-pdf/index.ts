@@ -32,7 +32,21 @@ function error(message: string, status: number): Response {
   });
 }
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+  "Access-Control-Max-Age": "86400",
+};
+
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders });
+  const response = await handleRequest(req);
+  for (const [key, value] of Object.entries(corsHeaders)) response.headers.set(key, value);
+  return response;
+});
+
+async function handleRequest(req: Request): Promise<Response> {
   if (req.method !== "POST") return error("method_not_allowed", 405);
   const token = req.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
   if (!token) return error("unauthenticated", 401);
@@ -129,4 +143,4 @@ Deno.serve(async (req) => {
   return new Response(JSON.stringify({ status: "ready", url: signed.data.signedUrl }), {
     headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
-});
+}
