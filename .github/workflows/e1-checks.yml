@@ -11,7 +11,8 @@ jobs:
         with:
           node-version: '22'
       - name: Validate JavaScript syntax
-        run: node --check app.js
+        run: |
+          find . -type f -name '*.js' -not -path './node_modules/*' -print0 | xargs -0 -r -n1 node --check
       - name: Check no private Supabase credentials are committed
         run: |
           ! grep -R -E 'sb_secret_|service_role' --include='*.js' --include='*.html' .
