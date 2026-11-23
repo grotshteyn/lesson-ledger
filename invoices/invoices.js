@@ -7,7 +7,7 @@ const eur=value=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}
 const invoiceLineLabel=(description,subject='')=>{
  const raw=String(description??'');
  const named=subject?raw.replace(/Unterrichtsstunde/gi,subject):raw;
- return named.replace(/\\s+\\d{2}\\.\\d{2}\\.\\d{4}\\s*$/,'').trim();
+ return named.replace(/\s+\d{2}\.\d{2}\.\d{4}\s*$/,'').trim();
 };
 const monthLabel=m=>new Date(String(m).slice(0,7)+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
 export const groupInvoices=rows=>Object.entries(rows.reduce((a,r)=>{(a[r.billingMonth]??=[]).push(r);return a;},{})).sort(([a],[b])=>b.localeCompare(a)).map(([month,items])=>({month,items:items.sort((a,b)=>({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[a.status]??5)-({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[b.status]??5)),totalCents:items.reduce((sum,x)=>sum+Math.round((typeof x.totalCents==='string'?Number(x.totalCents):Number(x.totalCents)/100)*100),0)}));
