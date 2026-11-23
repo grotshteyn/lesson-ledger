@@ -1,6 +1,6 @@
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js';
-import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-1';
+import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
 import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=invoice-subject-detail-2';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
