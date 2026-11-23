@@ -93,7 +93,7 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
       }
       const groups=[...sections.values()].sort((a,b)=>b.latestDate.localeCompare(a.latestDate));
       const row=x=>'<button class="ll-list-row" data-open="'+esc(x.id)+'" data-student="'+esc(x.student_id)+'"><span><strong>'+esc(names.get(x.student_id)||'Unbekannter Schüler')+'</strong><small>'+esc(pretty(x.lesson_date))+' · '+esc(x.minutes)+' Min.</small></span><b>'+(x.billing_mode==='monthly_flat'?'monatlich':euro(x.status==='held'||x.status==='cancelled_billable'?x.rate:0))+'</b></button>';
-      html('<header class="ll-heading"><h2>Stunden</h2></header><div class="ll-groups">'+
+      html('<header class="ll-heading"><h2>Stunden</h2><p class="ll-muted">'+lessons.length+' erfasste Stunden · alle Monate</p></header><div class="ll-groups">'+
         (groups.length?groups.map(g=>'<section><h3>'+esc(g.label)+'</h3><div class="ll-card">'+g.items.map(row).join('')+'</div></section>').join(''):
         '<p class="ll-card">Noch keine Stunden erfasst.</p>')+
         '</div><div class="ll-floating">'+button('+ Stunde erfassen','new','ll-primary')+'</div>');
