@@ -191,3 +191,26 @@ body:has(.ll-app) .shell{max-width:680px;padding:0;min-height:100dvh}
 /* Keep the prominent overview CTA floating above the bottom tab bar. */
 .ll-app>.ll-floating-action{position:fixed;z-index:11;bottom:92px}
 .ll-app:has(>.ll-floating-action) .ll-content .ll-unified-actions{z-index:8}
+
+
+/* Unified inline settings and invoice section bottom sheets */
+.ll-settings-page{max-width:580px;margin:0 auto;padding:18px 20px 110px;background:#f4f4f3;min-height:100dvh;font-family:Inter,system-ui,sans-serif}
+.ll-settings-heading{display:flex;align-items:center;justify-content:space-between;margin:4px 0 24px}
+.ll-settings-heading h1{font-size:clamp(25px,6vw,34px);letter-spacing:-.025em;margin:0}
+.ll-settings-heading button,.ll-sheet-close{background:transparent;border:0;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:10px}
+.ll-setting-section{background:#fff;border:1px solid #d5d5d3;border-radius:12px;padding:16px;margin:16px 0;display:flex;flex-direction:column;gap:13px}
+.ll-setting-section h2{font-size:19px;line-height:1.25;margin:0 0 5px}
+.ll-setting-field{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#343434}
+.ll-setting-field input,.ll-setting-field select{box-sizing:border-box;width:100%;min-height:46px;border:1px solid #c9c9c6;border-radius:9px;background:#fff;color:#222;padding:10px 12px;font:400 16px Inter,system-ui,sans-serif}
+.ll-setting-field input:focus,.ll-setting-field select:focus{outline:2px solid #222;outline-offset:1px}
+.ll-setting-account{display:flex;flex-direction:column;gap:5px;font-size:14px;overflow-wrap:anywhere}
+.ll-setting-account span,.ll-settings-hint{color:#666;font-size:13px}
+.ll-setting-save{min-height:46px;border:2px solid #242424;border-radius:10px;background:#242424;color:#fff;font:700 15px Inter,system-ui,sans-serif;padding:10px 14px;width:100%}
+.ll-setting-secondary{background:#fff;color:#242424}
+.ll-setting-save:disabled{opacity:.6}
+.ll-setting-error{color:#a32626;font-size:13px;margin:0}
+.ll-settings-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.42);display:flex;align-items:flex-end;justify-content:center}
+.ll-settings-sheet{width:min(100%,580px);max-height:90dvh;overflow-y:auto;overscroll-behavior:contain;background:#f4f4f3;border-radius:18px 18px 0 0;padding:10px 18px calc(22px + env(safe-area-inset-bottom,0px));box-sizing:border-box;box-shadow:0 -8px 35px #0002}
+.ll-sheet-handle{height:4px;width:40px;background:#b9b9b6;border-radius:99px;margin:0 auto 4px}
+.ll-sheet-close{display:block;margin-left:auto}
+.ll-settings-sheet .ll-setting-section{margin:0}
