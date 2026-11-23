@@ -63,59 +63,142 @@ Deno.serve(async (req) => {
       headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   }
+  // DIN 5008-inspired A4 invoice. Coordinates are PDF points, origin bottom-left.
   const pdf = await PDFDocument.create();
-  let page = pdf.addPage([595, 842]);
+  const W = 595.28, H = 841.89, left = 70.9, right = 524.4;
+  const ink = rgb(0.13, 0.16, 0.19), muted = rgb(0.39, 0.42, 0.45), rule = rgb(0.79, 0.81, 0.83);
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const dark = rgb(0.12, 0.17, 0.24);
-  let y = 795;
-  function write(value: unknown, opts: { size?: number; bold?: boolean; x?: number; step?: number } = {}) {
-    const text = safe(value);
-    const size = opts.size ?? 10;
-    if (y < 65) { page = pdf.addPage([595, 842]); y = 795; }
-    page.drawText(text.slice(0, 100), { x: opts.x ?? 48, y, font: opts.bold ? bold : font, size, color: dark });
-    y -= opts.step ?? size + 7;
-  }
   const snapshot = invoice.snapshot ?? {};
   const teacher = snapshot.teacher ?? {};
   const payer = snapshot.payer ?? {};
-  write(invoice.kind === "cancellation" ? "STORNORECHNUNG" : "RECHNUNG", { size: 21, bold: true, step: 36 });
-  write(teacher.name ?? "", { bold: true });
-  for (const s of address(teacher.address)) write(s);
-  if (teacher.email) write(teacher.email);
-  if (teacher.tax_number) write("Steuernummer: " + teacher.tax_number);
-  y -= 18;
-  write("Rechnung an:", { bold: true });
-  write(payer.name ?? "", { bold: true });
-  for (const s of address(payer.address)) write(s);
+  const text = (value: unknown) => safe(value).replace(/\\s+/g, " ").trim();
+  const width = (s: string, size: number, strong = false) => (strong ? bold : font).widthOfTextAtSize(s, size);
+  const wrap = (value: unknown, max: number, size: number, strong = false): string[] => {
+    const words = text(value).split(" ").filter(Boolean);
+    const out: string[] = [];
+    let row = "";
+    for (let word of words) {
+      while (width(word, size, strong) > max && word.length > 1) {
+        let n = 1;
+        while (n < word.length && width(word.slice(0, n + 1), size, strong) <= max) n++;
+        if (row) { out.push(row); row = ""; }
+        out.push(word.slice(0, n)); word = word.slice(n);
+      }
+      if (!row) row = word;
+      else if (width(row + " " + word, size, strong) <= max) row += " " + word;
+      else { out.push(row); row = word; }
+    }
+    if (row) out.push(row);
+    return out.length ? out : [""];
+  };
+  let page = pdf.addPage([W, H]);
+  let y = 0;
+  const draw = (value: unknown, x: number, baseline: number, size = 10, strong = false, color = ink) =>
+    page.drawText(text(value), { x, y: baseline, font: strong ? bold : font, size, color });
+  const line = (baseline: number, x1 = left, x2 = right, thickness = 0.65) =>
+    page.drawLine({ start: { x: x1, y: baseline }, end: { x: x2, y: baseline }, thickness, color: rule });
+  const rightText = (value: unknown, baseline: number, size = 10, strong = false, x = right) => {
+    const s = text(value); draw(s, x - width(s, size, strong), baseline, size, strong);
+  };
+  const footer = () => {
+    line(49);
+    draw("Rechnung " + text(invoice.invoice_number), left, 34, 8, false, muted);
+    rightText(String(pdf.getPageCount()), 34, 8);
+  };
+  const continuation = () => {
+    footer();
+    page = pdf.addPage([W, H]);
+    draw("Rechnung " + text(invoice.invoice_number) + " · Fortsetzung", left, 785, 10, true);
+    line(770);
+    y = 748;
+  };
+  const ensure = (needed: number) => { if (y - needed < 94) continuation(); };
+  // Header: issuer identity in the top-right area, restrained and letter-like.
+  const teacherName = text(teacher.name);
+  rightText(teacherName, 785, 12, true);
+  const senderLines = [...address(teacher.address), ...(teacher.email ? [teacher.email] : [])];
+  let sy = 769;
+  for (const entry of senderLines) for (const row of wrap(entry, 225, 8.5)) {
+    rightText(row, sy, 8.5); sy -= 12;
+  }
+  // DIN 5008 type B-style window area: 20 mm left, 45 mm top, 85 mm wide.
+  const addrX = left, addrTop = H - 127.6;
+  const senderShort = [teacherName, ...address(teacher.address)].filter(Boolean).join(" · ");
+  draw(wrap(senderShort, 239, 7)[0], addrX, addrTop - 10, 7, false, muted);
+  line(addrTop - 14, addrX, addrX + 240, 0.4);
+  let ay = addrTop - 34;
+  for (const entry of [payer.name, ...address(payer.address)]) {
+    for (const row of wrap(entry, 238, 10)) { draw(row, addrX, ay, 10); ay -= 15; }
+  }
+  // Document heading and metadata below the address field.
+  y = 533;
+  draw(invoice.kind === "cancellation" ? "Stornorechnung" : "Rechnung", left, y, 23, true);
+  y -= 31;
+  const metadata: [string, string][] = [
+    ["Rechnungsnummer", text(invoice.invoice_number)],
+    ["Rechnungsdatum", fmtDate(invoice.issued_on)],
+    ["Leistungszeitraum", (() => {
+      const m = String(invoice.billing_month ?? "").slice(0, 7);
+      if (!/^\\d{4}-\\d{2}$/.test(m)) return fmtDate(invoice.billing_month);
+      const months = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+      return months[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
+    })()],
+    ["Fällig am", fmtDate(invoice.due_on)],
+  ];
+  if (invoice.kind === "cancellation") metadata.push(["Storno zu", text(snapshot.original_invoice_number ?? snapshot.original_invoice_id)]);
+  for (const [label, value] of metadata) {
+    draw(label, left, y, 9, false, muted); draw(value, left + 120, y, 9, true); y -= 17;
+  }
   y -= 20;
-  write("Rechnungsnummer: " + invoice.invoice_number, { bold: true });
-  write("Rechnungsdatum: " + fmtDate(invoice.issued_on));
-  write("Leistungsmonat: " + fmtDate(invoice.billing_month));
-  write("Fällig am: " + fmtDate(invoice.due_on));
-  if (invoice.kind === "cancellation") {
-    write("Storno zur Rechnung: " + (snapshot.original_invoice_number ?? snapshot.original_invoice_id ?? ""));
+  const tableHeader = () => {
+    line(y + 11);
+    draw("Leistung", left, y - 4, 9, true);
+    rightText("Betrag (brutto)", y - 4, 9, true);
+    line(y - 12);
+    y -= 29;
+  };
+  tableHeader();
+  for (const item of lines ?? []) {
+    const description = wrap(item.description, 312, 9.5);
+    const date = item.lesson_date ? fmtDate(item.lesson_date) : "";
+    const rows = description.length + (date ? 1 : 0);
+    ensure(rows * 14 + 15);
+    if (y > 720) tableHeader();
+    for (const row of description) { draw(row, left, y, 9.5); y -= 14; }
+    if (date) { draw(date, left, y, 8, false, muted); y -= 14; }
+    rightText(amount(item.gross_amount), y + rows * 14 - 14, 9.5);
+    y -= 12;
+    line(y + 4, left, right, 0.35);
+    y -= 10;
   }
-  y -= 17;
-  write("Leistung                                      Betrag (brutto)", { bold: true, step: 24 });
-  for (const line of lines ?? []) {
-    const label = safe(line.description).slice(0, 58);
-    write(label, { size: 9, step: 13 });
-    write(amount(line.gross_amount), { x: 430, size: 9, step: 21 });
+  ensure(170);
+  y -= 4;
+  const totals: [string, unknown][] = [
+    ["Netto", invoice.net_amount],
+    ["Umsatzsteuer", invoice.vat_amount],
+  ];
+  for (const [label, value] of totals) {
+    draw(label, right - 220, y, 9.5); rightText(amount(value), y, 9.5); y -= 18;
   }
-  y -= 10;
-  write("Netto: " + amount(invoice.net_amount), { bold: true });
-  write("Umsatzsteuer: " + amount(invoice.vat_amount), { bold: true });
-  write("Gesamtbetrag: " + amount(invoice.gross_amount), { size: 13, bold: true, step: 28 });
-  if (invoice.vat_mode === "small_business") {
-    write("Keine Umsatzsteuer gemäß § 19 UStG.");
-  } else if (invoice.vat_mode === "exempt_teaching") {
-    write("Umsatzsteuerfrei nach § 4 Nr. 21 UStG.");
-  } else {
-    write("Umsatzsteuer 19 % ist im Gesamtbetrag enthalten.");
-  }
-  if (teacher.iban) write("IBAN: " + teacher.iban);
-  if (teacher.bank_name) write("Bank: " + teacher.bank_name);
+  line(y + 7, right - 220, right, 1);
+  y -= 11;
+  draw("Gesamtbetrag", right - 220, y, 12, true);
+  rightText(amount(invoice.gross_amount), y, 12, true);
+  y -= 32;
+  const taxNote = invoice.vat_mode === "small_business"
+    ? "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."
+    : invoice.vat_mode === "exempt_teaching"
+    ? "Umsatzsteuerfrei nach § 4 Nr. 21 UStG."
+    : "Umsatzsteuer 19 % ist im Gesamtbetrag enthalten.";
+  for (const row of wrap(taxNote, right - left, 9)) { ensure(14); draw(row, left, y, 9, false, muted); y -= 14; }
+  y -= 24;
+  ensure(100);
+  draw("Bankverbindung", left, y, 11, true); y -= 20;
+  if (teacher.bank_name) { for (const row of wrap(teacher.bank_name, 380, 9.5)) { draw(row, left, y, 9.5); y -= 15; } }
+  if (teacher.iban) { draw("IBAN", left, y, 9, false, muted); draw(teacher.iban, left + 55, y, 9.5); y -= 17; }
+  if (teacher.tax_number) { y -= 10; draw("Steuernummer: " + text(teacher.tax_number), left, y, 8.5, false, muted); }
+  footer();
   const bytes = await pdf.save();
   const uploaded = await admin.storage.from(bucket).upload(path, bytes, {
     contentType: "application/pdf", upsert: false, cacheControl: "3600",
