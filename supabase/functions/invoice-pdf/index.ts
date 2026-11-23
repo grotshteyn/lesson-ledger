@@ -78,66 +78,160 @@ async function handleRequest(req: Request): Promise<Response> {
     .eq("invoice_id", invoiceId).order("line_number");
   if (linesError) return error("lines_lookup_failed", 500);
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + "-encoding-v3.pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-sample-layout-v1.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
       headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   }
+  // Reference layout: Beispielrechnung.pdf. A4 coordinates use a bottom-left origin.
   const pdf = await PDFDocument.create();
-  let page = pdf.addPage([595, 842]);
+  const W = 595.28, H = 841.89, L = 81, R = 535;
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const dark = rgb(0.12, 0.17, 0.24);
-  let y = 795;
-  function write(value: unknown, opts: { size?: number; bold?: boolean; x?: number; step?: number } = {}) {
-    const text = safe(value);
-    const size = opts.size ?? 10;
-    if (y < 65) { page = pdf.addPage([595, 842]); y = 795; }
-    page.drawText(text.slice(0, 100), { x: opts.x ?? 48, y, font: opts.bold ? bold : font, size, color: dark });
-    y -= opts.step ?? size + 7;
-  }
+  const ink = rgb(0.08, 0.08, 0.08);
+  const gray = rgb(0.38, 0.38, 0.38);
   const snapshot = invoice.snapshot ?? {};
   const teacher = snapshot.teacher ?? {};
   const payer = snapshot.payer ?? {};
-  write(invoice.kind === "cancellation" ? "STORNORECHNUNG" : "RECHNUNG", { size: 21, bold: true, step: 36 });
-  write(teacher.name ?? "", { bold: true });
-  for (const s of address(teacher.address)) write(s);
-  if (teacher.email) write(teacher.email);
-  if (teacher.tax_number) write("Steuernummer: " + teacher.tax_number);
-  y -= 18;
-  write("Rechnung an:", { bold: true });
-  write(payer.name ?? "", { bold: true });
-  for (const s of address(payer.address)) write(s);
-  y -= 20;
-  write("Rechnungsnummer: " + invoice.invoice_number, { bold: true });
-  write("Rechnungsdatum: " + fmtDate(invoice.issued_on));
-  write("Leistungsmonat: " + fmtDate(invoice.billing_month));
-  write("Fällig am: " + fmtDate(invoice.due_on));
+  const clean = (v: unknown) => safe(v).replace(/\s+/g, " ").trim();
+  const money = (v: unknown) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) throw new Error("invalid_amount");
+    return new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + " €";
+  };
+  const measure = (v: string, size = 10, strong = false) =>
+    (strong ? bold : font).widthOfTextAtSize(v, size);
+  const wrap = (v: unknown, maxWidth: number, size = 10, strong = false) => {
+    const words = clean(v).split(" ").filter(Boolean);
+    const result: string[] = [];
+    let current = "";
+    for (let word of words) {
+      while (measure(word, size, strong) > maxWidth && word.length > 1) {
+        let cut = 1;
+        while (cut < word.length && measure(word.slice(0, cut + 1), size, strong) <= maxWidth) cut++;
+        if (current) { result.push(current); current = ""; }
+        result.push(word.slice(0, cut)); word = word.slice(cut);
+      }
+      if (!current) current = word;
+      else if (measure(current + " " + word, size, strong) <= maxWidth) current += " " + word;
+      else { result.push(current); current = word; }
+    }
+    if (current) result.push(current);
+    return result.length ? result : [""];
+  };
+  let page = pdf.addPage([W, H]);
+  const put = (v: unknown, x: number, y: number, size = 10, strong = false, color = ink) =>
+    page.drawText(clean(v), { x, y, size, font: strong ? bold : font, color });
+  const putRight = (v: unknown, y: number, size = 10, strong = false) => {
+    const str = clean(v); put(str, R - measure(str, size, strong), y, size, strong);
+  };
+  const rule = (y: number, weight = 0.65) =>
+    page.drawLine({ start: { x: L, y }, end: { x: R, y }, thickness: weight, color: ink });
+  const footer = () => {
+    if (pdf.getPageCount() > 1) {
+      put("Rechnung " + clean(invoice.invoice_number), L, 42, 8, false, gray);
+      putRight("Seite " + pdf.getPageCount(), 42, 8);
+    }
+  };
+  const period = () => {
+    const m = String(invoice.billing_month ?? "").slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(m)) return fmtDate(invoice.billing_month);
+    const [year, month] = m.split("-").map(Number);
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return "01." + String(month).padStart(2, "0") + "." + year
+      + " bis " + String(last).padStart(2, "0") + "." + String(month).padStart(2, "0") + "." + year;
+  };
+  // Sender and window-address area, matching the sample.
+  let y = 774;
+  for (const [i, item] of [teacher.name, ...address(teacher.address)].filter(Boolean).entries()) {
+    for (const row of wrap(item, 280, 10, i === 0)) {
+      put(row, L, y, 10, i === 0); y -= 14;
+    }
+  }
+  const sender = [teacher.name, ...address(teacher.address)].filter(Boolean).join(", ");
+  put(wrap(sender, 350, 7.5)[0], L, 688, 7.5, false, gray);
+  y = 671;
+  for (const item of [payer.name, ...address(payer.address)].filter(Boolean)) {
+    for (const row of wrap(item, 310, 10)) { put(row, L, y); y -= 14; }
+  }
+  y = Math.min(603, y - 33);
+  put(invoice.kind === "cancellation" ? "Stornorechnung" : "Rechnung", L, y, 17, true);
+  y -= 30;
+  const meta: Array<[string, unknown]> = [
+    ["Rechnungsnummer", invoice.invoice_number],
+    ["Rechnungsdatum", fmtDate(invoice.issued_on)],
+    ["Leistungszeitraum", period()],
+  ];
+  const studentName = snapshot.student_name ?? snapshot.student?.name ?? snapshot.student?.student_name;
+  if (studentName) meta.push(["Schüler/in", studentName]);
+  if (teacher.tax_number) meta.push(["Steuernummer", teacher.tax_number]);
   if (invoice.kind === "cancellation") {
-    write("Storno zur Rechnung: " + (snapshot.original_invoice_number ?? snapshot.original_invoice_id ?? ""));
+    meta.push(["Storno zu", snapshot.original_invoice_number ?? snapshot.original_invoice_id ?? ""]);
   }
-  y -= 17;
-  write("Leistung                                      Betrag (brutto)", { bold: true, step: 24 });
-  for (const line of lines ?? []) {
-    const label = safe(line.description).slice(0, 58);
-    write(label, { size: 9, step: 13 });
-    write(amount(line.gross_amount), { x: 430, size: 9, step: 21 });
+  for (const [label, value] of meta) {
+    put(label, L, y, 9.5);
+    put(value, L + 139, y, 9.5);
+    y -= 17;
   }
-  y -= 10;
-  write("Netto: " + amount(invoice.net_amount), { bold: true });
-  write("Umsatzsteuer: " + amount(invoice.vat_amount), { bold: true });
-  write("Gesamtbetrag: " + amount(invoice.gross_amount), { size: 13, bold: true, step: 28 });
-  if (invoice.vat_mode === "small_business") {
-    write("Keine Umsatzsteuer gemäß § 19 UStG.");
-  } else if (invoice.vat_mode === "exempt_teaching") {
-    write("Umsatzsteuerfrei nach § 4 Nr. 21 UStG.");
-  } else {
-    write("Umsatzsteuer 19 % ist im Gesamtbetrag enthalten.");
+  y -= 20;
+  const tableHeader = () => {
+    put("Datum", L, y, 9.5, true);
+    put("Leistung", L + 86, y, 9.5, true);
+    putRight("Betrag", y, 9.5, true);
+    rule(y - 6, 0.75);
+    y -= 25;
+  };
+  const newPage = () => {
+    footer();
+    page = pdf.addPage([W, H]);
+    put("Rechnung " + clean(invoice.invoice_number) + " (Fortsetzung)", L, 783, 10, true);
+    y = 742;
+    tableHeader();
+  };
+  const ensure = (needed: number) => { if (y - needed < 95) newPage(); };
+  tableHeader();
+  for (const item of lines ?? []) {
+    const date = item.lesson_date ? fmtDate(item.lesson_date) : "";
+    const description = wrap(item.description, R - (L + 86) - 95, 9.5);
+    const rowHeight = Math.max(1, description.length) * 14 + 10;
+    ensure(rowHeight);
+    if (date) put(date, L, y, 9.5);
+    for (const [i, line] of description.entries()) put(line, L + 86, y - i * 14, 9.5);
+    putRight(money(item.gross_amount), y, 9.5);
+    y -= rowHeight;
   }
-  if (teacher.iban) write("IBAN: " + teacher.iban);
-  if (teacher.bank_name) write("Bank: " + teacher.bank_name);
+  ensure(175);
+  rule(y + 8, 0.8);
+  y -= 8;
+  put("Rechnungsbetrag", L + 86, y, 10, true);
+  putRight(money(invoice.gross_amount), y, 10, true);
+  y -= 32;
+  const note = invoice.vat_mode === "small_business"
+    ? "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."
+    : invoice.vat_mode === "exempt_teaching"
+    ? "Umsatzsteuerfrei nach § 4 Nr. 21 UStG."
+    : "Umsatzsteuer 19 % ist im Rechnungsbetrag enthalten.";
+  for (const line of wrap(note, R - L, 9.5)) { put(line, L, y, 9.5); y -= 15; }
+  y -= 13;
+  const payment = "Bitte überweisen Sie den Betrag"
+    + (invoice.due_on ? " bis zum " + fmtDate(invoice.due_on) : "")
+    + " unter Angabe der Rechnungsnummer.";
+  for (const line of wrap(payment, R - L, 9.5)) { ensure(15); put(line, L, y, 9.5); y -= 15; }
+  y -= 9;
+  const bank = ["Bankverbindung:", teacher.name, teacher.iban ? "IBAN " + teacher.iban : "",
+    teacher.bank_name].filter(Boolean).join(" ");
+  for (const line of wrap(bank, R - L, 9.5)) { ensure(15); put(line, L, y, 9.5); y -= 15; }
+  if (teacher.email || teacher.phone) {
+    y -= 9;
+    const contact = ["Kontakt:", teacher.email, teacher.phone].filter(Boolean).join("  ·  ");
+    for (const line of wrap(contact, R - L, 9.5)) { ensure(15); put(line, L, y, 9.5); y -= 15; }
+  }
+  y -= 22;
+  ensure(14);
+  put("Vielen Dank!", L, y, 9.5);
+  footer();
   const bytes = await pdf.save();
   const uploaded = await admin.storage.from(bucket).upload(path, bytes, {
     contentType: "application/pdf", upsert: false, cacheControl: "3600",
