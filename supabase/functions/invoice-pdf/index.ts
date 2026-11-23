@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     .eq("invoice_id", invoiceId).order("line_number");
   if (linesError) return error("lines_lookup_failed", 500);
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + ".pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-din5008-v2.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
