@@ -209,3 +209,9 @@
 .ll-app .ll-lessons .ll-groups .ll-list-row strong{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;margin:0}
 .ll-app .ll-lessons .ll-groups .ll-list-row small{display:block;max-width:100%;margin:0;overflow-wrap:anywhere;color:#555}
 .ll-app .ll-lessons .ll-groups .ll-list-row b{flex:0 0 auto;text-align:right}
+
+/* Compact rows: never wrap names or metadata; truncate instead. */
+.ll-app .ll-lessons .ll-groups .ll-list-row{min-width:0;overflow:hidden}
+.ll-app .ll-lessons .ll-groups .ll-list-row>span{overflow:hidden}
+.ll-app .ll-lessons .ll-groups .ll-list-row strong,
+.ll-app .ll-lessons .ll-groups .ll-list-row small{width:100%;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
