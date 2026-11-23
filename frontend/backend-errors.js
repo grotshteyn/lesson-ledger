@@ -1,5 +1,11 @@
 // German UI boundary for Supabase/PostgREST errors. Do not display raw backend text.
 const rules = [
+  [/monthly billing changes must start on the first day of a month/i,'Änderungen der Monatspauschale sind nur zum Monatsersten möglich. Bitte ein passendes Gültigkeitsdatum wählen.'],
+  [/effective date required/i,'Bitte ein Gültigkeitsdatum angeben.'],
+  [/invalid payer email/i,'Bitte eine gültige E-Mail-Adresse für die zahlungspflichtige Person eingeben.'],
+  [/subject and payer name cannot be blank/i,'Fach und Name der zahlungspflichtigen Person dürfen nicht leer sein.'],
+  [/invalid student details/i,'Bitte die Schülerdaten, Dauer, Häufigkeit und Preise prüfen.'],
+  [/student name changes are not supported/i,'Der Schülername kann hier nicht geändert werden.'],
   [/row.level.security|permission denied|insufficient privilege|not authorized|not authenticated|jwt|invalid token|42501/i,'Keine Berechtigung. Bitte erneut anmelden oder den Zugriff prüfen.'],
   [/invoice|invoiced|abgerechnet|locked/i,'Diese Stunde ist bereits abgerechnet und kann nicht verändert werden.'],
   [/idempotenc|replay|payload.*chang|request.*key/i,'Diese Anfrage wurde bereits mit anderen Angaben verwendet. Bitte erneut speichern.'],
