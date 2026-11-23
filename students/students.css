@@ -256,3 +256,10 @@
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-history{font-size:15px;line-height:1.5}
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-card-heading h2{font-size:18px}
 .ll-app .e2-screen:not(:has(#e2-search)) .e2-tabs button{font-size:16px}
+
+/* Align student overview cards with lessons and invoices. */
+.ll-app .e2-screen:has(#e2-search) .e2-student-list{background:transparent;border:0;display:grid;gap:8px}
+.ll-app .e2-screen:has(#e2-search) .e2-student-row{min-height:72px;padding:14px 16px;margin:0;border:1px solid #d5d5d3;border-radius:12px;align-items:center}
+.ll-app .e2-screen:has(#e2-search) .e2-row-main strong{font-size:16px;font-weight:600;line-height:1.35}
+.ll-app .e2-screen:has(#e2-search) .e2-row-main small{font-size:14px;font-weight:400;line-height:1.35;margin-top:5px}
+.ll-app .e2-screen:has(#e2-search) .e2-row-price{font-size:16px;font-weight:600}
