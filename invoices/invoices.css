@@ -167,3 +167,52 @@
 .e4-line>button .e4-line-bottom small{font-size:13px;font-weight:500;flex-shrink:0}
 .e4-line>button.e4-row-pdf:last-child{min-width:76px;width:auto;padding:0 10px;border-left:1px solid #c8ddc8;font-size:13px;font-weight:700;white-space:nowrap}
 @media(max-width:360px){.e4-line>button:first-child{padding:12px 10px}.e4-line>button .e4-student-name,.e4-line>button .e4-line-top strong{font-size:16px}.e4-line>button .e4-line-meta{font-size:13px}}
+
+
+/* Invoice subviews: footer belongs to the content column, never viewport-centered.
+   Fixes horizontally displaced/clipped Abbrechen and Ausstellen on narrow phones. */
+.ll-app:has(.ll-tabs.ll-hidden) .ll-content:has(.e4){
+ min-width:0;width:100%;max-width:100%;overflow-x:clip;
+ padding-left:16px;padding-right:16px;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4{
+ min-width:0;width:100%;max-width:100%;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot,
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot,
+.ll-app .e4 .e4-foot:has(>button:nth-child(2)),
+.ll-app .e4 .e4-detail .e4-foot:has(>button:nth-child(2)),
+.ll-app .e4 .e4-detail .e4-foot:has(>button:only-child){
+ position:sticky;inset:auto;left:auto;right:auto;bottom:0;
+ transform:none;width:100%;max-width:100%;min-width:0;
+ box-sizing:border-box;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
+ margin:20px 0 0;padding:12px 0 calc(16px + env(safe-area-inset-bottom,0px));
+ background:#f4f4f3;z-index:12;pointer-events:auto;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot,
+.ll-app .e4 .e4-detail .e4-foot:has(>button:nth-child(2)),
+.ll-app .e4 .e4-detail .e4-foot:has(>button:only-child){
+ background:#fff;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot:has(>button:only-child),
+.ll-app .e4 .e4-detail .e4-foot:has(>button:only-child){
+ grid-template-columns:minmax(0,1fr);
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot>button,
+.ll-app:has(.ll-tabs.ll-hidden) .e4-detail .e4-foot>button{
+ position:static;min-width:0;max-width:100%;width:100%;
+ min-height:48px;padding:10px 6px;margin:0;
+ white-space:normal;overflow-wrap:break-word;
+ font-size:clamp(13px,3.6vw,15px);line-height:1.25;
+ border-radius:10px;box-shadow:none;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot>button:first-child:not(:last-child){
+ background:#fff;color:#242424;border:2px solid #242424;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot>button:last-child{
+ background:#242424;color:#fff;border:2px solid #242424;
+}
+.ll-app:has(.ll-tabs.ll-hidden) .e4-foot>button:disabled{
+ background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1;
+}
