@@ -26,7 +26,9 @@ export const parseSection=(form,section,previous={})=>{
   if(!Number.isInteger(days)||days<1||days>365)throw Error('Die Zahlungsfrist muss zwischen 1 und 365 Tagen liegen.');
   Object.assign(changes,{iban,bank_name:value('bank_name'),tax_number:value('tax_number'),vat_mode:value('vat_mode'),payment_days:days});
  }
- return {...previous,...changes,cancellation_rule:previous.cancellation_rule||'24h'};
+ const allowed=['teacher_name','teacher_address','teacher_email','phone','tax_number','vat_mode','iban','bank_name','payment_days','cancellation_rule','invoice_prefix'];
+ const merged={};for(const key of allowed)if(previous[key]!==undefined)merged[key]=previous[key];
+ return {...merged,...changes,cancellation_rule:previous.cancellation_rule||'24h'};
 };
 function validIban(v){if(!/^[A-Z]{2}[0-9A-Z]{13,32}$/.test(v))return false;const reordered=v.slice(4)+v.slice(0,4);let rem=0;for(const c of reordered){const digits=/[A-Z]/.test(c)?String(c.charCodeAt(0)-55):c;for(const d of digits)rem=(rem*10+Number(d))%97;}return rem===1;}
 export async function saveBillingSection(supabase,ledger,section,form,previous){
