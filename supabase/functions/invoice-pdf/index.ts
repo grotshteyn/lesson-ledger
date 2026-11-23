@@ -99,7 +99,7 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v3.pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v4.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
@@ -216,9 +216,9 @@ async function handleRequest(req: Request): Promise<Response> {
   for (const item of lines ?? []) {
     const date = item.lesson_date ? fmtDate(item.lesson_date) : "";
     const rawDescription = String(item.description ?? "");
-    const displayDescription = lessonSubject
+    const displayDescription = (lessonSubject
       ? rawDescription.replace(/Unterrichtsstunde/gi, lessonSubject)
-      : rawDescription;
+      : rawDescription).replace(/\\s+\\d{2}\\.\\d{2}\\.\\d{4}\\s*$/, "").trim();
     const description = wrap(displayDescription, R - (L + 86) - 95, 9.5);
     const rowHeight = Math.max(1, description.length) * 14 + 10;
     ensure(rowHeight);
