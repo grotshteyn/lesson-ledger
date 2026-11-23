@@ -8,9 +8,17 @@ const bucket = "invoice-pdfs";
 
 // Helvetica's WinAnsi encoding supports German umlauts, ß and the euro sign.
 // Replace only characters outside the font's repertoire, not German text.
-const safe = (x: unknown) => String(x ?? "")
-  .replace(/[\\u0000-\\u001F\\u007F]/g, " ")
-  .replace(/[^\\x20-\\x7E\\u00A0-\\u00FF\\u20AC]/g, "?");
+const safe = (x: unknown) => Array.from(String(x ?? "")).map((ch) => {
+  const cp = ch.codePointAt(0)!;
+  if (cp < 32 || cp === 127) return " ";
+  if ((cp >= 32 && cp <= 126) || (cp >= 160 && cp <= 255) || cp === 8364) return ch;
+  // Convert common typographic punctuation to WinAnsi-safe ASCII.
+  if (cp === 8211 || cp === 8212) return "-";
+  if (cp === 8216 || cp === 8217) return "'";
+  if (cp === 8220 || cp === 8221) return '"';
+  if (cp === 8230) return "...";
+  return "?";
+}).join("");
 const amount = (x: unknown) => {
   const n = Number(x);
   if (!Number.isFinite(n)) throw new Error("invalid_amount");
@@ -70,7 +78,7 @@ async function handleRequest(req: Request): Promise<Response> {
     .eq("invoice_id", invoiceId).order("line_number");
   if (linesError) return error("lines_lookup_failed", 500);
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + ".pdf";
+  const path = invoice.ledger_id + "/" + invoice.id + "-encoding-v3.pdf";
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
