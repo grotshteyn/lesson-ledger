@@ -295,3 +295,15 @@
 .ll-app .e2-screen .e2-detail-footer>button[data-done]{
  width:100%;min-height:48px;border-radius:10px;
 }
+
+
+/* Contextual lesson creation: regular in-flow action, never a floating CTA. */
+.ll-app .e2-screen:has(#e2-lessons)>.e2-lesson-actions{
+ position:static;inset:auto;left:auto;bottom:auto;transform:none;
+ display:block;width:100%;max-width:none;margin:16px 0 18px;z-index:auto;
+}
+.ll-app .e2-screen:has(#e2-lessons)>.e2-lesson-actions button{
+ display:block;width:100%;min-height:48px;border-radius:12px;
+ background:#242424;color:#fff;font-size:16px;font-weight:700;
+}
+.ll-app .e2-screen .e2-detail-footer{display:flex;flex-direction:column}
