@@ -1,3 +1,4 @@
+import {sectionForm,parseSection} from '../frontend/settings-sections.js?v=1';
 import {actionBar} from '../frontend/action-bar.js';
 // E4 invoice UI. All fixture amounts are display-only backend-shaped values.
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
@@ -161,7 +162,23 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const batch=()=>{view='batch';selected=new Set(readyInvoices(rows).map(r=>r.id));drawBatch();};
  const drawBatch=()=>{const eligible=readyInvoices(rows);show('<h2>Rechnungen ausstellen</h2>'+groupInvoices(eligible).map(g=>'<section class="e4-month"><h3>'+esc(monthLabel(g.month))+'</h3><div class="e4-rows">'+g.items.map(r=>'<button class="e4-choice '+(selected.has(r.id)?'chosen':'')+'" data-select="'+esc(r.id)+'" aria-pressed="'+selected.has(r.id)+'"><span>'+(selected.has(r.id)?'✓ ':'')+esc(r.student)+'</span><strong>'+eur(r.totalCents)+'</strong></button>').join('')+'</div></section>').join('')+'<p class="e4-selection-count">'+selected.size+' von '+eligible.length+' ausgewählt</p>'+warning(adapter.mode==='live'?'Die Ausstellung ist verbindlich. Einzelne Rechnungen können bei erneuter Prüfung fehlschlagen.':'Nur Demo. Es werden keine Rechnungen erstellt.')+foot(button('Abbrechen','home')+button((adapter.mode==='live'?'':'Demo: ')+selected.size+' Rechnungen ausstellen',adapter.mode==='live'?'live-issue':'demo-results',selected.size?'':'disabled')),true);};
  const correction=()=>{view='correct';show('<h2>Rechnung korrigieren</h2>'+warning('Eine ausgestellte Rechnung kann nicht geändert werden. Nach der Stornierung können die Stunden korrigiert und neu abgerechnet werden.')+'<p>'+esc(current.number)+' · '+esc(current.student)+'</p>'+(adapter.mode==='live'?'':warning('Stornierung ist im Demomodus deaktiviert.'))+foot(button('Zurück','back')+button(adapter.mode==='live'?'Rechnung stornieren':'Demo: Stornierung ansehen',adapter.mode==='live'?'live-cancel':'demo-cancel','')),true);};
+ const openSettingsSheet=async(section='payment')=>{
+  if(adapter.mode!=='live')return;
+  let ledger,data;
+  try{const result=await adapter.loadSettings();ledger=result.ledger;data=result.settings||{};}
+  catch(ex){notice='Einstellungen konnten nicht geladen werden: '+ex.message;return;}
+  const backdrop=document.createElement('div');backdrop.className='ll-settings-overlay';backdrop.innerHTML='<div class="ll-settings-sheet" role="dialog" aria-modal="true" aria-label="Rechnungsangaben bearbeiten"><div class="ll-sheet-handle"></div><button type="button" class="ll-sheet-close" aria-label="Schließen">Schließen</button>'+sectionForm(section,data)+'</div>';
+  root.append(backdrop);
+  const close=()=>backdrop.remove();
+  backdrop.addEventListener('click',e=>{if(e.target===backdrop||e.target.closest('.ll-sheet-close'))close();});
+  const form=backdrop.querySelector('form');form.onsubmit=async e=>{
+   e.preventDefault();const error=form.querySelector('.ll-setting-error'),submit=form.querySelector('[type=submit]');submit.disabled=true;error.textContent='';
+   try{const changes=parseSection(form,section,data);await adapter.saveSettings(ledger,changes);close();notice='Angaben gespeichert.';if(current?.id){const id=current.id;await refresh();await details(id);}else await refresh();}
+   catch(ex){error.textContent=ex.message||'Speichern fehlgeschlagen.';submit.disabled=false;}
+  };
+ };
  const form=async kind=>{
+  if(kind==='settings')return openSettingsSheet();
   view=kind;const payer=kind==='payer';let data={},ledger=null;
   try{
    if(adapter.mode==='live'){
@@ -206,9 +223,9 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
    }catch(ex){error.textContent='Speichern fehlgeschlagen: '+(ex.message||'Unbekannter Fehler');submit.disabled=false;}
   });
  };
- const click=async e=>{const choice=e.target.closest('[data-select]');if(choice){selected.has(choice.dataset.select)?selected.delete(choice.dataset.select):selected.add(choice.dataset.select);drawBatch();return;}const open=e.target.closest('[data-open]');if(open){await details(open.dataset.open);return;}const act=e.target.closest('[data-e4]')?.dataset.e4;if(!act)return;if(act==='home')home();else if(act==='back'){if(current?.id)await details(current.id);else home();}else if(act==='batch')batch();else if(act==='refresh'){try{notice='';await refresh();}catch(e){notice='Aktualisierung fehlgeschlagen: '+e.message;home();}}else if(act==='live-issue')await issueLive([...selected].map(id=>rows.find(r=>r.id===id)).filter(Boolean));else if(act==='issue-download')await issueAndDownload();else if(act==='live-single')await issueLive([rows.find(r=>r.id===current.id)].filter(Boolean));else if(act==='live-cancel')await cancelLive();else if(act==='demo-results')demoResults();else if(act==='single-issue'){selected=new Set([current.id]);demoResults();}else if(act==='demo-cancel')demoCancelled();else if(act==='correct')correction();else if(act==='payer'||act==='settings')await form(act);else if(act.startsWith('pdf-')&&adapter.mode==='live')await downloadPdf(act.slice(4));else if(act.startsWith('pdf-')||act==='share'||act==='email'){notice='Diese Aktion benötigt die echte PDF-Schnittstelle. Im Demomodus wurde nichts heruntergeladen oder versendet.';if(view==='detail')await details(current.id);else home();}};
+ const click=async e=>{const choice=e.target.closest('[data-select]');if(choice){selected.has(choice.dataset.select)?selected.delete(choice.dataset.select):selected.add(choice.dataset.select);drawBatch();return;}const open=e.target.closest('[data-open]');if(open){await details(open.dataset.open);return;}const act=e.target.closest('[data-e4]')?.dataset.e4;if(!act)return;if(act==='home')home();else if(act==='back'){if(current?.id)await details(current.id);else home();}else if(act==='batch')batch();else if(act==='refresh'){try{notice='';await refresh();}catch(e){notice='Aktualisierung fehlgeschlagen: '+e.message;home();}}else if(act==='live-issue')await issueLive([...selected].map(id=>rows.find(r=>r.id===id)).filter(Boolean));else if(act==='issue-download')await issueAndDownload();else if(act==='live-single')await issueLive([rows.find(r=>r.id===current.id)].filter(Boolean));else if(act==='live-cancel')await cancelLive();else if(act==='demo-results')demoResults();else if(act==='single-issue'){selected=new Set([current.id]);demoResults();}else if(act==='demo-cancel')demoCancelled();else if(act==='correct')correction();else if(act==='payer')await form(act);else if(act==='settings')await openSettingsSheet(e.target.closest('.e4-card')?.querySelector('h3')?.textContent==='Von'?'contact':'payment');else if(act.startsWith('pdf-')&&adapter.mode==='live')await downloadPdf(act.slice(4));else if(act.startsWith('pdf-')||act==='share'||act==='email'){notice='Diese Aktion benötigt die echte PDF-Schnittstelle. Im Demomodus wurde nichts heruntergeladen oder versendet.';if(view==='detail')await details(current.id);else home();}};
  const handleClick=e=>{if(e.target.closest('a[data-e4]'))e.preventDefault();void click(e);};
  root.addEventListener('click',handleClick);
  adapter.list().then(data=>{if(disposed)return;rows=data;home();}).catch(e=>{if(disposed)return;notice='Rechnungen konnten nicht geladen werden: '+(e.message||'Unbekannter Fehler');home();});
- return {destroy(){disposed=true;root.removeEventListener('click',handleClick);onSubpageChange(false);},create(){batch();},settings(){current=null;form('settings');}};
+ return {destroy(){disposed=true;root.removeEventListener('click',handleClick);onSubpageChange(false);},create(){batch();},settings(){openSettingsSheet('contact');}};
 }
