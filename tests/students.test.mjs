@@ -85,3 +85,17 @@ test('student details use back arrow without redundant Fertig action',()=>{
 test('monthly lesson history shows monatlich while per-lesson uses saved rate',()=>{
  assert.match(source,/l\.billing_mode==='monthly_flat'\?'monatlich':money\(l\.charge_override==='not_charged'\?0:l\.rate\)/);
 });
+
+
+test('ST-4: payer edit footer remains a two-action form and preserves inputs on errors',()=>{
+ assert.match(source,/const footer=\(save='Fertig'\)/);
+ assert.match(source,/data-cancel>Abbrechen/);
+ assert.match(source,/type="submit"/);
+ assert.match(source,/catch\(error\)\{showError\(error\)\}/);
+});
+test('ST-4: payer edit backend errors are localized',async()=>{
+ const {germanBackendError}=await import('../frontend/backend-errors.js');
+ assert.match(germanBackendError({message:'Monthly billing changes must start on the first day of a month'}),/Monatsersten/);
+ assert.match(germanBackendError({message:'Invalid payer email'}),/E-Mail-Adresse/);
+ assert.match(germanBackendError({message:'Subject and payer name cannot be blank'}),/dürfen nicht leer/);
+});
