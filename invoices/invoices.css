@@ -216,3 +216,35 @@
 .ll-app:has(.ll-tabs.ll-hidden) .e4-foot>button:disabled{
  background:#d6d6d2;color:#555;border-color:#d6d6d2;opacity:1;
 }
+
+/* Invoice detail follows the student detail page: plain heading and wide cards. */
+.ll-app .ll-content:has(.e4-detail){padding-left:0;padding-right:0}
+.ll-app .e4:has(.e4-detail){padding-top:0}
+.ll-app .e4-detail{
+  background:transparent;
+  min-height:0;
+  padding:12px 0 calc(90px + env(safe-area-inset-bottom,0px));
+}
+.ll-app .e4-detail .e4-subhead{
+  background:transparent;
+  border:0;
+  margin:4px 0 24px;
+  padding:0;
+}
+.ll-app .e4-detail .e4-subhead h2{
+  font-size:clamp(25px,6vw,34px);
+  line-height:1.15;
+  letter-spacing:-.025em;
+}
+.ll-app .e4-detail .e4-subhead p{margin-top:7px}
+.ll-app .e4-detail .e4-card{
+  width:100%;
+  border:1px solid #d5d5d3;
+  border-radius:12px;
+  padding:16px;
+  margin:16px 0;
+}
+@media(max-width:380px){
+  .ll-app .e4-detail .e4-card{padding:13px}
+  .ll-app .e4-detail .e4-subhead{margin-inline:0;padding-inline:0}
+}
