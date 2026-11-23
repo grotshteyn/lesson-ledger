@@ -1,4 +1,5 @@
 import {germanBackendError} from '../frontend/backend-errors.js';
+import {actionBar} from '../frontend/action-bar.js';
 // E2 Students screens. Mount only after the shell has selected the Schüler route.
 // All writes use existing tenant-scoped Supabase RPCs; no direct DB mutations.
 export const STUDENT_STORIES = ['ST-1','ST-3','ST-4','ST-6','ST-6.5'];
@@ -79,7 +80,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data};
  const backButton='<button type="button" class="e2-back" data-back aria-label="Zurück">‹</button>';
- const footer=(save='Fertig')=>`<div class="e2-actions"><button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button></div>`;
+ const footer=(save='Fertig')=>actionBar(`<button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button>`,{context:'student-edit'});
  const loading=()=>render('<p role="status">Wird geladen …</p>');
  async function list(){
    onSubpageChange(false);
@@ -145,7 +146,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p><button class="e2-secondary" data-status>Status ändern</button>`)+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
     `<div class="e2-lesson-actions"><button type="button" class="e2-primary" data-new-lesson>+ Stunde erfassen</button></div><div id="e2-lessons" aria-live="polite">Stunden werden geladen …</div>`}
-    <p role="alert" class="e2-error"></p><div class="e2-actions e2-actions-single e2-detail-footer"><button type="button" class="e2-primary" data-done>Fertig</button></div>`);
+    <p role="alert" class="e2-error"></p>${actionBar('<button type="button" class="e2-primary" data-done>Fertig</button>',{count:1,context:'student-detail'})}`);
    bind('[data-done]',list);
    root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>detailPage(id,b.dataset.tab)));
    root.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editSection(id,v,b.dataset.edit)));
