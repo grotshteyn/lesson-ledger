@@ -218,7 +218,7 @@ async function handleRequest(req: Request): Promise<Response> {
     const rawDescription = String(item.description ?? "");
     const displayDescription = (lessonSubject
       ? rawDescription.replace(/Unterrichtsstunde/gi, lessonSubject)
-      : rawDescription).replace(/\\s+\\d{2}\\.\\d{2}\\.\\d{4}\\s*$/, "").trim();
+      : rawDescription).replace(/\s+\d{2}\.\d{2}\.\d{4}\s*$/, "").trim();
     const description = wrap(displayDescription, R - (L + 86) - 95, 9.5);
     const rowHeight = Math.max(1, description.length) * 14 + 10;
     ensure(rowHeight);
