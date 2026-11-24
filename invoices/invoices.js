@@ -1,4 +1,4 @@
-import {openSectionSheet,parseSection} from '../frontend/settings-sections.js?v=3';
+import {openSectionSheet,parseSection} from '../frontend/settings-sections.js?v=4';
 import {actionBar} from '../frontend/action-bar.js';
 // E4 invoice UI. All fixture amounts are display-only backend-shaped values.
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
@@ -148,13 +148,13 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const r=current,issued=r.kind==='standard'||r.kind==='cancellation'||r.status==='issued'||r.status==='cancelled',missing=r.status==='missing_details';
  const errors=r.validationErrors||[];
  const errorLabels={payer_address_missing:'Rechnungsadresse fehlt',payer_name_missing:'Name der zahlungspflichtigen Person fehlt',teacher_iban_missing:'IBAN fehlt',teacher_tax_number_missing:'Steuernummer fehlt',teacher_settings_missing:'Rechnungseinstellungen fehlen',teacher_vat_mode_missing:'Umsatzsteuer-Einstellung fehlt',student_details_missing:'Schülerdaten fehlen',no_billable_items:'Keine abrechenbaren Stunden',already_billed:'Bereits abgerechnet',month_not_finished:'Abrechnungsmonat ist noch nicht abgeschlossen'};
- const inlineErrors=(codes,action)=>{const matching=errors.filter(code=>codes.includes(code));return matching.length?'<div class="e4-inline-warning" role="status">'+matching.map(code=>'<p>'+esc(errorLabels[code]||code)+'</p>').join('')+(issued?'':button(action==='payer'?'Angaben ergänzen':action==='contact-settings'?'Kontaktinformationen ergänzen':action==='payment-settings'?'Zahlungsinformationen ergänzen':'Rechnungseinstellungen bearbeiten',action))+'</div>':'';};
+ const inlineErrors=(codes,action)=>{const matching=errors.filter(code=>codes.includes(code));return matching.length?'<div class="e4-inline-warning" role="status">'+matching.map(code=>'<p>'+esc(errorLabels[code]||code)+'</p>').join('')+(issued?'':button('Bearbeiten',action))+'</div>':'';};
  const contactMissing=!r.teacher?.name||!formatAddress(r.teacher?.address);
- const from=card('Von','<p>'+esc(r.teacher?.name||'Rechnungssteller fehlt')+'</p><p>'+esc(formatAddress(r.teacher?.address))+'</p>'+inlineErrors(['teacher_settings_missing'],'contact-settings')+(contactMissing&&!errors.includes('teacher_settings_missing')&&!issued?'<div class="e4-inline-warning">Kontaktinformationen fehlen '+button('Kontaktinformationen ergänzen','contact-settings')+'</div>':''),!issued?'<a href="#" data-e4="contact-settings">Bearbeiten</a>':'');
- const payer=card('An','<p>'+esc(r.payer||r.student)+'</p>'+(r.payer&&r.payer!==r.student?'<p class="e4-muted">für '+esc(r.student)+'</p>':'')+(r.address?'<p>'+esc(r.address)+'</p>':'')+inlineErrors(['payer_address_missing','payer_name_missing'],'payer')+(!r.address&&!errors.includes('payer_address_missing')&&!issued?'<div class="e4-inline-warning">Rechnungsadresse fehlt '+button('Ergänzen','payer')+'</div>':''));
+ const from=card('Von','<p>'+esc(r.teacher?.name||'Rechnungssteller fehlt')+'</p><p>'+esc(formatAddress(r.teacher?.address))+'</p>'+inlineErrors(['teacher_settings_missing'],'contact-settings')+(contactMissing&&!errors.includes('teacher_settings_missing')&&!issued?'<div class="e4-inline-warning">Kontaktinformationen fehlen '+button('Bearbeiten','contact-settings')+'</div>':''),!issued?'<a href="#" data-e4="contact-settings">Bearbeiten</a>':'');
+ const payer=card('An','<p>'+esc(r.payer||r.student)+'</p>'+(r.payer&&r.payer!==r.student?'<p class="e4-muted">für '+esc(r.student)+'</p>':'')+(r.address?'<p>'+esc(r.address)+'</p>':'')+inlineErrors(['payer_address_missing','payer_name_missing'],'payer')+(!r.address&&!errors.includes('payer_address_missing')&&!issued?'<div class="e4-inline-warning">Rechnungsadresse fehlt '+button('Bearbeiten','payer')+'</div>':''),!issued?'<a href="#" data-e4="payer">Bearbeiten</a>':'');
  const sourceLines=r.lines?.length?r.lines.map(line=>({label:invoiceLineLabel(line.description,r.subject),amount:line.gross_amount,date:line.lesson_date||''})):r.billingMode==='monthly_flat'?[{label:'Monatspauschale (Beispiel)',amount:r.totalCents}]:Array.isArray(r.lessons)?r.lessons.map((day,i)=>({label:'Unterricht Mathe, 45 Min.',date:'Mo '+day,amount:i===r.lessons.length-1?r.totalCents-(r.lessons.length-1)*Math.floor(r.totalCents/r.lessons.length):Math.floor(r.totalCents/r.lessons.length)})):[];
  const what=card('Leistungen','<div class="e4-lines">'+sourceLines.map(item=>'<div class="e4-lesson"><span class="e4-date">'+esc(/^\d{4}-\d{2}-\d{2}$/.test(item.date)?new Date(item.date+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):item.date)+'</span><span>'+esc(item.label)+'</span><strong>'+(item.amount==null?'':eur(item.amount))+'</strong></div>').join('')+'</div><div class="e4-total"><b>Gesamt</b><b>'+eur(r.totalCents)+'</b></div><p class="e4-vat-note">'+esc(r.vatNote||vatLabel(r.vat_mode))+'</p>'+inlineErrors(['student_details_missing','no_billable_items','already_billed','month_not_finished'],'settings')+(r.excludedLessons?.length?'<div class="e4-excluded"><b>Nicht berechnet (nur für dich sichtbar)</b>'+r.excludedLessons.map(x=>'<p>'+esc(x.description||x.lesson_date)+'</p>').join('')+'</div>':''));
- const bank=card('Bankverbindung',(r.teacher?.bank_name?'<p>'+esc(r.teacher.bank_name)+'</p>':'')+(r.teacher?.iban?'<p>IBAN '+esc(r.teacher.iban)+'</p>':'')+(r.teacher?.payment_terms?'<p>'+esc(r.teacher.payment_terms)+'</p>':r.dueDate?'<p>Fällig am '+esc(r.dueDate)+'</p>':'')+(r.teacher?.tax_number?'<p>Steuernummer '+esc(r.teacher.tax_number)+'</p>':'')+inlineErrors(['teacher_iban_missing','teacher_tax_number_missing','teacher_vat_mode_missing'],'payment-settings'),!issued?'<a href="#" data-e4="payment-settings">Zahlungsinformationen bearbeiten</a>':'');
+ const bank=card('Bankverbindung',(r.teacher?.bank_name?'<p>'+esc(r.teacher.bank_name)+'</p>':'')+(r.teacher?.iban?'<p>IBAN '+esc(r.teacher.iban)+'</p>':'')+(r.teacher?.payment_terms?'<p>'+esc(r.teacher.payment_terms)+'</p>':r.dueDate?'<p>Fällig am '+esc(r.dueDate)+'</p>':'')+(r.teacher?.tax_number?'<p>Steuernummer '+esc(r.teacher.tax_number)+'</p>':'')+inlineErrors(['teacher_iban_missing','teacher_tax_number_missing','teacher_vat_mode_missing'],'payment-settings'),!issued?'<a href="#" data-e4="payment-settings">Bearbeiten</a>':'');
  const unassigned=errors.filter(code=>!['teacher_settings_missing','teacher_tax_number_missing','teacher_vat_mode_missing','payer_address_missing','payer_name_missing','student_details_missing','no_billable_items','already_billed','month_not_finished','teacher_iban_missing'].includes(code));
  const stateLabel=issued?(r.status==='cancelled'?'Storniert':'Ausgestellt'):missing?'Angaben fehlen':r.status==='ready'?'Bereit':status[r.status]||r.status;
  const primary=issued?button('PDF herunterladen','pdf-'+r.id,adapter.mode==='live'?'':'disabled'):button('Ausstellen & herunterladen',adapter.mode==='live'?'issue-download':'single-issue',missing||r.status!=='ready'||busy||adapter.mode!=='live'?'disabled':'');
@@ -171,50 +171,18 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
   openSectionSheet({section,data,onSave:form=>adapter.saveSettings(ledger,parseSection(form,section,data)),onSaved:async()=>{notice='Angaben gespeichert.';if(current?.id){const id=current.id;await refresh();await details(id);}else await refresh();}});
  };
  const form=async kind=>{
-  if(kind==='settings')return openSettingsSheet();
-  view=kind;const payer=kind==='payer';let data={},ledger=null;
-  try{
-   if(adapter.mode==='live'){
-    if(payer){data=await adapter.loadPayer(current.studentId);}
-    else{const x=await adapter.loadSettings();ledger=x.ledger;data=x.settings||{};}
-   }
-  }catch(e){notice='Angaben konnten nicht geladen werden: '+(e.message||'Unbekannter Fehler');}
-  const addr=payer?data.payer_address:data.teacher_address;
-  const field=(name,label,value='',type='text',placeholder='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" value="'+esc(value)+'" placeholder="'+esc(placeholder)+'"></label>';
-  const heading=payer?'Zahlungspflichtige Person':'Rechnungseinstellungen';
-  const html='<h2>'+heading+'</h2>'+(adapter.mode==='fixture'?warning('Nur Vorschau. Speichern ist im Demomodus deaktiviert.'):'')+
-   '<form id="e4-data-form" data-kind="'+kind+'">'+
-   '<div class="e4-section-title">'+(payer?'Zahlungspflichtige Person':'Auf deinen Rechnungen')+'</div>'+
-   field('name','Name *',payer?data.payer_name:data.teacher_name)+
-   field('street','Straße und Hausnummer *',addr?.street||'')+
-   field('postcode','Postleitzahl *',addr?.postcode||'')+
-   field('city','Ort *',addr?.city||'')+
-   (!payer?field('country','Land',addr?.country||'Deutschland'):'')+
-   field('email','E-Mail',payer?data.payer_email:data.teacher_email,'email')+
-   (!payer?field('phone','Telefon (optional)',data.phone,'tel')+
-   '<div class="e4-section-title">Steuern</div>'+field('tax','Steuernummer',data.tax_number)+
-   '<fieldset class="e4-vat"><legend>Umsatzsteuer</legend>'+
-   [['small_business','Kleinunternehmer (§ 19 UStG)'],['exempt_teaching','Steuerbefreiter Unterricht (§ 4 Nr. 21 UStG)'],['regular_19','19 % Umsatzsteuer'],['unsure','Noch nicht festgelegt']].map(([v,l])=>'<label><input type="radio" name="vat" value="'+v+'" '+(data.vat_mode===v?'checked':'')+'>'+l+'</label>').join('')+'</fieldset>'+
-   '<div class="e4-section-title">Zahlung</div>'+field('iban','IBAN',data.iban)+field('bank','Bankname (optional)',data.bank_name)+field('payment_days','Zahlungsfrist in Tagen',data.payment_days??14,'number'):'')+
-   '<p class="e4-form-error" role="alert"></p>'+foot(button('Abbrechen','back')+'<button type="submit" '+(adapter.mode==='fixture'?'disabled':'')+'>Fertig</button>')+'</form>';
-  show(html,true);
-  const el=root.querySelector('#e4-data-form');
-  el?.addEventListener('submit',async e=>{
-   e.preventDefault();if(adapter.mode!=='live')return;
-   const f=e.currentTarget,v=n=>f.elements.namedItem(n)?.value.trim()||'',address={street:v('street'),postcode:v('postcode'),city:v('city'),country:payer?'Deutschland':v('country')||'Deutschland'};
-   const error=f.querySelector('.e4-form-error');
-   if(!v('name')||!address.street||!/^\d{5}$/.test(address.postcode)||!address.city){error.textContent='Bitte Name, Straße, fünfstellige Postleitzahl und Ort eingeben.';return;}
-   if(v('email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email'))){error.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}
-   const submit=f.querySelector('[type="submit"]');submit.disabled=true;
-   try{
-    if(payer){await adapter.savePayer(current.studentId,{payer_name:v('name'),payer_address:address,payer_email:v('email')});}
-    else{
-     const days=Number(v('payment_days'));if(!Number.isInteger(days)||days<1||days>365)throw new Error('Zahlungsfrist muss zwischen 1 und 365 Tagen liegen.');
-     await adapter.saveSettings(ledger,{teacher_name:v('name'),teacher_address:address,teacher_email:v('email'),phone:v('phone'),tax_number:v('tax'),vat_mode:f.querySelector('input[name="vat"]:checked')?.value||'unsure',iban:v('iban').replace(/\s/g,'').toUpperCase(),bank_name:v('bank'),payment_days:days,cancellation_rule:data.cancellation_rule||'24h',invoice_prefix:data.invoice_prefix||null});
-    }
-    const returnId=payer&&current?'draft:'+current.studentId+':'+current.billingMonth:null;notice='Angaben gespeichert.';await refresh();if(returnId)await details(returnId);
-   }catch(ex){error.textContent='Speichern fehlgeschlagen: '+(ex.message||'Unbekannter Fehler');submit.disabled=false;}
-  });
+  if(kind!=='payer')return openSettingsSheet('contact');
+  if(adapter.mode!=='live')return;
+  const studentId=current.studentId,returnId=current.id;
+  let data;
+  try{data=await adapter.loadPayer(studentId);}catch(ex){notice='Angaben konnten nicht geladen werden: '+ex.message;await details(returnId);return;}
+  openSectionSheet({section:'payer',data:data||{},onSave:async f=>{
+   const v=n=>f.elements.namedItem(n)?.value.trim()||'';
+   const address={street:v('street'),postcode:v('postcode'),city:v('city'),country:data?.payer_address?.country||'Deutschland'};
+   if(!v('name')||!address.street||!/^\d{5}$/.test(address.postcode)||!address.city)throw Error('Bitte Name, Straße, fünfstellige Postleitzahl und Ort eingeben.');
+   if(v('email')&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email')))throw Error('Bitte eine gültige E-Mail-Adresse eingeben.');
+   await adapter.savePayer(studentId,{payer_name:v('name'),payer_address:address,payer_email:v('email')});
+  },onSaved:async()=>{notice='Angaben gespeichert.';await refresh();await details(returnId);}});
  };
  const click=async e=>{const choice=e.target.closest('[data-select]');if(choice){selected.has(choice.dataset.select)?selected.delete(choice.dataset.select):selected.add(choice.dataset.select);drawBatch();return;}const open=e.target.closest('[data-open]');if(open){await details(open.dataset.open);return;}const act=e.target.closest('[data-e4]')?.dataset.e4;if(!act)return;if(act==='home')home();else if(act==='back'){if(current?.id)await details(current.id);else home();}else if(act==='batch')batch();else if(act==='refresh'){try{notice='';await refresh();}catch(e){notice='Aktualisierung fehlgeschlagen: '+e.message;home();}}else if(act==='live-issue')await issueLive([...selected].map(id=>rows.find(r=>r.id===id)).filter(Boolean));else if(act==='issue-download')await issueAndDownload();else if(act==='live-single')await issueLive([rows.find(r=>r.id===current.id)].filter(Boolean));else if(act==='live-cancel')await cancelLive();else if(act==='demo-results')demoResults();else if(act==='single-issue'){selected=new Set([current.id]);demoResults();}else if(act==='demo-cancel')demoCancelled();else if(act==='correct')correction();else if(act==='payer')await form(act);else if(act==='contact-settings')await openSettingsSheet('contact');else if(act==='payment-settings'||act==='settings')await openSettingsSheet('payment');else if(act.startsWith('pdf-')&&adapter.mode==='live')await downloadPdf(act.slice(4));else if(act.startsWith('pdf-')||act==='share'||act==='email'){notice='Diese Aktion benötigt die echte PDF-Schnittstelle. Im Demomodus wurde nichts heruntergeladen oder versendet.';if(view==='detail')await details(current.id);else home();}};
  const handleClick=e=>{if(e.target.closest('a[data-e4]'))e.preventDefault();void click(e);};
