@@ -78,11 +78,11 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  const render=html=>{if(!alive)return;root.innerHTML=`<div class="e2-screen">${html}</div>`;bindChoices(root);};
  const openEdit=(title,fields,hint)=>{
   const overlay=document.createElement('div');overlay.className='ll-settings-overlay';
-  overlay.innerHTML='<div class="ll-settings-sheet e2-student-sheet" role="dialog" aria-modal="true" aria-label="'+escape(title)+'"><form class="ll-setting-section"><h2>'+escape(title)+'</h2>'+fields+'<p class="e2-muted">'+escape(hint)+'</p><p role="alert" class="ll-setting-error"></p><div class="ll-setting-actions"><button type="button" class="ll-setting-save ll-setting-secondary" data-cancel>Abbrechen</button><button type="submit" class="ll-setting-save">Speichern</button></div></form></div>';
+  overlay.innerHTML='<div class="ll-settings-sheet e2-student-sheet" role="dialog" aria-modal="true" aria-label="'+escape(title)+'"><form class="ll-setting-section"><h2>'+escape(title)+'</h2><div class="ll-student-sheet-body">'+fields+'<p class="ll-settings-hint">'+escape(hint)+'</p><p role="alert" class="ll-setting-error"></p></div><div class="ll-setting-actions"><button type="button" class="ll-setting-save ll-setting-secondary" data-cancel>Abbrechen</button><button type="submit" class="ll-setting-save">Speichern</button></div></form></div>';
   const prior=document.activeElement,overflow=document.body.style.overflow;
   document.body.append(overlay);document.body.style.overflow='hidden';
   const close=()=>{overlay.remove();document.body.style.overflow=overflow;sheet=null;prior?.focus();};
-  sheet={overlay,close};overlay.querySelector('[data-cancel]').onclick=close;bindChoices(overlay);return overlay.querySelector('form');
+  sheet={overlay,close};overlay.querySelector('[data-cancel]').onclick=close;bindChoices(overlay);overlay.querySelector('.ll-student-sheet-body').scrollTop=0;return overlay.querySelector('form');
  };
  const bind=(selector,callback)=>root.querySelector(selector)?.addEventListener('click',callback);
  const showError=error=>{const el=(sheet?.overlay||root).querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
