@@ -24,7 +24,7 @@ export function adaptOverview(response){
  return out;
 }
 export function adaptPreview(raw){
- return {...raw,id:'draft:'+raw.student_id+':'+String(raw.billing_month).slice(0,7),studentId:raw.student_id,billingMonth:String(raw.billing_month).slice(0,7),subject:raw.subject||raw.student?.subject||raw.student_subject||'',student:raw.student_name||raw.payer?.name||'Schülername fehlt',payer:raw.payer?.name,address:formatAddress(raw.payer?.address),status:(raw.validation_errors||[]).length?'missing_details':'ready',totalCents:raw.gross_amount,lines:raw.lines||[],excludedLessons:raw.excluded_lessons||[],vatNote:raw.vat_note||'',validationErrors:raw.validation_errors||[],warnings:raw.warnings||[],teacher:raw.teacher,invoiceDate:raw.invoice_date,dueDate:raw.due_date};
+ return {...raw,id:'draft:'+raw.student_id+':'+String(raw.billing_month).slice(0,7),studentId:raw.student_id,billingMonth:String(raw.billing_month).slice(0,7),subject:raw.subject||raw.student?.subject||raw.student_subject||'',student:raw.student_name||raw.payer?.name||'Schülername fehlt',payer:raw.payer?.name,address:formatAddress(raw.payer?.address),status:(raw.validation_errors||[]).includes('month_not_finished')?'in_progress':(raw.validation_errors||[]).length?'missing_details':'ready',totalCents:raw.gross_amount,lines:raw.lines||[],excludedLessons:raw.excluded_lessons||[],vatNote:raw.vat_note||'',validationErrors:raw.validation_errors||[],warnings:raw.warnings||[],teacher:raw.teacher,invoiceDate:raw.invoice_date,dueDate:raw.due_date};
 }
 const demoTeacher={name:'Maria Keller',address:'Seestr. 4, 78462 Konstanz',tax_number:'09/123/45678',iban:'DE12 3456 7890 1234 5678 90',payment_terms:'Zahlbar innerhalb von 14 Tagen'};
 const demo=[
@@ -51,7 +51,7 @@ export function adaptIssued(raw,overview={}){
 export function supabaseInvoiceAdapter(supabase){
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data;};
  const today=()=>new Date().toLocaleDateString('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit'});
- const previousMonth=()=>{const d=new Date();return new Date(d.getFullYear(),d.getMonth()-1,1).toLocaleDateString('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit'});};
+ const currentMonth=()=>today().slice(0,7)+'-01';
  const enrichSubject=async row=>{
    if(row.subject||!row.studentId)return row;
    try{
@@ -63,7 +63,7 @@ export function supabaseInvoiceAdapter(supabase){
  };
  return {mode:'live',
  async list(){
- const rows=adaptOverview(await rpc('list_invoice_overview',{p_through_month:previousMonth()}));
+ const rows=adaptOverview(await rpc('list_invoice_overview',{p_through_month:currentMonth()}));
  const missing=rows.filter(r=>!r.student||r.student==='Schülername wird geladen'||r.student==='Schülername fehlt');
  if(missing.length){
   try{
@@ -94,7 +94,7 @@ export function fixtureInvoiceAdapter(){
 }
 export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoiceAdapter()}){
  let rows=[],view='list',current=null,selected=new Set(),notice='',result=[],disposed=false,busy=false;
- const status={ready:'Bereit',missing_details:'Angaben fehlen',in_progress:'Geplant',issued:'Ausgestellt',cancelled:'Storniert'};
+ const status={ready:'Bereit',missing_details:'Angaben fehlen',in_progress:'Voraussichtlich',issued:'Ausgestellt',cancelled:'Storniert'};
  const button=(label,action,extra='')=>'<button type="button" data-e4="'+action+'" '+extra+'>'+esc(label)+'</button>';
  const card=(title,body,action='')=>'<section class="e4-card"><div class="e4-card-heading"><h3>'+title+'</h3>'+action+'</div>'+body+'</section>';
  const line=r=>'<div class="e4-line '+esc(r.status)+'"><button type="button" data-open="'+esc(r.id)+'"><span class="e4-line-top"><span class="e4-student-name">'+esc(r.student||'Schülername nicht verfügbar')+'</span><strong>'+eur(r.totalCents)+'</strong></span><span class="e4-line-bottom"><span class="e4-line-meta">'+esc((r.number?r.number+' · ':'')+monthLabel(r.billingMonth))+'</span><small>'+esc(status[r.status]||r.status)+'</small></span></button>'+(r.status==='issued'&&adapter.mode==='live'?button('PDF ↓','pdf-'+r.id,'class="e4-row-pdf" aria-label="PDF für '+esc(r.student||r.number||'Rechnung')+' herunterladen"'):'')+'</div>';
@@ -102,7 +102,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const foot=(html,placement='bottom')=>placement==='floating'?'<div class="e4-foot">'+html+'</div>':actionBar(html,{placement,count:(html.match(/<button\b/g)||[]).length===1?1:2,context:'invoice'});
  const warning=msg=>'<p class="e4-warning" role="status">'+esc(msg)+'</p>';
  const show=(html,sub=false)=>{if(disposed)return;onSubpageChange(sub);root.innerHTML='<div class="e4">'+(adapter.mode==='fixture'?'<div class="e4-demo">Vorschau mit Beispieldaten · keine echten Rechnungen</div>':'')+(notice?warning(notice):'')+html+'</div>';};
- const home=()=>{view='list';current=null;show((rows.length?groups(rows):'<p class="e4-empty">Noch keine abrechenbaren Rechnungen für abgeschlossene Monate.</p>')+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch'),'floating'):foot('<button disabled>Rechnungen ausstellen</button>','floating')));};
+ const home=()=>{view='list';current=null;show((rows.length?groups(rows):'<p class="e4-empty">Noch keine abrechenbaren Rechnungen.</p>')+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch'),'floating'):foot('<button disabled>Rechnungen ausstellen</button>','floating')));};
  const refresh=async()=>{rows=await adapter.list();if(!disposed)home();};
  const downloadPdf=async id=>{try{const url=await adapter.pdf(id);const a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener noreferrer';a.click();}catch(e){notice='PDF konnte nicht geladen werden: '+(e.message||'Unbekannter Fehler');await details(id);}};
  const issueLive=async(items)=>{if(busy||!items.length)return;
@@ -148,15 +148,15 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const r=current,issued=r.kind==='standard'||r.kind==='cancellation'||r.status==='issued'||r.status==='cancelled',missing=r.status==='missing_details';
  const errors=r.validationErrors||[];
  const errorLabels={payer_address_missing:'Rechnungsadresse fehlt',payer_name_missing:'Name der zahlungspflichtigen Person fehlt',teacher_iban_missing:'IBAN fehlt',teacher_tax_number_missing:'Steuernummer fehlt',teacher_settings_missing:'Rechnungseinstellungen fehlen',teacher_vat_mode_missing:'Umsatzsteuer-Einstellung fehlt',student_details_missing:'Schülerdaten fehlen',no_billable_items:'Keine abrechenbaren Stunden',already_billed:'Bereits abgerechnet',month_not_finished:'Abrechnungsmonat ist noch nicht abgeschlossen'};
- const inlineErrors=(codes,action)=>{const matching=errors.filter(code=>codes.includes(code));return matching.length?'<div class="e4-inline-warning" role="status">'+matching.map(code=>'<p>'+esc(errorLabels[code]||code)+'</p>').join('')+(issued||['payer','contact-settings','payment-settings'].includes(action)?'':button('Bearbeiten',action))+'</div>':'';};
+ const inlineErrors=(codes,action)=>{const matching=errors.filter(code=>codes.includes(code));return matching.length?'<div class="e4-inline-warning" role="status">'+matching.map(code=>'<p>'+esc(errorLabels[code]||code)+'</p>').join('')+(issued||action==='none'||['payer','contact-settings','payment-settings'].includes(action)?'':button('Bearbeiten',action))+'</div>':'';};
  const contactMissing=!r.teacher?.name||!formatAddress(r.teacher?.address);
  const from=card('Von','<p>'+esc(r.teacher?.name||'Rechnungssteller fehlt')+'</p><p>'+esc(formatAddress(r.teacher?.address))+'</p>'+inlineErrors(['teacher_settings_missing'],'contact-settings')+(contactMissing&&!errors.includes('teacher_settings_missing')&&!issued?'<div class="e4-inline-warning">Kontaktinformationen fehlen</div>':''),!issued?'<button type="button" class="ll-invoice-edit" data-e4="contact-settings">Bearbeiten</button>':'');
  const payer=card('An','<p>'+esc(r.payer||r.student)+'</p>'+(r.payer&&r.payer!==r.student?'<p class="e4-muted">für '+esc(r.student)+'</p>':'')+(r.address?'<p>'+esc(r.address)+'</p>':'')+inlineErrors(['payer_address_missing','payer_name_missing'],'payer')+(!r.address&&!errors.includes('payer_address_missing')&&!issued?'<div class="e4-inline-warning">Rechnungsadresse fehlt</div>':''),!issued?'<button type="button" class="ll-invoice-edit" data-e4="payer">Bearbeiten</button>':'');
  const sourceLines=r.lines?.length?r.lines.map(line=>({label:invoiceLineLabel(line.description,r.subject),amount:line.gross_amount,date:line.lesson_date||''})):r.billingMode==='monthly_flat'?[{label:'Monatspauschale (Beispiel)',amount:r.totalCents}]:Array.isArray(r.lessons)?r.lessons.map((day,i)=>({label:'Unterricht Mathe, 45 Min.',date:'Mo '+day,amount:i===r.lessons.length-1?r.totalCents-(r.lessons.length-1)*Math.floor(r.totalCents/r.lessons.length):Math.floor(r.totalCents/r.lessons.length)})):[];
- const what=card('Leistungen','<div class="e4-lines">'+sourceLines.map(item=>'<div class="e4-lesson"><span class="e4-date">'+esc(/^\d{4}-\d{2}-\d{2}$/.test(item.date)?new Date(item.date+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):item.date)+'</span><span>'+esc(item.label)+'</span><strong>'+(item.amount==null?'':eur(item.amount))+'</strong></div>').join('')+'</div><div class="e4-total"><b>Gesamt</b><b>'+eur(r.totalCents)+'</b></div><p class="e4-vat-note">'+esc(r.vatNote||vatLabel(r.vat_mode))+'</p>'+inlineErrors(['student_details_missing','no_billable_items','already_billed','month_not_finished'],'settings')+(r.excludedLessons?.length?'<div class="e4-excluded"><b>Nicht berechnet (nur für dich sichtbar)</b>'+r.excludedLessons.map(x=>'<p>'+esc(x.description||x.lesson_date)+'</p>').join('')+'</div>':''));
+ const what=card('Leistungen','<div class="e4-lines">'+sourceLines.map(item=>'<div class="e4-lesson"><span class="e4-date">'+esc(/^\d{4}-\d{2}-\d{2}$/.test(item.date)?new Date(item.date+'T12:00:00').toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):item.date)+'</span><span>'+esc(item.label)+'</span><strong>'+(item.amount==null?'':eur(item.amount))+'</strong></div>').join('')+'</div><div class="e4-total"><b>Gesamt</b><b>'+eur(r.totalCents)+'</b></div><p class="e4-vat-note">'+esc(r.vatNote||vatLabel(r.vat_mode))+'</p>'+inlineErrors(['student_details_missing','no_billable_items','already_billed','month_not_finished'],'none')+(r.excludedLessons?.length?'<div class="e4-excluded"><b>Nicht berechnet (nur für dich sichtbar)</b>'+r.excludedLessons.map(x=>'<p>'+esc(x.description||x.lesson_date)+'</p>').join('')+'</div>':''));
  const bank=card('Bankverbindung',(r.teacher?.bank_name?'<p>'+esc(r.teacher.bank_name)+'</p>':'')+(r.teacher?.iban?'<p>IBAN '+esc(r.teacher.iban)+'</p>':'')+(r.teacher?.payment_terms?'<p>'+esc(r.teacher.payment_terms)+'</p>':r.dueDate?'<p>Fällig am '+esc(r.dueDate)+'</p>':'')+(r.teacher?.tax_number?'<p>Steuernummer '+esc(r.teacher.tax_number)+'</p>':'')+inlineErrors(['teacher_iban_missing','teacher_tax_number_missing','teacher_vat_mode_missing'],'payment-settings'),!issued?'<button type="button" class="ll-invoice-edit" data-e4="payment-settings">Bearbeiten</button>':'');
  const unassigned=errors.filter(code=>!['teacher_settings_missing','teacher_tax_number_missing','teacher_vat_mode_missing','payer_address_missing','payer_name_missing','student_details_missing','no_billable_items','already_billed','month_not_finished','teacher_iban_missing'].includes(code));
- const stateLabel=issued?(r.status==='cancelled'?'Storniert':'Ausgestellt'):missing?'Angaben fehlen':r.status==='ready'?'Bereit':status[r.status]||r.status;
+ const stateLabel=issued?(r.status==='cancelled'?'Storniert':'Ausgestellt'):r.status==='in_progress'?'Voraussichtlich':missing?'Angaben fehlen':r.status==='ready'?'Bereit':status[r.status]||r.status;
  const primary=issued?button('PDF herunterladen','pdf-'+r.id,adapter.mode==='live'?'':'disabled'):button('Ausstellen & herunterladen',adapter.mode==='live'?'issue-download':'single-issue',missing||r.status!=='ready'||busy||adapter.mode!=='live'?'disabled':'');
  show('<div class="e4-detail"><header class="e4-subhead"><h2>'+(issued?'Rechnung '+esc(r.number||''):'Rechnungsentwurf')+'</h2><p>'+esc(r.student)+' · '+esc(monthLabel(r.billingMonth))+'</p><span class="e4-status e4-status--'+esc(r.status)+'">'+esc(stateLabel)+'</span></header>'+from+payer+what+bank+(unassigned.length?'<div class="e4-inline-warning" role="status">'+unassigned.map(code=>'<p>'+esc(errorLabels[code]||code)+'</p>').join('')+'</div>':'')+(issued?button('Diese Rechnung korrigieren','correct'):'')+foot(button(issued?'Schließen':'Abbrechen','home')+primary)+'</div>',true);
  };
