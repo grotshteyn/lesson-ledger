@@ -258,4 +258,4 @@
 
 .e4-search{display:flex;align-items:center;gap:8px;margin:0 0 16px}.e4 .e4-search input{margin:0;min-width:0;flex:1}.e4-search button{height:44px;width:44px;flex:none;border:1px solid #aaa;border-radius:9px;background:#fff;font-size:22px}
 
-.e4-cancel-link{display:block;color:#a12e2e!important;text-decoration:underline;text-align:center;padding:14px 0;font-size:14px}.e4-cancel-sheet{animation:e4-sheet-in .18s ease-out}.e4-cancel-sheet h2{font-size:24px;margin:0 0 20px;color:inherit}.e4-cancel-confirm{background:#a12e2e!important;color:#fff!important}@keyframes e4-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.e4-cancel-link{display:block;color:#a12e2e!important;text-decoration:underline;text-align:center;padding:14px 0;font-size:14px}.e4-cancel-sheet{animation:e4-sheet-in .18s ease-out}.e4-cancel-sheet h2{font-size:16px;font-weight:400;margin:0 0 20px;color:inherit}.e4-cancel-confirm{background:#a12e2e!important;color:#fff!important}@keyframes e4-sheet-in{from{transform:translateY(100%)}to{transform:translateY(0)}}
