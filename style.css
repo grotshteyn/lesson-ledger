@@ -231,3 +231,8 @@ body.settings-screen .shell{max-width:680px;padding:0}
 .ll-setting-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:sticky;bottom:0;background:#f4f4f3;padding:12px 0 4px}
 .ll-setting-actions button{min-height:48px;margin:0}
 .ll-setting-error:empty,#ll-account-status:empty{display:none}
+
+/* Standard single-action footer on the read-only settings page. */
+.ll-settings-page{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.ll-settings-footer{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,580px);padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));background:#f4f4f3;z-index:12}
+.ll-settings-footer .ll-setting-save{min-height:48px;margin:0}
