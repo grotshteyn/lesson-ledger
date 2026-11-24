@@ -3,6 +3,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 export const sectionFields=(section,s={})=>{
  const a=s.teacher_address||{};
  const input=(key,label,value='',type='text')=>'<label class="ll-setting-field"><span>'+label+'</span><input name="'+key+'" type="'+type+'" value="'+esc(value)+'"></label>';
+ if(section==='account')return input('email','Anmelde-E-Mail',s.email,'email')+'<label class="ll-setting-field"><span>Neues Passwort (optional)</span><input name="password" type="password" autocomplete="new-password" minlength="12"></label><label class="ll-setting-field"><span>Passwort bestätigen</span><input name="confirm_password" type="password" autocomplete="new-password"></label><p class="ll-settings-hint">Mindestens 12 Zeichen. Lass die Passwortfelder leer, wenn du dein Passwort nicht ändern möchtest.</p>';
  if(section==='payer'){const a=s.payer_address||{};return input('name','Name',s.payer_name)+input('street','Straße und Hausnummer',a.street)+input('postcode','Postleitzahl',a.postcode)+input('city','Ort',a.city)+input('email','E-Mail',s.payer_email,'email');}
  if(section==='contact')return input('teacher_name','Name auf Rechnungen',s.teacher_name)+input('street','Straße und Hausnummer',a.street)+input('postcode','Postleitzahl',a.postcode)+input('city','Ort',a.city)+input('country','Land',a.country||'Deutschland')+input('teacher_email','Kontakt-E-Mail',s.teacher_email,'email')+input('phone','Telefon (optional)',s.phone,'tel');
  if(section==='payment')return input('iban','IBAN',s.iban)+input('bank_name','Bankname',s.bank_name)+input('tax_number','Steuernummer',s.tax_number)+
@@ -10,7 +11,7 @@ export const sectionFields=(section,s={})=>{
  input('payment_days','Zahlungsfrist (Tage)',s.payment_days??14,'number')+'<p class="ll-settings-hint">Stornoregel: Bis 24 Stunden vorher kostenlos, danach kostenpflichtig.</p>';
  return '';
 };
-export const sectionTitle=section=>section==='payer'?'Zahlungspflichtige Person':section==='contact'?'Kontaktinformationen':'Zahlungsinformationen';
+export const sectionTitle=section=>section==='account'?'Konto':section==='payer'?'Zahlungspflichtige Person':section==='contact'?'Kontaktinformationen':'Zahlungsinformationen';
 export const sectionForm=(section,s)=>'<form class="ll-setting-section" data-section="'+section+'"><h2>'+sectionTitle(section)+'</h2>'+sectionFields(section,s)+'<p class="ll-setting-error" role="alert"></p><div class="ll-setting-actions"><button class="ll-setting-save ll-setting-secondary" type="button" data-sheet-cancel>Abbrechen</button><button class="ll-setting-save" type="submit">Speichern</button></div></form>';
 export const parseSection=(form,section,previous={})=>{
  const value=name=>form.elements.namedItem(name)?.value.trim()||'';
