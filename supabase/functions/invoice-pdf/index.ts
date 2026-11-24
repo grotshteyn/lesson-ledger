@@ -99,7 +99,10 @@ async function handleRequest(req: Request): Promise<Response> {
     }
   }
   const admin = createClient(url, service, { auth: { persistSession: false } });
-  const path = invoice.ledger_id + "/" + invoice.id + "-subject-v4.pdf";
+  const { data: cancellation, error: cancellationError } = await client.from("invoices").select("invoice_number").eq("original_invoice_id",invoiceId).eq("kind","cancellation").limit(1).maybeSingle();
+  if (cancellationError) return error("cancellation_lookup_failed",500);
+  const voided = invoice.kind === "standard" && !!cancellation;
+  const path = invoice.ledger_id + "/" + invoice.id + (voided ? "-voided-v1.pdf" : "-subject-v5.pdf");
   const existing = await admin.storage.from(bucket).createSignedUrl(path, 300);
   if (existing.data?.signedUrl) {
     return new Response(JSON.stringify({ status: "ready", url: existing.data.signedUrl }), {
@@ -240,7 +243,7 @@ async function handleRequest(req: Request): Promise<Response> {
     : "Umsatzsteuer 19 % ist im Rechnungsbetrag enthalten.";
   for (const line of wrap(note, R - L, 9.5)) { put(line, L, y, 9.5); y -= 15; }
   y -= 13;
-  const payment = "Bitte überweisen Sie den Betrag"
+  const payment = voided ? "Diese Rechnung wurde storniert. Bitte nicht bezahlen." : invoice.kind === "cancellation" ? "Diese Stornorechnung hebt die ursprüngliche Rechnung auf." : "Bitte überweisen Sie den Betrag"
     + (invoice.due_on ? " bis zum " + fmtDate(invoice.due_on) : "")
     + " unter Angabe der Rechnungsnummer.";
   for (const line of wrap(payment, R - L, 9.5)) { ensure(15); put(line, L, y, 9.5); y -= 15; }
@@ -257,6 +260,10 @@ async function handleRequest(req: Request): Promise<Response> {
   ensure(14);
   put("Vielen Dank!", L, y, 9.5);
   footer();
+  if (voided) for (const p of pdf.getPages()) {
+    const mark = "STORNIERT";
+    p.drawText(mark,{x:R-bold.widthOfTextAtSize(mark,18),y:810,size:18,font:bold,color:rgb(0.65,0.1,0.1)});
+  }
   const bytes = await pdf.save();
   const uploaded = await admin.storage.from(bucket).upload(path, bytes, {
     contentType: "application/pdf", upsert: false, cacheControl: "3600",
