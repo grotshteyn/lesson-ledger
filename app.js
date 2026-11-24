@@ -1,5 +1,5 @@
 import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=5';
-import {shellMarkup,bindShell} from './frontend/shell.js';
+import {shellMarkup,bindShell} from './frontend/shell.js?v=settings-de-80';
 import {mountStudents} from './students/students.js?v=optional-payer-1';
 import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
 import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=void-details-2';
