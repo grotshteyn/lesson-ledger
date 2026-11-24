@@ -239,4 +239,19 @@ body.settings-screen .shell{max-width:680px;padding:0}
 
 .ll-app .e4 .e4-card-heading .ll-invoice-edit{border:0;background:none;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:8px 0;white-space:nowrap;box-shadow:none;min-height:0}
 
-.e2-student-sheet .e2-field{display:flex;flex-direction:column;gap:6px;font-size:14px;color:#333}.e2-student-sheet .e2-field input,.e2-student-sheet .e2-field select{box-sizing:border-box;width:100%;min-height:46px;border:1px solid #c9c9c6;border-radius:9px;background:#fff;color:#222;padding:10px 12px;font:400 16px Inter,system-ui,sans-serif}.e2-student-sheet .e2-segment{display:flex;gap:6px}.e2-student-sheet .e2-segment button{flex:1;min-height:42px;border:1px solid #c9c9c6;border-radius:9px;background:white;color:#242424}.e2-student-sheet .e2-segment button[aria-pressed=true]{background:#242424;color:white}.e2-student-sheet [hidden]{display:none!important}.ll-app .e2-card-heading .e2-edit{border:0;background:none;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:8px 0;white-space:nowrap}
+
+
+/* Student sheets use the same field rhythm as billing settings. */
+.ll-settings-sheet.e2-student-sheet{display:flex;flex-direction:column;overflow:hidden;max-height:90dvh}
+.e2-student-sheet .ll-setting-section{display:flex;flex-direction:column;min-height:0;max-height:100%;gap:14px;margin:0}
+.e2-student-sheet .ll-setting-section>h2{flex:none;margin:0 0 8px}
+.e2-student-sheet .ll-student-sheet-body{display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.e2-student-sheet .e2-field,.e2-student-sheet .e2-choice-field{display:flex;flex-direction:column;gap:6px;margin:0;font-size:13px;font-weight:600;color:#343434}
+.e2-student-sheet .e2-field input,.e2-student-sheet .e2-field select{box-sizing:border-box;width:100%;min-height:46px;margin:0;border:1px solid #c9c9c6;border-radius:9px;background:#fff;color:#222;padding:10px 12px;font:400 16px Inter,system-ui,sans-serif}
+.e2-student-sheet .e2-segment{display:flex;gap:6px}
+.e2-student-sheet .e2-segment button{flex:1;min-width:0;min-height:44px;padding:6px 4px;border:1px solid #c9c9c6;border-radius:9px;background:#fff;color:#242424;font:500 13px Inter,system-ui,sans-serif}
+.e2-student-sheet .e2-segment button[aria-pressed=true]{background:#242424;color:#fff}
+.e2-student-sheet .ll-student-sheet-body p,.e2-student-sheet .e2-effective-display{margin:0;font-size:13px;line-height:1.4}
+.e2-student-sheet .ll-setting-actions{position:static;flex:none;padding:12px 0 4px;margin:0}
+.e2-student-sheet [hidden]{display:none!important}
+.ll-app .e2-card-heading .e2-edit{border:0;background:none;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:8px 0;white-space:nowrap}
