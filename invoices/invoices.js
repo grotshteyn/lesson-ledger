@@ -1,4 +1,4 @@
-import {sectionForm,parseSection} from '../frontend/settings-sections.js?v=2';
+import {openSectionSheet,parseSection} from '../frontend/settings-sections.js?v=3';
 import {actionBar} from '../frontend/action-bar.js';
 // E4 invoice UI. All fixture amounts are display-only backend-shaped values.
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
@@ -167,15 +167,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
   let ledger,data;
   try{const result=await adapter.loadSettings();ledger=result.ledger;data=result.settings||{};}
   catch(ex){notice='Einstellungen konnten nicht geladen werden: '+ex.message;return;}
-  const backdrop=document.createElement('div');backdrop.className='ll-settings-overlay';backdrop.innerHTML='<div class="ll-settings-sheet" role="dialog" aria-modal="true" aria-label="Rechnungsangaben bearbeiten"><div class="ll-sheet-handle"></div><button type="button" class="ll-sheet-close" aria-label="Schließen">Schließen</button>'+sectionForm(section,data)+'</div>';
-  root.append(backdrop);
-  const close=()=>backdrop.remove();
-  backdrop.addEventListener('click',e=>{if(e.target===backdrop||e.target.closest('.ll-sheet-close'))close();});
-  const form=backdrop.querySelector('form');form.onsubmit=async e=>{
-   e.preventDefault();const error=form.querySelector('.ll-setting-error'),submit=form.querySelector('[type=submit]');submit.disabled=true;error.textContent='';
-   try{const changes=parseSection(form,section,data);await adapter.saveSettings(ledger,changes);close();notice='Angaben gespeichert.';if(current?.id){const id=current.id;await refresh();await details(id);}else await refresh();}
-   catch(ex){error.textContent=ex.message||'Speichern fehlgeschlagen.';submit.disabled=false;}
-  };
+  openSectionSheet({section,data,onSave:form=>adapter.saveSettings(ledger,parseSection(form,section,data)),onSaved:async()=>{notice='Angaben gespeichert.';if(current?.id){const id=current.id;await refresh();await details(id);}else await refresh();}});
  };
  const form=async kind=>{
   if(kind==='settings')return openSettingsSheet();
