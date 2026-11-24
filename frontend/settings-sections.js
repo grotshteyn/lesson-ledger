@@ -10,7 +10,7 @@ export const sectionFields=(section,s={})=>{
  return '';
 };
 export const sectionTitle=section=>section==='contact'?'Kontaktinformationen':'Zahlungsinformationen';
-export const sectionForm=(section,s)=>'<form class="ll-setting-section" data-section="'+section+'"><h2>'+sectionTitle(section)+'</h2>'+sectionFields(section,s)+'<p class="ll-setting-error" role="alert"></p><button class="ll-setting-save" type="submit">Speichern</button></form>';
+export const sectionForm=(section,s)=>'<form class="ll-setting-section" data-section="'+section+'"><h2>'+sectionTitle(section)+'</h2>'+sectionFields(section,s)+'<p class="ll-setting-error" role="alert"></p><div class="ll-setting-actions"><button class="ll-setting-save ll-setting-secondary" type="button" data-sheet-cancel>Abbrechen</button><button class="ll-setting-save" type="submit">Speichern</button></div></form>';
 export const parseSection=(form,section,previous={})=>{
  const value=name=>form.elements.namedItem(name)?.value.trim()||'';
  const changes={};
@@ -36,4 +36,21 @@ export async function saveBillingSection(supabase,ledger,section,form,previous){
  const {error}=await supabase.from('billing_settings_versions').insert({...changes,ledger_id:ledger,effective_from:new Date().toLocaleDateString('sv-SE')});
  if(error)throw error;
  return changes;
+}
+
+export function sectionSummary(section,s={}){
+ const a=s.teacher_address||{};
+ const vat={small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Regulär 19 %',unsure:'Noch nicht festgelegt'};
+ const rows=section==='contact'?[['Name auf Rechnungen',s.teacher_name],['Postanschrift',[a.street,[a.postcode,a.city].filter(Boolean).join(' '),a.country].filter(Boolean).join(', ')],['Kontakt-E-Mail',s.teacher_email],['Telefon',s.phone]]:[['IBAN',s.iban],['Bankname',s.bank_name],['Steuernummer',s.tax_number],['Umsatzsteuer',vat[s.vat_mode]],['Zahlungsfrist',(s.payment_days??14)+' Tage'],['Stornoregel','24 Stunden']];
+ return '<section class="ll-setting-section"><div class="ll-setting-heading"><h2>'+sectionTitle(section)+'</h2><button type="button" data-edit-section="'+section+'">Bearbeiten</button></div>'+rows.map(([label,value])=>'<div class="ll-setting-summary"><span>'+esc(label)+'</span><strong>'+esc(value||'Nicht angegeben')+'</strong></div>').join('')+'</section>';
+}
+export function openSectionSheet({section,data,onSave,onSaved=()=>{}}){
+ const overlay=document.createElement('div');overlay.className='ll-settings-overlay';
+ overlay.innerHTML='<div class="ll-settings-sheet" role="dialog" aria-modal="true" aria-label="'+sectionTitle(section)+'">'+sectionForm(section,data)+'</div>';
+ const prior=document.activeElement,overflow=document.body.style.overflow;
+ document.body.append(overlay);document.body.style.overflow='hidden';
+ const close=()=>{overlay.remove();document.body.style.overflow=overflow;prior?.focus();};
+ const form=overlay.querySelector('form'),cancel=form.querySelector('[data-sheet-cancel]'),submit=form.querySelector('[type=submit]'),error=form.querySelector('.ll-setting-error');
+ cancel.onclick=close;
+ form.onsubmit=async e=>{e.preventDefault();error.textContent='';submit.disabled=cancel.disabled=true;try{const result=await onSave(form);close();await onSaved(result);}catch(ex){error.textContent=ex.message||'Speichern fehlgeschlagen.';submit.disabled=cancel.disabled=false;}};
 }
