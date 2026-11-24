@@ -1,8 +1,8 @@
-import {sectionForm,saveBillingSection} from './frontend/settings-sections.js?v=2';
+import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=3';
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js';
 import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
-import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=unified-settings-1';
+import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=unified-settings-2';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -212,17 +212,15 @@ async function allLessonsPage(){
 
 function settingsPage(){
  const account='<section class="ll-setting-section"><h2>Konto</h2><div class="ll-setting-account"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><label class="ll-setting-field"><span>Neue Anmelde-E-Mail (optional)</span><input id="ll-account-email" type="email" value="'+escapeHTML(user.email)+'"></label><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-change-email">E-Mail ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-password">Passwort ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
- frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1><button type="button" id="ll-settings-close" aria-label="Zurück">Schließen</button></header>'+account+sectionForm('contact',settings)+sectionForm('payment',settings)+'</div>','settings-screen');
+ frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1><button type="button" id="ll-settings-close" aria-label="Zurück">Schließen</button></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',settings)+'</div>','settings-screen');
  $('ll-settings-close').onclick=()=>routeTab(activeTab);
  $('ll-password').onclick=()=>{recoveryMode=true;choosePassword();};
  $('ll-logout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login();};
  $('ll-logout-all').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login();};
  $('ll-change-email').onclick=async()=>{const email=$('ll-account-email').value.trim(),status=$('ll-account-status');if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){status.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});status.textContent=error?error.message:'Bitte bestätige die neue E-Mail-Adresse.';};
- document.querySelectorAll('.ll-setting-section[data-section]').forEach(form=>form.onsubmit=async e=>{
-  e.preventDefault();const error=form.querySelector('.ll-setting-error'),save=form.querySelector('[type=submit]');error.textContent='';save.disabled=true;
-  try{settings=await saveBillingSection(supabase,ledger,form.dataset.section,form,settings);save.textContent='Gespeichert';setTimeout(()=>{if(save.isConnected)save.textContent='Speichern';},1800);}
-  catch(ex){error.textContent=ex.message||'Speichern fehlgeschlagen.';}
-  finally{save.disabled=false;}
+ document.querySelectorAll('[data-edit-section]').forEach(button=>button.onclick=()=>{
+  const section=button.dataset.editSection;
+  openSectionSheet({section,data:settings,onSave:form=>saveBillingSection(supabase,ledger,section,form,settings),onSaved:result=>{settings=result;settingsPage();}});
  });
 }
 
