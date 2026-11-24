@@ -1,8 +1,8 @@
 import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=5';
 import {shellMarkup,bindShell} from './frontend/shell.js?v=settings-de-80';
 import {mountStudents} from './students/students.js?v=optional-payer-1';
-import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
-import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=invoice-no-banners-1';
+import {mountLessons} from './lessons/lessons.js?v=lesson-invoice-link-85';
+import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=lesson-invoice-link-85';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
 const root=document.querySelector('#app');let user=null,ledger=null,settings=null,step=0,draft={},editing=false;const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
@@ -166,12 +166,12 @@ function routeTab(tab,options={}){
  renderTab(tab);
  const mountRoot=$('ll-module-root');
  if(tab==='invoices'){
-  activeModule=mountInvoices({root:mountRoot,adapter:supabaseInvoiceAdapter(supabase),onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);}});
+  activeModule=mountInvoices({root:mountRoot,adapter:supabaseInvoiceAdapter(supabase),initialInvoiceId:options.invoiceId,onBack:options.returnLessonId?()=>routeTab('lessons',{lessonId:options.returnLessonId,studentId:options.returnStudentId}):null,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);}});
  }else if(tab==='students'){
   activeModule=mountStudents({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},onLessonCreate:id=>routeTab('lessons',{studentId:id}),onLessonOpen:(id,studentId)=>routeTab('lessons',{lessonId:id,studentId})});
   if(options.studentId)activeModule.open?.(options.studentId,'lessons');
  }else{
-  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId,onBack:()=>options.studentId?routeTab('students',{studentId:options.studentId}):routeTab('lessons')});
+  activeModule=mountLessons({root:mountRoot,supabase,today,onSubpageChange:hidden=>{root.querySelector('.ll-tabs')?.classList.toggle('ll-hidden',hidden);root.querySelector('.ll-header')?.classList.toggle('ll-hidden',hidden);},initialStudentId:options.studentId,initialLessonId:options.lessonId,onInvoiceOpen:(invoiceId,lessonId,studentId)=>routeTab('invoices',{invoiceId,returnLessonId:lessonId,returnStudentId:studentId}),onBack:()=>options.studentId?routeTab('students',{studentId:options.studentId}):routeTab('lessons')});
   if(options.lessonId)activeModule.openLesson(options.lessonId,options.studentId);
   else if(options.studentId)activeModule.createLesson(options.studentId);
  }
