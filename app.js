@@ -212,7 +212,7 @@ async function allLessonsPage(){
 
 function settingsPage(){
  const account='<section class="ll-setting-section"><h2>Konto</h2><div class="ll-setting-account"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><label class="ll-setting-field"><span>Neue Anmelde-E-Mail (optional)</span><input id="ll-account-email" type="email" value="'+escapeHTML(user.email)+'"></label><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-change-email">E-Mail ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-password">Passwort ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
- frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1><button type="button" id="ll-settings-close" aria-label="Zurück">Schließen</button></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',settings)+'</div>','settings-screen');
+ frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',settings)+'<footer class="ll-settings-footer"><button type="button" id="ll-settings-close" class="ll-setting-save">Schließen</button></footer></div>','settings-screen');
  $('ll-settings-close').onclick=()=>routeTab(activeTab);
  $('ll-password').onclick=()=>{recoveryMode=true;choosePassword();};
  $('ll-logout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login();};
