@@ -1,4 +1,4 @@
-import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=4';
+import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=5';
 import {shellMarkup,bindShell} from './frontend/shell.js';
 import {mountStudents} from './students/students.js?v=student-sheets-spacing-2';
 import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
@@ -211,13 +211,22 @@ async function allLessonsPage(){
 }
 
 function settingsPage(){
- const account='<section class="ll-setting-section"><h2>Konto</h2><div class="ll-setting-account"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><label class="ll-setting-field"><span>Neue Anmelde-E-Mail (optional)</span><input id="ll-account-email" type="email" value="'+escapeHTML(user.email)+'"></label><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-change-email">E-Mail ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-password">Passwort ändern</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
+ const account='<section class="ll-setting-section"><div class="ll-setting-heading"><h2>Konto</h2><button type="button" id="ll-account-edit">Bearbeiten</button></div><div class="ll-setting-summary"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
  frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',settings)+'<footer class="ll-settings-footer"><button type="button" id="ll-settings-close" class="ll-setting-save">Schließen</button></footer></div>','settings-screen');
  $('ll-settings-close').onclick=()=>routeTab(activeTab);
- $('ll-password').onclick=()=>{recoveryMode=true;choosePassword();};
+ $('ll-account-edit').onclick=()=>openSectionSheet({section:'account',data:{email:user.email},onSave:async form=>{
+  const email=form.elements.email.value.trim(),password=form.elements.password.value,confirmation=form.elements.confirm_password.value;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Bitte eine gültige E-Mail-Adresse eingeben.');
+  if(password||confirmation){if(password.length<12)throw Error('Bitte mindestens 12 Zeichen verwenden.');if(password!==confirmation)throw Error('Die Passwörter stimmen nicht überein.');}
+  const changes={};if(email!==user.email)changes.email=email;if(password)changes.password=password;
+  if(!Object.keys(changes).length)return '';
+  const {data,error}=await supabase.auth.updateUser(changes);if(error)throw error;if(data?.user)user=data.user;
+  return [changes.email?'Bitte bestätige die neue E-Mail-Adresse.':'',changes.password?'Passwort gespeichert.':''].filter(Boolean).join(' ');
+ },onSaved:message=>{settingsPage();$('ll-account-status').textContent=message;}});
+
  $('ll-logout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login();};
  $('ll-logout-all').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login();};
- $('ll-change-email').onclick=async()=>{const email=$('ll-account-email').value.trim(),status=$('ll-account-status');if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){status.textContent='Bitte eine gültige E-Mail-Adresse eingeben.';return;}const {error}=await supabase.auth.updateUser({email});status.textContent=error?error.message:'Bitte bestätige die neue E-Mail-Adresse.';};
+
  document.querySelectorAll('[data-edit-section]').forEach(button=>button.onclick=()=>{
   const section=button.dataset.editSection;
   openSectionSheet({section,data:settings,onSave:form=>saveBillingSection(supabase,ledger,section,form,settings),onSaved:result=>{settings=result;settingsPage();}});
