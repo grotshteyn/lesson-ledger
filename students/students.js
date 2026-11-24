@@ -114,16 +114,16 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  function create(prefill=''){
    onSubpageChange(true);
   ++sequence;
-  render(`<header class="e2-heading"><h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true))}${card('Stunden und Preis',lessonLength(45)+billingChoice('per_lesson')+input('price','Preis pro Stunde (€) *','','number',true)+locationChoice('')+input('lessons_per_week','Stunden pro Woche *',1,'number',true)+input('start_date','Erste Stunde ab *',today(),'date',true))}${card('Zahlungspflichtige Person','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person *')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Fertig')}</form>`);
+  render(`<header class="e2-heading"><h1>Schüler hinzufügen</h1></header><form id="e2-form">${card('Grundlagen',input('student_name','Name *',prefill,'text',true)+input('nickname','Kurzname')+input('subject','Fach *','','text',true))}${card('Stunden und Preis',lessonLength(45)+billingChoice('per_lesson')+input('price','Preis pro Stunde (€) *','','number',true)+locationChoice('')+input('start_date','Erste Stunde ab *',today(),'date',true))}${card('Zahlungspflichtige Person (optional)','<label class="e2-check"><input name="student_pays" type="checkbox"> Schüler bezahlt selbst</label>'+input('payer_name','Name der zahlenden Person')+input('payer_email','E-Mail','','email')+input('payer_street','Straße und Hausnummer')+input('payer_postcode','Postleitzahl')+input('payer_city','Ort'))}<p role="alert" class="e2-error"></p>${footer('Fertig')}</form>`);
   bind('[data-back]',list);bind('[data-cancel]',list);
   root.querySelector('[name="student_pays"]').addEventListener('change',e=>{const form=e.target.form;form.elements.payer_name.value=e.target.checked?form.elements.student_name.value:'';form.elements.payer_name.disabled=e.target.checked});
   root.querySelector('#e2-form').addEventListener('submit',async e=>{
-   e.preventDefault();const form=e.currentTarget,price=number(form,'price'),minutes=number(form,'minutes'),weekly=number(form,'lessons_per_week');
-   if(!fieldValue(form,'student_name')||!fieldValue(form,'subject')||!fieldValue(form,'start_date')||(!form.elements.student_pays.checked&&!fieldValue(form,'payer_name')))return showError('Bitte alle Pflichtfelder ausfüllen.');
-   if(!Number.isInteger(minutes)||minutes<=0||!Number.isInteger(weekly)||weekly<=0||!Number.isFinite(price)||price<=0)return showError('Dauer, Häufigkeit und Preis müssen größer als null sein.');
+   e.preventDefault();const form=e.currentTarget,price=number(form,'price'),minutes=number(form,'minutes');
+   if(!fieldValue(form,'student_name')||!fieldValue(form,'subject')||!fieldValue(form,'start_date'))return showError('Bitte alle Pflichtfelder ausfüllen.');
+   if(!Number.isInteger(minutes)||minutes<=0||!Number.isFinite(price)||price<=0)return showError('Dauer und Preis müssen größer als null sein.');
    if(!emailValid(fieldValue(form,'payer_email')))return showError('Bitte eine gültige E-Mail-Adresse eingeben.');
    const name=fieldValue(form,'student_name');
-   const payload={student_name:name,nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject'),start_date:fieldValue(form,'start_date'),minutes,lessons_per_week:weekly,billing_mode:fieldValue(form,'billing_mode'),price:String(price),location:fieldValue(form,'location'),payer_name:form.elements.student_pays.checked?name:fieldValue(form,'payer_name'),payer_email:fieldValue(form,'payer_email'),payer_address:{street:fieldValue(form,'payer_street'),postcode:fieldValue(form,'payer_postcode'),city:fieldValue(form,'payer_city'),country:'Deutschland'}};
+   const payload={student_name:name,nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject'),start_date:fieldValue(form,'start_date'),minutes,billing_mode:fieldValue(form,'billing_mode'),price:String(price),location:fieldValue(form,'location'),payer_name:form.elements.student_pays.checked?name:fieldValue(form,'payer_name'),payer_email:fieldValue(form,'payer_email'),payer_address:{street:fieldValue(form,'payer_street'),postcode:fieldValue(form,'payer_postcode'),city:fieldValue(form,'payer_city'),country:'Deutschland'}};
    const submit=form.querySelector('[type="submit"]');submit.disabled=true;
    try{
     const existing=(await Promise.all(['active','paused','ended'].map(p_status=>rpc('find_students',{p_query:name,p_status,p_at:today()})))).flat();
@@ -149,7 +149,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    const editButton=section=>`<button class="e2-edit" data-edit="${section}">Bearbeiten</button>`;
    render(`<header class="e2-heading"><div><h1>${escape(v.student_name)}</h1><p class="e2-muted">${escape(v.subject)} · ${escape(studentPrice(v))} · ${escape(statusNames[status]||'Noch nicht begonnen')}</p></div></header><div class="e2-tabs e2-single-select" role="group" aria-label="Schüleransicht"><button type="button" data-tab="lessons" aria-pressed="${!isDetails}">Stunden</button><button type="button" data-tab="details" aria-pressed="${isDetails}">Details</button></div>${isDetails?
     card('Grundlagen',`<dl>${detail('Name',v.student_name)}${detail('Kurzname',v.nickname)}${detail('Fach',v.subject)}${detail('Beginn',dateLabel(v.start_date))}</dl>`,editButton('basics'))+
-    card('Stunden und Preis',`<dl>${detail('Dauer',v.minutes+' Minuten')}${detail('Stunden pro Woche',v.lessons_per_week)}${detail('Preis',studentPrice(v))}${detail('Unterrichtsort',locationNames[v.location])}</dl>`,editButton('pricing'))+
+    card('Stunden und Preis',`<dl>${detail('Dauer',v.minutes+' Minuten')}${detail('Preis',studentPrice(v))}${detail('Unterrichtsort',locationNames[v.location])}</dl>`,editButton('pricing'))+
     card('Zahlungspflichtige Person',`<dl>${detail('Name',v.payer_name)}${detail('E-Mail',v.payer_email)}${detail('Straße',payer.street)}${detail('PLZ',payer.postcode)}${detail('Ort',payer.city)}</dl>`,editButton('payer'))+
     card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p>`,'<button type="button" class="e2-edit" data-status>Bearbeiten</button>')+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
@@ -175,7 +175,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
  function editSection(id,v,section){
   const address=v.payer_address||{};
   const basics=`<p class="e2-muted">Name: ${escape(v.student_name)} (nicht bearbeitbar)</p>`+input('nickname','Kurzname',v.nickname)+input('subject','Fach',v.subject,'text',true);
-  const pricing=lessonLength(v.minutes)+billingChoice(v.billing_mode)+input('price',v.billing_mode==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)',v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate,'number',true)+locationChoice(v.location)+input('lessons_per_week','Stunden pro Woche',v.lessons_per_week,'number',true);
+  const pricing=lessonLength(v.minutes)+billingChoice(v.billing_mode)+input('price',v.billing_mode==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)',v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate,'number',true)+locationChoice(v.location);
   const payer=input('payer_name','Name',v.payer_name,'text',true)+input('payer_email','E-Mail',v.payer_email,'email')+input('payer_street','Straße',address.street)+input('payer_postcode','PLZ',address.postcode)+input('payer_city','Ort',address.city);
   const labels={basics:'Grundlagen',pricing:'Stunden und Preis',payer:'Zahlungspflichtige Person'};
   const effective=v.billing_mode==='monthly_flat'&&section==='pricing'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
@@ -186,8 +186,8 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    if(section==='basics'){Object.assign(changes,basicsChanges({nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject')}));if(!changes.subject)return showError('Fach ist erforderlich.')}
    if(section==='payer'){changes.payer_name=fieldValue(form,'payer_name');changes.payer_email=fieldValue(form,'payer_email');changes.payer_address={...address,street:fieldValue(form,'payer_street'),postcode:fieldValue(form,'payer_postcode'),city:fieldValue(form,'payer_city')};if(!changes.payer_name||!emailValid(changes.payer_email))return showError('Bitte Name und E-Mail prüfen.')}
    if(section==='pricing'){
-    changes.minutes=number(form,'minutes');changes.lessons_per_week=number(form,'lessons_per_week');changes.location=fieldValue(form,'location');
-    if(!Number.isInteger(changes.minutes)||changes.minutes<=0||!Number.isInteger(changes.lessons_per_week)||changes.lessons_per_week<=0)return showError('Dauer und Häufigkeit müssen positive ganze Zahlen sein.');
+    changes.minutes=number(form,'minutes');changes.location=fieldValue(form,'location');
+    if(!Number.isInteger(changes.minutes)||changes.minutes<=0)return showError('Die Dauer muss eine positive ganze Zahl sein.');
     changes.billing_mode=fieldValue(form,'billing_mode');changes.price=String(number(form,'price'));
     if(!(Number(changes.price)>0))return showError('Bitte einen Preis größer als null angeben.');
     if((v.billing_mode==='monthly_flat'||changes.billing_mode==='monthly_flat')&&at.slice(-2)!=='01')return showError('Monatspauschalen können nur am Monatsersten geändert werden.');
