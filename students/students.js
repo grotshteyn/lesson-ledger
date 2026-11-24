@@ -45,15 +45,14 @@ const nextMonthStart=date=>{const d=new Date(date+'T12:00:00');d.setMonth(d.getM
 export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{},onLessonOpen=()=>{},onSubpageChange=()=>{},today=todayLocal}){
  if(!root||!supabase)throw new Error('Schüleransicht benötigt ein Element und Supabase');
  let alive=true,sequence=0,search='',selected=null,view='lessons';
- const render=html=>{
-   if(!alive)return;
-   root.innerHTML=`<div class="e2-screen">${html}</div>`;
-   root.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{
+ let sheet=null;
+ const bindChoices=(scope)=>{
+   scope.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{
      const group=button.closest('.e2-choice-field'),key=button.dataset.choice,value=button.dataset.value;
      group.querySelector('input[name="'+key+'"]').value=value;
      group.querySelectorAll('[data-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
      if(key==='length_choice'){
-       const other=root.querySelector('.e2-other-length'),hidden=root.querySelector('input[type="hidden"][name="minutes"]');
+       const other=scope.querySelector('.e2-other-length'),hidden=scope.querySelector('input[type="hidden"][name="minutes"]');
        if(other)other.hidden=value!=='other';
        if(hidden){hidden.disabled=value==='other';if(value!=='other')hidden.value=value;}
        if(value==='other'&&!other.querySelector('input[name="minutes"]')){other.innerHTML='<label class="e2-field">Andere Dauer (Minuten)<input name="minutes" type="number" min="5" max="240" required></label>';}
@@ -61,23 +60,32 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
        if(otherInput)otherInput.disabled=value!=='other';
      }
      if(key==='billing_mode'){
-       const price=root.querySelector('[name="price"]');
+       const price=scope.querySelector('[name="price"]');
        const label=price?.closest('label');if(label)label.firstChild.textContent=value==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)';
      }
      if(key==='effective_choice'){
-       const date=root.querySelector('.e2-effective-date'),hidden=root.querySelector('input[type="hidden"][name="effective_from"]');
+       const date=scope.querySelector('.e2-effective-date'),hidden=scope.querySelector('input[type="hidden"][name="effective_from"]');
        if(date)date.hidden=value!=='other';
        const dateInput=date?.querySelector('input[name="effective_from"]');
        if(dateInput)dateInput.disabled=value!=='other';
        if(hidden){hidden.disabled=value==='other';if(value!=='other')hidden.value=value==='next'?nextMonthStart(today()):today();}
-       const display=root.querySelector('.e2-effective-display');if(display)display.textContent=dateLabel(value==='other'?(dateInput?.value||today()):value==='next'?nextMonthStart(today()):today());
+       const display=scope.querySelector('.e2-effective-display');if(display)display.textContent=dateLabel(value==='other'?(dateInput?.value||today()):value==='next'?nextMonthStart(today()):today());
      }
    }));
-   root.querySelectorAll('.e2-other-length[hidden] input,.e2-effective-date[hidden] input').forEach(input=>input.disabled=true);
-   root.querySelector('.e2-effective-date input')?.addEventListener('change',e=>{const display=root.querySelector('.e2-effective-display');if(display)display.textContent=dateLabel(e.target.value);});
+   scope.querySelectorAll('.e2-other-length[hidden] input,.e2-effective-date[hidden] input').forEach(input=>input.disabled=true);
+   scope.querySelector('.e2-effective-date input')?.addEventListener('change',e=>{const display=scope.querySelector('.e2-effective-display');if(display)display.textContent=dateLabel(e.target.value);});
+ };
+ const render=html=>{if(!alive)return;root.innerHTML=`<div class="e2-screen">${html}</div>`;bindChoices(root);};
+ const openEdit=(title,fields,hint)=>{
+  const overlay=document.createElement('div');overlay.className='ll-settings-overlay';
+  overlay.innerHTML='<div class="ll-settings-sheet e2-student-sheet" role="dialog" aria-modal="true" aria-label="'+escape(title)+'"><form class="ll-setting-section"><h2>'+escape(title)+'</h2>'+fields+'<p class="e2-muted">'+escape(hint)+'</p><p role="alert" class="ll-setting-error"></p><div class="ll-setting-actions"><button type="button" class="ll-setting-save ll-setting-secondary" data-cancel>Abbrechen</button><button type="submit" class="ll-setting-save">Speichern</button></div></form></div>';
+  const prior=document.activeElement,overflow=document.body.style.overflow;
+  document.body.append(overlay);document.body.style.overflow='hidden';
+  const close=()=>{overlay.remove();document.body.style.overflow=overflow;sheet=null;prior?.focus();};
+  sheet={overlay,close};overlay.querySelector('[data-cancel]').onclick=close;bindChoices(overlay);return overlay.querySelector('form');
  };
  const bind=(selector,callback)=>root.querySelector(selector)?.addEventListener('click',callback);
- const showError=error=>{const el=root.querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
+ const showError=error=>{const el=(sheet?.overlay||root).querySelector('[role="alert"]');if(el)el.textContent=germanBackendError(error)};
  const rpc=async(name,args)=>{const {data,error}=await supabase.rpc(name,args);if(error)throw error;return data};
  const backButton='<button type="button" class="e2-back" data-back aria-label="Zurück">‹</button>';
  const footer=(save='Fertig')=>actionBar(`<button type="button" class="e2-secondary" data-cancel>Abbrechen</button><button class="e2-primary" type="submit">${save}</button>`,{context:'student-edit'});
@@ -143,7 +151,7 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
     card('Grundlagen',`<dl>${detail('Name',v.student_name)}${detail('Kurzname',v.nickname)}${detail('Fach',v.subject)}${detail('Beginn',dateLabel(v.start_date))}</dl>`,editButton('basics'))+
     card('Stunden und Preis',`<dl>${detail('Dauer',v.minutes+' Minuten')}${detail('Stunden pro Woche',v.lessons_per_week)}${detail('Preis',studentPrice(v))}${detail('Unterrichtsort',locationNames[v.location])}</dl>`,editButton('pricing'))+
     card('Zahlungspflichtige Person',`<dl>${detail('Name',v.payer_name)}${detail('E-Mail',v.payer_email)}${detail('Straße',payer.street)}${detail('PLZ',payer.postcode)}${detail('Ort',payer.city)}</dl>`,editButton('payer'))+
-    card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p><button class="e2-secondary" data-status>Status ändern</button>`)+
+    card('Status',`<p>${escape(statusNames[status]||'Noch nicht begonnen')}</p>`,'<button type="button" class="e2-edit" data-status>Bearbeiten</button>')+
     card('Verlauf',`<ol class="e2-history">${(versions.data||[]).map(x=>`<li>Angaben gültig ab ${escape(dateLabel(x.effective_from))} · ${escape(studentPrice(x))}</li>`).join('')}${(events.data||[]).map(x=>`<li>${escape(x.event_type)} ab ${escape(dateLabel(x.effective_from))}</li>`).join('')}</ol>`):
     `<div class="e2-lesson-actions"><button type="button" class="e2-primary" data-new-lesson>+ Stunde erfassen</button></div><div id="e2-lessons" aria-live="polite">Stunden werden geladen …</div>`}
     <p role="alert" class="e2-error"></p>${actionBar('<button type="button" class="e2-primary" data-done>Fertig</button>',{count:1,context:'student-detail'})}`);
@@ -165,17 +173,14 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
   box.querySelectorAll('[data-lesson]').forEach(b=>b.addEventListener('click',()=>onLessonOpen(b.dataset.lesson,id)));
  }
  function editSection(id,v,section){
-   onSubpageChange(true);
-  ++sequence;
   const address=v.payer_address||{};
   const basics=`<p class="e2-muted">Name: ${escape(v.student_name)} (nicht bearbeitbar)</p>`+input('nickname','Kurzname',v.nickname)+input('subject','Fach',v.subject,'text',true);
   const pricing=lessonLength(v.minutes)+billingChoice(v.billing_mode)+input('price',v.billing_mode==='monthly_flat'?'Monatspauschale (€)':'Preis pro Stunde (€)',v.billing_mode==='monthly_flat'?v.monthly_fee:v.rate,'number',true)+locationChoice(v.location)+input('lessons_per_week','Stunden pro Woche',v.lessons_per_week,'number',true);
   const payer=input('payer_name','Name',v.payer_name,'text',true)+input('payer_email','E-Mail',v.payer_email,'email')+input('payer_street','Straße',address.street)+input('payer_postcode','PLZ',address.postcode)+input('payer_city','Ort',address.city);
   const labels={basics:'Grundlagen',pricing:'Stunden und Preis',payer:'Zahlungspflichtige Person'};
   const effective=v.billing_mode==='monthly_flat'&&section==='pricing'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
-  render(`<header class="e2-heading"><div><h1>${labels[section]}</h1><p class="e2-muted">${escape(v.student_name)}</p></div></header><form id="e2-edit">${card(labels[section],{basics,pricing,payer}[section]+(section==='pricing'?effectiveChoice(effective):input('effective_from','Gültig ab',effective,'date',true)))}<p class="e2-muted">Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.</p><p role="alert" class="e2-error"></p>${footer()}</form>`);
-  const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
-  root.querySelector('#e2-edit').addEventListener('submit',async e=>{
+  const editForm=openEdit(labels[section],{basics,pricing,payer}[section]+(section==='pricing'?effectiveChoice(effective):input('effective_from','Gültig ab',effective,'date',true)),'Änderungen werden versioniert. Bereits abgerechnete Stunden bleiben unverändert.');
+  editForm.addEventListener('submit',async e=>{
    e.preventDefault();const form=e.currentTarget,at=fieldValue(form,'effective_from'),changes={};
    if(!at)return showError('Bitte ein Gültigkeitsdatum angeben.');
    if(section==='basics'){Object.assign(changes,basicsChanges({nickname:fieldValue(form,'nickname'),subject:fieldValue(form,'subject')}));if(!changes.subject)return showError('Fach ist erforderlich.')}
@@ -194,16 +199,13 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
      const {price,billing_mode,...other}=changes;
      await rpc('change_student_with_repricing',{p_student_id:id,p_effective_from:at,p_changes:{...other,price,billing_mode},p_reprice:false,p_idempotency_key:crypto.randomUUID()});
     }else await rpc('change_student',{p_student_id:id,p_effective_from:at,p_changes:changes});
-    await detailPage(id,'details');
+    sheet?.close();await detailPage(id,'details');
    }catch(error){showError(error)}finally{if(submit.isConnected)submit.disabled=false}
   });
  }
  function editStatus(id,v,current){
-   onSubpageChange(true);
-  ++sequence;const effective=v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
-  render(`<header class="e2-heading"><h1>Status ändern</h1></header><form id="e2-status">${card('Status',select('event','Aktion',[['pause','Pausieren'],['restart','Wieder starten'],['end','Beenden']],current==='paused'||current==='ended'?'restart':'pause')+input('effective_from','Gültig ab',effective,'date',true)+input('pause_until','Pause bis (optional)','','date'))}<p class="e2-muted">Bei Monatspauschalen beginnen Statusänderungen am Monatsersten.</p><p role="alert" class="e2-error"></p>${footer('Fertig')}</form>`);
-  const cancel=()=>detailPage(id,'details');bind('[data-back]',cancel);bind('[data-cancel]',cancel);
-  const form=root.querySelector('#e2-status');
+  const effective=v.billing_mode==='monthly_flat'&&today().slice(-2)!=='01'?nextMonthStart(today()):today();
+  const form=openEdit('Status ändern',select('event','Aktion',[['pause','Pausieren'],['restart','Wieder starten'],['end','Beenden']],current==='paused'||current==='ended'?'restart':'pause')+input('effective_from','Gültig ab',effective,'date',true)+input('pause_until','Pause bis (optional)','','date'),'Bei Monatspauschalen beginnen Statusänderungen am Monatsersten.');
   const update=()=>{form.elements.pause_until.closest('label').hidden=form.elements.event.value!=='pause'};form.elements.event.addEventListener('change',update);update();
   form.addEventListener('submit',async e=>{
    e.preventDefault();const event=fieldValue(form,'event'),at=fieldValue(form,'effective_from'),until=fieldValue(form,'pause_until');
@@ -211,13 +213,13 @@ export function mountStudents({root,supabase,onBack=()=>{},onLessonCreate=()=>{}
    if(v.billing_mode==='monthly_flat'&&at.slice(-2)!=='01')return showError('Monatspauschalen beginnen am Monatsersten.');
    if(!confirm('Statusänderung speichern?'))return;
    const submit=form.querySelector('[type="submit"]');submit.disabled=true;
-   try{await rpc('set_student_status',{p_student_id:id,p_event:event,p_effective_from:at,p_pause_until:event==='pause'&&until?until:null});await detailPage(id,'details')}
+   try{await rpc('set_student_status',{p_student_id:id,p_event:event,p_effective_from:at,p_pause_until:event==='pause'&&until?until:null});sheet?.close();await detailPage(id,'details')}
    catch(error){showError(error)}finally{if(submit.isConnected)submit.disabled=false}
   });
  }
  void onBack; // Shell owns navigation away from the Students tab.
  list();
- const dispose=()=>{alive=false;sequence++;root.replaceChildren()};
+ const dispose=()=>{alive=false;sequence++;sheet?.close();root.replaceChildren()};
  // The shell restores a student after returning from the Lessons module.
  // Expose the existing detail renderer without changing the disposal contract.
  dispose.open=(id,tab='lessons')=>detailPage(id,tab);
