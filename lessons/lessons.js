@@ -247,13 +247,13 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     if(action==='new')createLesson();
     else if(action==='reload')load();
     else if(action==='list'){if(initialStudentId)onBack();else load();}
-    else if(action==='invoice'&&current?.invoice_id)onInvoiceOpen(current.invoice_id,current.id,current.student_id);
+    else if(action==='invoice'&&current?.invoice_id)onInvoiceOpen(current.invoice_id,current.id,initialStudentId);
     else if(action==='edit')createLesson(current.student_id,current);
     else if(action==='remove')remove();
     else if(action==='calendar')calendar();
     else if(action==='save')save();
     else if(action==='today'||action==='yesterday'){const d=new Date();if(action==='yesterday')d.setDate(d.getDate()-1);el('ll-date').value=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');el('ll-date').dispatchEvent(new Event('change'));}
   }
-  load();
+  if(!initialLessonId&&!initialStudentId)load();
   return {destroy(){disposed=true;revision++;root.replaceChildren();subpage(false);},openLesson,createLesson,refresh:load};
 }
