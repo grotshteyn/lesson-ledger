@@ -1,6 +1,6 @@
 import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=4';
 import {shellMarkup,bindShell} from './frontend/shell.js';
-import {mountStudents} from './students/students.js';
+import {mountStudents} from './students/students.js?v=student-sheets-1';
 import {mountLessons} from './lessons/lessons.js?v=all-lessons-week-month-2';
 import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=invoice-edit-buttons-6';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
