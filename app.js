@@ -1,7 +1,7 @@
 import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=5';
 import {shellMarkup,bindShell} from './frontend/shell.js?v=settings-de-80';
 import {mountStudents} from './students/students.js?v=optional-payer-1';
-import {mountLessons} from './lessons/lessons.js?v=invoice-date-card-1';
+import {mountLessons} from './lessons/lessons.js?v=lesson-calendar-86';
 import {mountInvoices,supabaseInvoiceAdapter} from './invoices/invoices.js?v=invoice-date-card-1';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.57.0';
 const supabase=createClient('https://zcszskoegwgcjgqsfmfx.supabase.co','sb_publishable_7U5badP6_IAFBOOYKNNF6A_ZW4XqSK0',{auth:{detectSessionInUrl:true,autoRefreshToken:true,persistSession:true}});
