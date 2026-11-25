@@ -1,4 +1,4 @@
-import {sectionSummary,openSectionSheet,saveBillingSection} from './frontend/settings-sections.js?v=5';
+import {sectionSummary,openSectionSheet,saveBillingSection,parseSection} from './frontend/settings-sections.js?v=numbering-payment-89';
 import {shellMarkup,bindShell} from './frontend/shell.js?v=settings-de-80';
 import {mountStudents} from './students/students.js?v=optional-payer-1';
 import {mountLessons} from './lessons/lessons.js?v=lesson-calendar-86';
@@ -214,14 +214,14 @@ async function readNumbering(){const {data,error}=await supabase.rpc('get_invoic
 async function writeNumbering(number,year){const {data,error}=await supabase.rpc('set_invoice_numbering',{p_next_number:number,p_expected_year:year});if(error)throw error;return data;}
 function numberingError(e){return ({invalid_next_number:'Bitte eine gültige Rechnungsnummer zwischen 0001 und 9999 eingeben.',invoice_year_changed:'Das Rechnungsjahr hat sich geändert. Bitte öffne die Einstellung erneut.',invoice_numbering_locked:'Die Nummerierung kann nach der ersten Rechnung nicht mehr geändert werden.'})[e.message]||germanError(e);}
 function formatNumbering(n,value){return String(n.next_invoice_number||'').slice(0,-4)+String(value).padStart(4,'0');}
-function numberingFields(n,value){if(!n.editable||n.exhausted)return '<p>'+escapeHTML(n.exhausted?'Nummernkreis ausgeschöpft':n.next_invoice_number)+'</p>';const custom=value!==1;return '<div class="ll-status-segment ll-segment ll-number-segment" role="group" aria-label="Rechnungsnummerierung"><button type="button" data-number-mode="yes" aria-pressed="'+(!custom)+'">Neu beginnen</button><button type="button" data-number-mode="no" aria-pressed="'+custom+'">Fortführen</button></div><div data-number-field '+(custom?'':'hidden')+'><label class="ll-setting-field"><span>Nächste Rechnungsnummer</span><input name="invoice_start" value="'+escapeHTML(formatNumbering(n,value))+'"></label></div><div data-number-preview '+(custom?'hidden':'')+'><div class="ll-setting-summary"><span>Nächste Rechnungsnummer</span><strong>'+escapeHTML(formatNumbering(n,1))+'</strong></div></div>';}
-function bindNumbering(el){const buttons=el.querySelectorAll('[data-number-mode]');buttons.forEach(b=>b.onclick=()=>{buttons.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));el.querySelector('[data-number-field]').hidden=b.dataset.numberMode==='yes';el.querySelector('[data-number-preview]').hidden=b.dataset.numberMode!=='yes';});}
+function numberingFields(n,value){if(!n.editable||n.exhausted)return '<p>'+escapeHTML(n.exhausted?'Nummernkreis ausgeschöpft':n.next_invoice_number)+'</p>';const custom=value!==1;return '<div class="ll-status-segment ll-segment ll-number-segment" role="group" aria-label="Rechnungsnummerierung"><button type="button" data-number-mode="yes" aria-pressed="'+(!custom)+'">Neu beginnen</button><button type="button" data-number-mode="no" aria-pressed="'+custom+'">Fortführen</button></div><div data-number-field '+(custom?'':'hidden')+'><label class="ll-setting-field"><span>Nächste Rechnungsnummer</span><input name="invoice_start" value="'+escapeHTML(formatNumbering(n,value))+'"></label></div>';}
+function bindNumbering(el){const buttons=el.querySelectorAll('[data-number-mode]');buttons.forEach(b=>b.onclick=()=>{buttons.forEach(x=>x.setAttribute('aria-pressed',String(x===b)));el.querySelector('[data-number-field]').hidden=b.dataset.numberMode==='yes';});}
 function numberingValue(el,n){if(el.querySelector('[data-number-mode="yes"]').getAttribute('aria-pressed')==='true')return 1;const value=el.querySelector('[name="invoice_start"]').value.trim(),prefix=String(n.next_invoice_number).slice(0,-4),suffix=value.slice(prefix.length);if(!value.startsWith(prefix)||!/^\d{1,4}$/.test(suffix)||Number(suffix)<1)throw Error('invalid_next_number');return Number(suffix);}
-async function mountNumberingSettings(el){try{const n=await readNumbering();if(!el.isConnected)return;el.innerHTML='<div class="ll-setting-heading"><h2>Rechnungsnummerierung</h2>'+(n.editable&&!n.exhausted?'<button type="button" data-number-edit>Bearbeiten</button>':'')+'</div><div class="ll-setting-summary"><span>Nächste Rechnungsnummer</span><strong>'+escapeHTML(n.exhausted?'Nummernkreis ausgeschöpft':n.next_invoice_number)+'</strong></div>';const edit=el.querySelector('[data-number-edit]');if(edit)edit.onclick=()=>{el.innerHTML='<h2>Rechnungsnummerierung</h2>'+numberingFields(n,n.next_number)+'<p class="ll-setting-error" role="alert"></p><div class="ll-setting-actions"><button type="button" class="ll-setting-save ll-setting-secondary" data-number-cancel>Abbrechen</button><button type="button" class="ll-setting-save" data-number-save>Speichern</button></div>';bindNumbering(el);const cancel=el.querySelector('[data-number-cancel]'),save=el.querySelector('[data-number-save]');cancel.onclick=()=>mountNumberingSettings(el);save.onclick=async()=>{save.disabled=cancel.disabled=true;try{await writeNumbering(numberingValue(el,n),n.year);await mountNumberingSettings(el);}catch(e){el.querySelector('.ll-setting-error').textContent=numberingError(e);save.disabled=cancel.disabled=false;}};};}catch(e){if(el.isConnected)el.textContent=numberingError(e);}}
-function settingsPage(){
+async function settingsPage(){
+ const previousScreen=root.firstElementChild;let numbering=null;try{numbering=await readNumbering();}catch(e){}if(root.firstElementChild!==previousScreen)return;
  const account='<section class="ll-setting-section"><div class="ll-setting-heading"><h2>Konto</h2><button type="button" id="ll-account-edit">Bearbeiten</button></div><div class="ll-setting-summary"><span>Anmelde-E-Mail</span><strong>'+escapeHTML(user.email)+'</strong></div><p id="ll-account-status" role="status"></p><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout">Abmelden</button><button type="button" class="ll-setting-save ll-setting-secondary" id="ll-logout-all">Überall abmelden</button></section>';
- frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',settings)+'<section class="ll-setting-section" id="ll-numbering-settings">Rechnungsnummerierung wird geladen…</section><footer class="ll-settings-footer"><button type="button" id="ll-settings-close" class="ll-setting-save">Schließen</button></footer></div>','settings-screen');
- mountNumberingSettings($('ll-numbering-settings'));$('ll-settings-close').onclick=()=>routeTab(activeTab);
+ frame('<div class="ll-settings-page"><header class="ll-settings-heading"><h1>Einstellungen</h1></header>'+account+sectionSummary('contact',settings)+sectionSummary('payment',{...settings,invoiceNumbering:numbering})+'<footer class="ll-settings-footer"><button type="button" id="ll-settings-close" class="ll-setting-save">Schließen</button></footer></div>','settings-screen');
+ $('ll-settings-close').onclick=()=>routeTab(activeTab);
  $('ll-account-edit').onclick=()=>openSectionSheet({section:'account',data:{email:user.email},onSave:async form=>{
   const email=form.elements.email.value.trim(),password=form.elements.password.value,confirmation=form.elements.confirm_password.value;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw Error('Bitte eine gültige E-Mail-Adresse eingeben.');
@@ -230,14 +230,18 @@ function settingsPage(){
   if(!Object.keys(changes).length)return '';
   const {data,error}=await supabase.auth.updateUser(changes);if(error)throw error;if(data?.user)user=data.user;
   return [changes.email?'Bitte bestätige die neue E-Mail-Adresse.':'',changes.password?'Passwort gespeichert.':''].filter(Boolean).join(' ');
- },onSaved:message=>{settingsPage();$('ll-account-status').textContent=message;}});
+ },onSaved:async message=>{await settingsPage();if($('ll-account-status'))$('ll-account-status').textContent=message;}});
 
  $('ll-logout').onclick=async()=>{await supabase.auth.signOut({scope:'local'});user=null;login();};
  $('ll-logout-all').onclick=async()=>{await supabase.auth.signOut({scope:'global'});user=null;login();};
 
  document.querySelectorAll('[data-edit-section]').forEach(button=>button.onclick=()=>{
   const section=button.dataset.editSection;
-  openSectionSheet({section,data:settings,onSave:form=>saveBillingSection(supabase,ledger,section,form,settings),onSaved:result=>{settings=result;settingsPage();}});
+  openSectionSheet({section,data:{...settings,invoiceNumbering:numbering},onSave:async form=>{
+   const field=form.elements.namedItem('invoice_start');
+   if(field){const value=field.value.trim(),prefix=String(numbering.next_invoice_number).slice(0,-4),suffix=value.slice(prefix.length);if(!value.startsWith(prefix)||!/^\d{1,4}$/.test(suffix)||Number(suffix)<1)throw Error(numberingError(Error('invalid_next_number')));if(Number(suffix)!==numbering.next_number){parseSection(form,section,settings);try{numbering=await writeNumbering(Number(suffix),numbering.year);}catch(e){throw Error(numberingError(e));}}}
+   return saveBillingSection(supabase,ledger,section,form,settings);
+  },onSaved:result=>{settings=result;settingsPage();}});
  });
 }
 
