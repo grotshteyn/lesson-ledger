@@ -215,3 +215,8 @@
 .ll-app .ll-lessons .ll-groups .ll-list-row>span{overflow:hidden}
 .ll-app .ll-lessons .ll-groups .ll-list-row strong,
 .ll-app .ll-lessons .ll-groups .ll-list-row small{width:100%;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+
+/* Reuse the lesson status switch outside the tab shell. */
+.ll-number-segment{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:0;background:#e6e6e3;padding:3px;border-radius:9px;gap:3px;margin-bottom:12px}
+.ll-number-segment button{min-height:44px;min-width:0;border:0;border-radius:7px;background:transparent;color:#242424;font-size:14px;font-weight:500;padding:7px 5px}
+.ll-number-segment button[aria-pressed=true]{background:#fff;color:#242424;font-weight:700;box-shadow:0 1px 3px #0002}
