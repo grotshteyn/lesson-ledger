@@ -115,6 +115,14 @@ export function mountLessons({root,supabase,onBack=()=>{},onSubpageChange=()=>{}
     try{
       if(!students.length){const r=unwrap(await supabase.from('student_versions').select('student_id,student_name,effective_from,created_at').lte('effective_from',today()).order('effective_from',{ascending:false}).order('created_at',{ascending:false}));const seen=new Set();students=r.filter(s=>{if(seen.has(s.student_id))return false;seen.add(s.student_id);return true;});}
        if(!original&&!fixedStudent){try{const all=(await Promise.all(['active','paused','ended'].map(p_status=>supabase.rpc('find_students',{p_query:'',p_status,p_at:today()})))).flatMap((r,i)=>unwrap(r).map(s=>({...s,status:['active','paused','ended'][i]})));if(all.length)students=all.sort((a,b)=>a.student_name.localeCompare(b.student_name,'de'));}catch(e){/* retain version-list fallback if status discovery unavailable */}}
+      if(disposed||view!=='form')return;
+      // Direct entry from student or invoice details skips the list loader.
+      if(initialStudentId||initialLessonId){
+        let query=supabase.from('active_lessons').select('*');
+        if(fixedStudent)query=query.eq('student_id',fixedStudent);
+        lessons=unwrap(await query.order('lesson_date',{ascending:false}).order('created_at',{ascending:false}).limit(1000))||[];
+      }
+      if(disposed||view!=='form')return;
       renderForm(date,original);
       if(original?.invoice_id){
         try{const {data,error}=await supabase.rpc('get_invoice',{p_invoice_id:original.invoice_id});if(error)throw error;const link=root.querySelector('[data-action="invoice"]');if(!disposed&&current?.id===original.id&&link&&data?.invoice_number)link.textContent='Rechnung '+data.invoice_number;}catch(e){/* keep direct invoice link even if number lookup fails */}
