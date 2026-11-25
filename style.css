@@ -255,3 +255,5 @@ body.settings-screen .shell{max-width:680px;padding:0}
 .e2-student-sheet .ll-setting-actions{position:static;flex:none;padding:12px 0 4px;margin:0}
 .e2-student-sheet [hidden]{display:none!important}
 .ll-app .e2-card-heading .e2-edit{border:0;background:none;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:8px 0;white-space:nowrap}
+
+.setup-screen .actions{align-items:flex-start}.setup-screen .setup-next-column{flex:2;display:flex;flex-direction:column;min-width:0}.setup-screen .setup-next-column #next{width:100%}.setup-screen .setup-next-column #skip{align-self:center}.setup-screen [aria-invalid=true]{border-color:#a52b1e!important}.setup-screen .choice:has([aria-invalid=true]){border-color:#a52b1e}.setup-screen .setup-field-error{display:block;color:#a52b1e;font-size:14px;margin-top:6px;line-height:1.4}
