@@ -8,7 +8,7 @@ export const sectionFields=(section,s={})=>{
  if(section==='contact')return input('teacher_name','Name auf Rechnungen',s.teacher_name)+input('street','Straße und Hausnummer',a.street)+input('postcode','Postleitzahl',a.postcode)+input('city','Ort',a.city)+input('country','Land',a.country||'Deutschland')+input('teacher_email','Kontakt-E-Mail',s.teacher_email,'email')+input('phone','Telefon (optional)',s.phone,'tel');
  if(section==='payment')return input('iban','IBAN',s.iban)+input('bank_name','Bankname',s.bank_name)+input('tax_number','Steuernummer',s.tax_number)+
  '<label class="ll-setting-field"><span>Umsatzsteuer</span><select name="vat_mode">'+[['small_business','Kleinunternehmer (§ 19 UStG)'],['exempt_teaching','Steuerfreier Unterricht (§ 4 Nr. 21 UStG)'],['regular_19','Regulär 19 %'],['unsure','Noch nicht festgelegt']].map(([v,l])=>'<option value="'+v+'" '+(s.vat_mode===v?'selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
- input('payment_days','Zahlungsfrist (Tage)',s.payment_days??14,'number')+'<p class="ll-settings-hint">Stornoregel: Bis 24 Stunden vorher kostenlos, danach kostenpflichtig.</p>';
+ input('payment_days','Zahlungsfrist (Tage)',s.payment_days??14,'number')+'<p class="ll-settings-hint">Stornoregel: Bis 24 Stunden vorher kostenlos, danach kostenpflichtig.</p>'+(s.invoiceNumbering?.editable&&!s.invoiceNumbering.exhausted?input('invoice_start','Nächste Rechnungsnummer',s.invoiceNumbering.next_invoice_number):'');
  return '';
 };
 export const sectionTitle=section=>section==='account'?'Konto':section==='payer'?'Zahlungspflichtige Person':section==='contact'?'Kontaktinformationen':'Zahlungsinformationen';
@@ -44,6 +44,7 @@ export function sectionSummary(section,s={}){
  const a=s.teacher_address||{};
  const vat={small_business:'Kleinunternehmer (§ 19 UStG)',exempt_teaching:'Steuerfreier Unterricht (§ 4 Nr. 21 UStG)',regular_19:'Regulär 19 %',unsure:'Noch nicht festgelegt'};
  const rows=section==='contact'?[['Name auf Rechnungen',s.teacher_name],['Postanschrift',[a.street,[a.postcode,a.city].filter(Boolean).join(' '),a.country].filter(Boolean).join(', ')],['Kontakt-E-Mail',s.teacher_email],['Telefon',s.phone]]:[['IBAN',s.iban],['Bankname',s.bank_name],['Steuernummer',s.tax_number],['Umsatzsteuer',vat[s.vat_mode]],['Zahlungsfrist',(s.payment_days??14)+' Tage'],['Stornoregel','24 Stunden']];
+ if(section==='payment'&&s.invoiceNumbering)rows.push(['Nächste Rechnungsnummer',s.invoiceNumbering.exhausted?'Nummernkreis ausgeschöpft':s.invoiceNumbering.next_invoice_number]);
  return '<section class="ll-setting-section"><div class="ll-setting-heading"><h2>'+sectionTitle(section)+'</h2><button type="button" data-edit-section="'+section+'">Bearbeiten</button></div>'+rows.map(([label,value])=>'<div class="ll-setting-summary"><span>'+esc(label)+'</span><strong>'+esc(value||'Nicht angegeben')+'</strong></div>').join('')+'</section>';
 }
 export function openSectionSheet({section,data,onSave,onSaved=()=>{}}){
