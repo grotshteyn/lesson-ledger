@@ -257,3 +257,8 @@ body.settings-screen .shell{max-width:680px;padding:0}
 .ll-app .e2-card-heading .e2-edit{border:0;background:none;color:#242424;font:600 14px Inter,system-ui,sans-serif;padding:8px 0;white-space:nowrap}
 
 .setup-screen .actions{align-items:flex-start}.setup-screen .setup-next-column{flex:2;display:flex;flex-direction:column;min-width:0}.setup-screen .setup-next-column #next{width:100%}.setup-screen .setup-next-column #skip{align-self:center}.setup-screen [aria-invalid=true]{border-color:#a52b1e!important}.setup-screen .choice:has([aria-invalid=true]){border-color:#a52b1e}.setup-screen .setup-field-error{display:block;color:#a52b1e;font-size:14px;margin-top:6px;line-height:1.4}
+
+/* #160: shared outline navigation icons, retaining existing tab geometry. */
+.ll-app .ll-tab span:first-child{display:flex;align-items:center;justify-content:center;line-height:1}
+.ll-app .ll-tab{gap:3px}
+.ll-app .ll-tabs{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
