@@ -30,16 +30,18 @@ const students=[];
 const invoices=new Set();
 const preview=(s,m)=>rpc('get_invoice_preview',{p_student_id:s,p_billing_month:m});
 async function gross(s,m,n){const p=await preview(s,m);assert.equal(Number(p.gross_amount),n);return p;}
-async function student(mode,price){
- const s=await rpc('create_student',{p_details:{student_name:tag+' '+mode,subject:'Regression',start_date:past,minutes:60,lessons_per_week:1,billing_mode:mode,price,payer_name:'Synthetic payer',payer_address:{street:'Test 1',postcode:'12345',city:'Test'},location:'online'}});
+async function student(mode,price,start=past){
+ const s=await rpc('create_student',{p_details:{student_name:tag+' '+mode,subject:'Regression',start_date:start,minutes:60,lessons_per_week:1,billing_mode:mode,price,payer_name:'Synthetic payer',payer_address:{street:'Test 1',postcode:'12345',city:'Test'},location:'online'}});
  students.push(s);console.log('Created test student '+s);return s;
 }
-async function lesson(s,date,rate){return rpc('log_lesson_v2',{p_student_id:s,p_lesson_date:date,p_rate:rate,p_minutes:60,p_status:'held',p_idempotency_key:randomUUID()});}
+async function lesson(s,date,rate){return rpc('log_lesson_v2',{p_student_id:s,p_lesson_date:date,p_rate:rate,p_minutes:60,p_status:'held',p_confirm_duplicate:true,p_idempotency_key:randomUUID()});}
 async function issue(s,m,k=randomUUID()){
  const a=await rpc('issue_invoice',{p_student_id:s,p_billing_month:m,p_idempotency_key:k});
  assert(a.invoice_id,'Missing invoice ID');invoices.add(a.invoice_id);return a;
 }
 async function cancel(id){await rpc('cancel_invoice',{p_invoice_id:id,p_idempotency_key:randomUUID()});invoices.delete(id);}
+async function rejects(fn,pattern){await assert.rejects(fn,pattern);}
+const shift=(m,n)=>{const x=new Date(m+'T00:00:00Z');x.setUTCMonth(x.getUTCMonth()+n);return x.toISOString().slice(0,10);};
 let failed=false;
 try{
  const s=await student('per_lesson',40);
@@ -62,6 +64,52 @@ try{
  await cancel(c.invoice_id);await gross(f,past,120);
  const e=await issue(f,past);assert.notEqual(c.invoice_id,e.invoice_id);
  console.log('PASS flat fee and reissue');
+ await lesson(f,past,120);await gross(f,past,0);
+ console.log('PASS flat fee unaffected by additional lesson');
+ const q=await student('per_lesson',40);
+ await lesson(q,month,40);
+ const results=await Promise.allSettled([issue(q,month),issue(q,month)]);
+ assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
+ assert.match(results.find(x=>x.status==='rejected').reason.message,/no_billable_items|invoice_not_ready/);
+ await gross(q,month,0);
+ await rejects(()=>issue(q,month),/no_billable_items|invoice_not_ready/);
+ await lesson(q,month,50);const second=await issue(q,month);
+ await lesson(q,month,60);const third=await issue(q,month);
+ assert.notEqual(second.invoice_id,third.invoice_id);
+ await gross(q,month,0);
+ console.log('PASS concurrent issuance, empty draft, second and third current invoices');
+ const ck=randomUUID();
+ const ca=await rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:ck});
+ invoices.delete(second.invoice_id);
+ const cb=await rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:ck});
+ assert.deepEqual(ca,cb);
+ await rejects(()=>rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:randomUUID()}),/already_cancelled/);
+ await gross(q,month,50);
+ console.log('PASS cancellation replay and remaining valid invoices');
+ const old=shift(month,-25),future=shift(month,1);
+ const h=await student('per_lesson',40,old);
+ await lesson(h,old,40);await gross(h,old,40);
+ const fp=await preview(h,future);assert(fp.validation_errors.includes('month_not_finished'));
+ await rejects(()=>issue(h,future),/invoice_not_ready|month_not_finished/);
+ await gross(h,old,40);
+ console.log('PASS older than 24 months, future month rejection and retained draft');
+ const z=await student('per_lesson',40);
+ await lesson(z,past,40);
+ const before=await preview(z,past);
+ await lesson(z,past,50);
+ assert.equal(Number(before.gross_amount),40);
+ await gross(z,past,90);
+ const zi=await issue(z,past);
+ const detail=await rpc('get_invoice',{p_invoice_id:zi.invoice_id});
+ await lesson(z,past,60);
+ assert.deepEqual(await rpc('get_invoice',{p_invoice_id:zi.invoice_id}),detail);
+ await gross(z,month,60);
+ console.log('PASS stale preview recomputation and historical invoice unchanged');
+ const pz=await student('monthly_flat',100);
+ await rpc('set_student_status',{p_student_id:pz,p_event:'pause',p_effective_from:past,p_pause_until:month});
+ await gross(pz,past,0);await gross(pz,month,100);
+ console.log('PASS fully paused month and restart');
+
 }catch(e){failed=true;console.error(e.message);}
 finally{
  for(const id of invoices){try{await cancel(id);}catch(e){failed=true;console.error('Cleanup invoice '+id+': '+e.message);}}
