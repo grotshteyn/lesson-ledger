@@ -64,7 +64,8 @@ try{
  await cancel(c.invoice_id);await gross(f,past,120);
  const e=await issue(f,past);assert.notEqual(c.invoice_id,e.invoice_id);
  console.log('PASS flat fee and reissue');
- await lesson(f,past,120);await gross(f,past,0);
+ await rejects(()=>lesson(f,past,120),/Monthly flat has no per-lesson charge/);
+ await lesson(f,past,null);await gross(f,past,0);
  console.log('PASS flat fee unaffected by additional lesson');
  const q=await student('per_lesson',40);
  await lesson(q,month,40);
