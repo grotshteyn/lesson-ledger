@@ -4,14 +4,14 @@ import {actionBar} from '../frontend/action-bar.js';
 // Never call provisional invoice RPCs until issue #55 defines their contracts.
 export const E4_STORIES = ['IN-1','IN-2','IN-4','IN-5'];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const eur=value=>new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(typeof value==='string'?Number(value):Number(value)/100); // decimal strings from E4 API; legacy fixture cents accepted
+const eur=value=>value==null?'Nicht verfügbar':new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(typeof value==='string'?Number(value):Number(value)/100); // decimal strings from E4 API; legacy fixture cents accepted
 const invoiceLineLabel=(description,subject='')=>{
  const raw=String(description??'');
  const named=subject?raw.replace(/Unterrichtsstunde/gi,subject):raw;
  return named.replace(/\s+\d{2}\.\d{2}\.\d{4}\s*$/,'').trim();
 };
 const monthLabel=m=>new Date(String(m).slice(0,7)+'-01T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'});
-export const groupInvoices=rows=>Object.entries(rows.reduce((a,r)=>{(a[r.billingMonth]??=[]).push(r);return a;},{})).sort(([a],[b])=>b.localeCompare(a)).map(([month,items])=>({month,items:items.sort((a,b)=>({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[a.status]??5)-({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[b.status]??5)),totalCents:items.reduce((sum,x)=>sum+Math.round((typeof x.totalCents==='string'?Number(x.totalCents):Number(x.totalCents)/100)*100),0)}));
+export const groupInvoices=rows=>Object.entries(rows.reduce((a,r)=>{(a[r.billingMonth]??=[]).push(r);return a;},{})).sort(([a],[b])=>b.localeCompare(a)).map(([month,items])=>({month,items:items.sort((a,b)=>({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[a.status]??5)-({ready:0,missing_details:1,in_progress:2,issued:3,cancelled:4}[b.status]??5)),totalCents:items.some(x=>x.totalCents==null)?null:items.reduce((sum,x)=>sum+Math.round((typeof x.totalCents==='string'?Number(x.totalCents):Number(x.totalCents)/100)*100),0)}));
 const berlinMonth=(date=new Date())=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit'}).format(date);
 export const readyInvoices=(rows,asOf=new Date())=>rows.filter(r=>['ready','in_progress'].includes(r.status)&&!(r.validationErrors||[]).length&&r.billingMonth<=berlinMonth(asOf));
 // Retry an uncertain transport response with the identical batch key.
@@ -115,7 +115,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const show=(html,sub=false)=>{if(disposed)return;onSubpageChange(sub);root.innerHTML='<div class="e4">'+(adapter.mode==='fixture'?'<div class="e4-demo">Vorschau mit Beispieldaten · keine echten Rechnungen</div>':'')+(notice?warning(notice):'')+html+'</div>';};
  const matches=()=>rows.filter(r=>[r.student,r.number,...(r.documents||[]).map(d=>d.number)].some(v=>String(v||'').toLocaleLowerCase('de-DE').includes(search.trim().toLocaleLowerCase('de-DE'))));
  const searchResults=()=>matches().length?groups(matches()):'<p class="e4-empty">'+(search.trim()?'Keine passenden Rechnungen.':'Noch keine abrechenbaren Rechnungen.')+'</p>';
- const home=()=>{view='list';current=null;show('<div class="e4-search"><input type="search" aria-label="Suche" placeholder="Suche nach Name oder Rechnungsnummer" value="'+esc(search)+'"></div><div class="e4-search-results">'+searchResults()+'</div>'+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch'),'floating'):foot('<button disabled>Rechnungen ausstellen</button>','floating')));};
+ const home=()=>{view='list';current=null;show((pendingIssue?warning('Eine vorherige Ausstellung ist noch ungeklärt.')+button('Ausstellung wiederherstellen','resume-issue'):'')+'<div class="e4-search"><input type="search" aria-label="Suche" placeholder="Suche nach Name oder Rechnungsnummer" value="'+esc(search)+'"></div><div class="e4-search-results">'+searchResults()+'</div>'+(readyInvoices(rows).length?foot(button('Rechnungen ausstellen','batch'),'floating'):foot('<button disabled>Rechnungen ausstellen</button>','floating')));};
  const refresh=async()=>{rows=await adapter.list();if(!disposed)home();};
  const safeName=value=>String(value||'Rechnung').normalize('NFC').replace(/[<>:"/\\|?*\x00-\x1f]/g,'_').replace(/[. ]+$/g,'').trim()||'Rechnung';
  const allDocs=()=>rows.flatMap(r=>r.documents?r.documents.map(d=>({...r,...d,student:r.student})):r.status==='issued'?[r]:[]);
@@ -125,14 +125,26 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
  const drawLiveResults=()=>{view='results';show('<h2>Ergebnis der Ausstellung</h2>'+groups(result.map(x=>({...x,id:x.issuedId||x.id,status:x.resultStatus==='issued'&&x.issuedId?'issued':'failed',totalCents:x.resultStatus==='issued'?x.totalCents:0})),true)+foot(button('Fertig','refresh',busy?'disabled':'')+button('Alle herunterladen','result-all',busy||!successfulResults().length?'disabled':'')),true);};
  const saveBlob=(blob,name)=>{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);};
  const downloadResults=async(id)=>{if(busy)return;busy=true;notice='';drawLiveResults();try{const docs=successfulResults().filter(x=>!id||x.issuedId===id),files=[],errors=[];for(const doc of docs){try{const response=await fetch(await adapter.pdf(doc.issuedId));if(!response.ok)throw Error('PDF nicht verfügbar');const blob=await response.blob();files.push({name:filename(doc),blob});}catch(e){errors.push(doc.student||doc.number);}}if(files.length){if(id)saveBlob(files[0].blob,files[0].name);else{const {zipSync}=await import('https://esm.sh/fflate@0.8.2');const entries={};for(const f of files)entries[f.name]=new Uint8Array(await f.blob.arrayBuffer());saveBlob(new Blob([zipSync(entries)],{type:'application/zip'}),'Rechnungen.zip');}}if(errors.length)notice='Download fehlgeschlagen: '+errors.join(', ')+'. Bitte erneut versuchen.';}catch(e){notice='Download fehlgeschlagen: '+e.message;}finally{busy=false;drawLiveResults();}};
+ const pendingStorage='lesson-ledger:invoice-pending:v1';
  let pendingIssue=null;
+ if(adapter.mode==='live'){try{pendingIssue=JSON.parse(sessionStorage.getItem(pendingStorage)||'null');}catch(_){}}
+ const persistPending=()=>{if(adapter.mode==='live'){if(pendingIssue)sessionStorage.setItem(pendingStorage,JSON.stringify(pendingIssue));else sessionStorage.removeItem(pendingStorage);}};
+ const mapResults=async(response,items)=>Promise.all(response.results.map(async x=>{
+  const draft=items.find(y=>y.studentId===x.student_id&&y.billingMonth===String(x.billing_month).slice(0,7));
+  const row={...draft,billingMonth:String(x.billing_month).slice(0,7),resultStatus:x.status,resultError:x.error_code||'',number:x.invoice_number,issuedId:x.invoice_id,totalCents:'0.00'};
+  if(x.status==='issued'&&x.invoice_id){try{const doc=await adapter.get(x.invoice_id);return {...row,student:doc.student||row.student,number:doc.number||row.number,totalCents:doc.totalCents};}catch(_){return {...row,totalCents:null,resultError:'Rechnungsbetrag konnte nicht geladen werden'};}}
+  return row;
+ }));
+ const resumePending=async()=>{if(busy||!pendingIssue)return;busy=true;try{const items=pendingIssue.items;const response=await recoverIssue(items);result=await mapResults(response,items);notice='';drawLiveResults();}catch(e){notice='Ausstellung weiterhin ungeklärt: '+e.message;home();}finally{busy=false;if(view==='results')drawLiveResults();}};
  const recoverIssue=async(items)=>{
   const signature=JSON.stringify(items.map(x=>[x.studentId,x.billingMonth]).sort());
   if(pendingIssue&&pendingIssue.signature!==signature)throw Error('Bitte zuerst die vorherige Ausstellung mit derselben Auswahl erneut versuchen.');
-  pendingIssue??={signature,key:crypto.randomUUID()};
+  pendingIssue??={signature,key:crypto.randomUUID(),items:items.map(x=>({studentId:x.studentId,billingMonth:x.billingMonth,student:x.student,id:x.id}))};
+  persistPending();
   const response=await issueWithRecovery(adapter,items,pendingIssue.key);
   if(!Array.isArray(response?.results))throw Error('Unvollständige Antwort. Bitte dieselbe Ausstellung erneut versuchen.');
   pendingIssue=null;
+  persistPending();
   return response;
  };
  const issueLive=async(items)=>{if(busy||!items.length)return;
@@ -140,9 +152,9 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
   if(!window.confirm(items.length+' Rechnung(en) jetzt verbindlich ausstellen? Die Rechnungen erhalten Nummern und können danach nur storniert werden.'))return;
   busy=true;try{
    const response=await recoverIssue(items);
-   result=(response.results||[]).map(x=>({...items.find(y=>y.studentId===x.student_id&&y.billingMonth===String(x.billing_month).slice(0,7)),resultStatus:x.status,resultError:x.error_code||'',number:x.invoice_number,issuedId:x.invoice_id}));
+   result=await mapResults(response,items);
    drawLiveResults();
-  }catch(e){notice='Ausstellung fehlgeschlagen: '+(e.message||'Unbekannter Fehler');if(view==='batch')drawBatch();else await details(current.id);}
+  }catch(e){notice='Ausstellung fehlgeschlagen: '+(e.message||'Unbekannter Fehler');if(pendingIssue)home();else if(view==='batch')drawBatch();else await details(current.id);}
   finally{busy=false;if(view==='results')drawLiveResults();}
  };
  const cancelLive=async()=>{if(busy||!current?.id)return;
@@ -216,7 +228,7 @@ export function mountInvoices({root,onSubpageChange=()=>{},adapter=fixtureInvoic
    await adapter.savePayer(studentId,{payer_name:v('name'),payer_address:address,payer_email:v('email')});
   },onSaved:async()=>{notice='Angaben gespeichert.';await refresh();await details(returnId);}});
  };
- const click=async e=>{if(busy)return;const choice=e.target.closest('[data-select]');if(choice){selected.has(choice.dataset.select)?selected.delete(choice.dataset.select):selected.add(choice.dataset.select);drawBatch();return;}const open=e.target.closest('[data-open]');if(open){await details(open.dataset.open);return;}const act=e.target.closest('[data-e4]')?.dataset.e4;if(!act)return;if(act==='clear-search'){search='';home();root.querySelector('.e4-search input')?.focus();}else if(act==='home'){if(onBack&&view==='detail')onBack();else home();}else if(act==='back'){if(current?.id)await details(current.id);else home();}else if(act==='batch')batch();else if(act==='refresh'){try{notice='';await refresh();}catch(e){notice='Aktualisierung fehlgeschlagen: '+e.message;home();}}else if(act==='result-all')await downloadResults();else if(act.startsWith('result-pdf-'))await downloadResults(act.slice(11));else if(act==='live-issue')await issueLive([...selected].map(id=>rows.find(r=>r.id===id)).filter(Boolean));else if(act==='issue-download')await issueAndDownload();else if(act==='live-single')await issueLive([rows.find(r=>r.id===current.id)].filter(Boolean));else if(act==='live-cancel')await cancelLive();else if(act==='demo-results')demoResults();else if(act==='single-issue'){selected=new Set([current.id]);demoResults();}else if(act==='demo-cancel')demoCancelled();else if(act==='correct')correction();else if(act==='payer')await form(act);else if(act==='contact-settings')await openSettingsSheet('contact');else if(act==='payment-settings'||act==='settings')await openSettingsSheet('payment');else if(act.startsWith('pdf-')&&adapter.mode==='live')await downloadPdf(act.slice(4));else if(act.startsWith('pdf-')||act==='share'||act==='email'){notice='Diese Aktion benötigt die echte PDF-Schnittstelle. Im Demomodus wurde nichts heruntergeladen oder versendet.';if(view==='detail')await details(current.id);else home();}};
+ const click=async e=>{if(busy)return;const choice=e.target.closest('[data-select]');if(choice){selected.has(choice.dataset.select)?selected.delete(choice.dataset.select):selected.add(choice.dataset.select);drawBatch();return;}const open=e.target.closest('[data-open]');if(open){await details(open.dataset.open);return;}const act=e.target.closest('[data-e4]')?.dataset.e4;if(!act)return;if(act==='resume-issue')await resumePending();else if(act==='clear-search'){search='';home();root.querySelector('.e4-search input')?.focus();}else if(act==='home'){if(onBack&&view==='detail')onBack();else home();}else if(act==='back'){if(current?.id)await details(current.id);else home();}else if(act==='batch')batch();else if(act==='refresh'){try{notice='';await refresh();}catch(e){notice='Aktualisierung fehlgeschlagen: '+e.message;home();}}else if(act==='result-all')await downloadResults();else if(act.startsWith('result-pdf-'))await downloadResults(act.slice(11));else if(act==='live-issue')await issueLive([...selected].map(id=>rows.find(r=>r.id===id)).filter(Boolean));else if(act==='issue-download')await issueAndDownload();else if(act==='live-single')await issueLive([rows.find(r=>r.id===current.id)].filter(Boolean));else if(act==='live-cancel')await cancelLive();else if(act==='demo-results')demoResults();else if(act==='single-issue'){selected=new Set([current.id]);demoResults();}else if(act==='demo-cancel')demoCancelled();else if(act==='correct')correction();else if(act==='payer')await form(act);else if(act==='contact-settings')await openSettingsSheet('contact');else if(act==='payment-settings'||act==='settings')await openSettingsSheet('payment');else if(act.startsWith('pdf-')&&adapter.mode==='live')await downloadPdf(act.slice(4));else if(act.startsWith('pdf-')||act==='share'||act==='email'){notice='Diese Aktion benötigt die echte PDF-Schnittstelle. Im Demomodus wurde nichts heruntergeladen oder versendet.';if(view==='detail')await details(current.id);else home();}};
  const handleClick=e=>{if(e.target.closest('a[data-e4]'))e.preventDefault();void click(e);};
  const handleSearch=e=>{if(!e.target.matches('.e4-search input'))return;search=e.target.value;root.querySelector('.e4-search-results').innerHTML=searchResults();};
  root.addEventListener('input',handleSearch);
