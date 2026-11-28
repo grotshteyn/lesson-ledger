@@ -1,0 +1,24 @@
+name: API regression (test account)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: lesson-ledger-api-regression
+  cancel-in-progress: false
+jobs:
+  regression:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run authenticated API tests
+        env:
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: node tests/api_regression.mjs
