@@ -113,7 +113,50 @@ try{
  await gross(pz,past,0);await gross(pz,month,100);
  console.log('PASS fully paused month and restart');
 
-}catch(e){failed=true;console.error(e.message);}
+ const price=await student('monthly_flat',100);
+ await rpc('change_student',{p_student_id:price,p_effective_from:month,p_changes:{price:150}});
+ await gross(price,past,100);await gross(price,month,150);
+ const mode=await student('per_lesson',40);
+ await lesson(mode,past,40);
+ await rpc('change_student',{p_student_id:mode,p_effective_from:month,p_changes:{billing_mode:'monthly_flat',price:130}});
+ await gross(mode,past,40);await gross(mode,month,130);
+ console.log('PASS historical flat price and billing mode transition');
+ const v=await student('per_lesson',40);
+ await lesson(v,past,0);
+ await rpc('log_lesson_v2',{p_student_id:v,p_lesson_date:past,p_status:'cancelled_billable',p_rate:40,p_minutes:60,p_confirm_duplicate:true,p_idempotency_key:randomUUID()});
+ const voided=await lesson(v,past,70);
+ await rpc('void_lesson',{p_lesson_id:voided.id,p_reason:'Synthetic regression correction',p_idempotency_key:randomUUID()});
+ await gross(v,past,40);
+ console.log('PASS zero rate, billable cancellation and void exclusion');
+ const n=await student('per_lesson',40);
+ const number=()=>rpc('get_invoice_numbering',{});
+ const n0=await number();
+ await rejects(()=>issue(n,past),/no_billable_items|invoice_not_ready/);
+ assert.deepEqual(await number(),n0);
+ await lesson(n,past,40);
+ const ni=await issue(n,past);
+ assert.equal(ni.invoice_number,n0.next_invoice_number);
+ assert.equal((await number()).next_number,n0.next_number+1);
+ console.log('PASS rejected issuance leaves counter unchanged and next number is contiguous');
+ const batch=await student('per_lesson',40);
+ await lesson(batch,past,40);
+ const sel={student_id:batch,billing_month:past};
+ const bk=randomUUID(),bn=await number();
+ const br=await rpc('issue_invoices',{p_selections:[sel,sel],p_idempotency_key:bk});
+ for(const item of br.results)if(item.invoice_id)invoices.add(item.invoice_id);
+ assert.equal(br.results.length,2);
+ assert(br.results[0].invoice_id);
+ assert.equal(br.results[0].invoice_id,br.results[1].invoice_id);
+ assert.equal((await number()).next_number,bn.next_number+1);
+ await gross(batch,past,0);
+ console.log('PASS duplicate batch selections issue only one invoice');
+ const t=performance.now();
+ const overview=await rpc('list_invoice_overview',{p_through_month:month});
+ const elapsed=Math.round(performance.now()-t);
+ const oldRow=overview.months.find(x=>x.billing_month===old);
+ assert.equal(Number(oldRow?.candidates.find(x=>x.student_id===h)?.gross_amount),40);
+ console.log('PASS overview includes old open lesson; elapsed_ms='+elapsed+' months='+overview.months.length);
+}catch(e){failed=true;console.error(e.stack??e.message);}
 finally{
  for(const id of invoices){try{await cancel(id);}catch(e){failed=true;console.error('Cleanup invoice '+id+': '+e.message);}}
  for(const s of students){try{await rpc('set_student_status',{p_student_id:s,p_event:'end',p_effective_from:month});}catch(e){failed=true;console.error('Cleanup student '+s+': '+e.message);}}
