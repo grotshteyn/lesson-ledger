@@ -83,7 +83,9 @@ try{
  const ca=await rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:ck});
  invoices.delete(second.invoice_id);
  const cb=await rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:ck});
- assert.deepEqual(ca,cb);
+ assert.equal(ca.replayed,false);
+ assert.equal(cb.replayed,true);
+ assert.deepEqual({...ca,replayed:true},cb);
  await rejects(()=>rpc('cancel_invoice',{p_invoice_id:second.invoice_id,p_idempotency_key:randomUUID()}),/already_cancelled/);
  await gross(q,month,50);
  console.log('PASS cancellation replay and remaining valid invoices');
