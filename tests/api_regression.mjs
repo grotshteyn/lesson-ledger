@@ -125,7 +125,7 @@ try{
  await lesson(v,past,0);
  await rpc('log_lesson_v2',{p_student_id:v,p_lesson_date:past,p_status:'cancelled_billable',p_rate:40,p_minutes:60,p_confirm_duplicate:true,p_idempotency_key:randomUUID()});
  const voided=await lesson(v,past,70);
- await rpc('void_lesson',{p_lesson_id:voided.id,p_reason:'Synthetic regression correction',p_idempotency_key:randomUUID()});
+ await rpc('void_lesson',{p_lesson_id:voided.id,p_reason:'edit',p_idempotency_key:randomUUID()});
  await gross(v,past,40);
  console.log('PASS zero rate, billable cancellation and void exclusion');
  const n=await student('per_lesson',40);
