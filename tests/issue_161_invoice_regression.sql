@@ -1,10 +1,11 @@
 -- Issue #161: repeatable transaction-isolated regression.
--- Run as database administrator against a TEST database only.
+-- Run as database administrator against the explicitly authorized dedicated regression ledger only.
 DO $test$
 declare l uuid; o uuid; s uuid; f uuid; m date:=date_trunc('month',now() at time zone 'Europe/Berlin')::date; p date; k uuid; a jsonb; b jsonb; c jsonb; x jsonb; addr jsonb:='{"street":"Test 1","postcode":"12345","city":"Test"}';
 begin
- select id,owner_id into l,o from public.ledgers order by id limit 1;
- assert l is not null, 'Test database needs one ledger';
+ perform set_config('plpgsql.check_asserts','on',true);
+ select id,owner_id into l,o from public.ledgers where id='93def825-755a-4619-879c-d776e2e8db67' and owner_id='feb42e04-41d2-4e71-a377-ec882c3ea99b';
+ if l is null then raise exception 'Dedicated regression ledger not found; refusing to run'; end if;
  perform set_config('request.jwt.claim.sub',o::text,true);
  p:=(m-interval '1 month')::date;
  begin
